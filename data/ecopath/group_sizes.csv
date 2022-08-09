@@ -1,0 +1,17 @@
+group,type,pred_size_min_mm,log10_pred_size_min_mm,pred_size_max_mm,log10_pred_size_max_mm,log10_predprey_ratio_min_mm,log10_predprey_ratio_opt_mm,log10_predprey_ratio_max_mm,source,log10_preysize_min_mm,log10_preysize_max_mm
+NK1-COH,Nekton,90,1.95,260,2.41,0.1,,2.4,,0,1.85
+NK2-CHI,Nekton,40,1.6,180,2.26,,,,,-0.22,1.7
+NK3-FOR,Nekton,20,1.3,150,2,0.6,1.6,3.2,McKinnell & Perry 2016,-1.9,1.4
+ZF1-ICT,Zoop. Ichthy.,5,0.7,15,1.18,1.22,1.72,2.22,"Munk, 1992",-1.52,-0.05
+ZC1-EUP,Zoop. Hard,5,0.7,30,1.48,0.9,1.55,2.2,"Fuchs & Franks, 2010",-1.5,0.58
+ZC2-AMP,Zoop. Hard,5,0.7,20,1.3,,,,,-0.52,0.48
+ZC3-DEC,Zoop. Hard,1,0,8,0.9,0.5,1,1.5,"Fileman, 2014",-0.8,0.8
+ZC4-CLG,Zoop. Hard,4,0.6,10,1,0.3,1.8,2.8,"Fuchs & Franks, 2010",-2.8,0.6
+ZC5-CSM,Zoop. Hard,0.2,-0.7,4,0.6,0.3,1.8,2.8,"Wirtz, 2012",-2.2,0.7
+ZS1-JEL,Zoop. Soft,40,1.6,2000,3.3,0.1,0.7,1.2,"Fuchs & Franks, 2010",0.4,3.1
+ZS2-CTH,Zoop. Soft,2,0.3,20,1.3,0.2,0.7,1.2,"Fuchs & Franks, 2010",-0.9,1.1
+ZS3-CHA,Zoop. Soft,2,0.3,20,1.3,0.7,1.15,1.4,"Pearre, 1980; Saito & Kiørboe, 2001",-1.1,0.6
+ZS4-LAR,Zoop. Soft,0.2,-0.7,2,0.3,0.8,2.1,3.8,"Lombard et  al., 2011",-4.5,-0.5
+PZ1-CIL,Protozoop.,0.02,-1.7,0.2,-0.7,0.2,0.9,1.3,"Fuchs & Franks, 2010",-3,-0.9
+PZ2-DIN,Protozoop.,0.002,-2.7,0.2,-0.7,0.1,0.2,0.4,"Fuchs & Franks, 2010",-3.1,-0.8
+PZ3-HNF,Protozoop.,0.002,-2.7,0.02,-1.7,0.6,0.8,0.9,"Lombard et  al., 2011",-3.6,-2.3
