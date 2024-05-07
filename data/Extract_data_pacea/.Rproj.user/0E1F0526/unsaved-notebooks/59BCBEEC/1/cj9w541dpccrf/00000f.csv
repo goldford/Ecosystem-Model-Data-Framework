@@ -1,0 +1,682 @@
+"0","install.packages(""remotes"")    # If you do not already have the ""remotes"" package"
+"2","WARNING: Rtools is required to build R packages but is not currently installed. Please download and install the appropriate version of Rtools before proceeding:
+
+https://cran.rstudio.com/bin/windows/Rtools/
+"
+"2","Installing package into ‘C:/Users/Greig/AppData/Local/R/win-library/4.3’
+(as ‘lib’ is unspecified)
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/remotes_2.5.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 430182 bytes (420 KB)
+"
+"2","downloaded 420 KB
+
+"
+"1","package ‘remotes’ successfully unpacked and MD5 sums checked
+"
+"1","
+"
+"1",""
+"1","The downloaded binary packages are in
+	C:\Users\Greig\AppData\Local\Temp\RtmpmSoxKX\downloaded_packages"
+"1",""
+"1","
+"
+"0","remotes::install_github(""pbs-assess/pacea"")"
+"2","Downloading GitHub repo pbs-assess/pacea@HEAD
+"
+"1","These packages have more recent versions available.
+It is recommended to update all of them.
+Which would you like to update?"
+"1",""
+"1","
+"
+"1",""
+"1","
+"
+"1","1: All                            "
+"1","
+"
+"1","2: CRAN packages only             "
+"1","
+"
+"1","3: None                           "
+"1","
+"
+"1","4: stringi (1.8.3 -> 1.8.4) [CRAN]"
+"1","
+"
+"1",""
+"1","
+"
+"2","Installing 56 packages: sys, askpass, withr, openssl, curl, ini, httr2, gitcreds, zip, rstudioapi, credentials, utf8, fansi, pkgconfig, pillar, tidyselect, tibble, generics, Rcpp, wk, proxy, e1071, maps, cpp11, colorspace, viridisLite, RColorBrewer, munsell, labeling, farver, whisker, rprojroot, purrr, gh, gert, desc, crayon, clipr, dplyr, units, s2, DBI, classInt, mapproj, dichromat, timechange, scales, isoband, gtable, usethis, tidyr, sf, pals, lubridate, httr, ggplot2
+"
+"2","Installing packages into ‘C:/Users/Greig/AppData/Local/R/win-library/4.3’
+(as ‘lib’ is unspecified)
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/sys_3.4.2.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 47103 bytes (45 KB)
+"
+"2","downloaded 45 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/askpass_1.2.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 74958 bytes (73 KB)
+"
+"2","downloaded 73 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/withr_3.0.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 246002 bytes (240 KB)
+"
+"2","downloaded 240 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/openssl_2.1.2.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 3190805 bytes (3.0 MB)
+"
+"2","downloaded 3.0 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/curl_5.2.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 3217885 bytes (3.1 MB)
+"
+"2","downloaded 3.1 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/ini_0.3.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 15817 bytes (15 KB)
+"
+"2","downloaded 15 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/httr2_1.0.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 547957 bytes (535 KB)
+"
+"2","downloaded 535 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/gitcreds_0.1.2.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 99475 bytes (97 KB)
+"
+"2","downloaded 97 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/zip_2.3.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 434791 bytes (424 KB)
+"
+"2","downloaded 424 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/rstudioapi_0.16.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 328866 bytes (321 KB)
+"
+"2","downloaded 321 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/credentials_2.0.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 221676 bytes (216 KB)
+"
+"2","downloaded 216 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/utf8_1.2.4.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 149784 bytes (146 KB)
+"
+"2","downloaded 146 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/fansi_1.0.6.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 314065 bytes (306 KB)
+"
+"2","downloaded 306 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/pkgconfig_2.0.3.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 22557 bytes (22 KB)
+"
+"2","downloaded 22 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/pillar_1.9.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 659372 bytes (643 KB)
+"
+"2","downloaded 643 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/tidyselect_1.2.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 225122 bytes (219 KB)
+"
+"2","downloaded 219 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/tibble_3.2.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 690812 bytes (674 KB)
+"
+"2","downloaded 674 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/generics_0.1.3.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 79434 bytes (77 KB)
+"
+"2","downloaded 77 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/Rcpp_1.0.12.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 2878033 bytes (2.7 MB)
+"
+"2","downloaded 2.7 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/wk_0.9.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 2055877 bytes (2.0 MB)
+"
+"2","downloaded 2.0 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/proxy_0.4-27.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 180074 bytes (175 KB)
+"
+"2","downloaded 175 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/e1071_1.7-14.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 665198 bytes (649 KB)
+"
+"2","downloaded 649 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/maps_3.4.2.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 3099154 bytes (3.0 MB)
+"
+"2","downloaded 3.0 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/cpp11_0.4.7.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 304077 bytes (296 KB)
+"
+"2","downloaded 296 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/colorspace_2.1-0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 2629769 bytes (2.5 MB)
+"
+"2","downloaded 2.5 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/viridisLite_0.4.2.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 1300103 bytes (1.2 MB)
+"
+"2","downloaded 1.2 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/RColorBrewer_1.1-3.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 56066 bytes (54 KB)
+"
+"2","downloaded 54 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/munsell_0.5.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 245393 bytes (239 KB)
+"
+"2","downloaded 239 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/labeling_0.4.3.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 62568 bytes (61 KB)
+"
+"2","downloaded 61 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/farver_2.1.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 1505851 bytes (1.4 MB)
+"
+"2","downloaded 1.4 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/whisker_0.4.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 83395 bytes (81 KB)
+"
+"2","downloaded 81 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/rprojroot_2.0.4.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 113618 bytes (110 KB)
+"
+"2","downloaded 110 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/purrr_1.0.2.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 498667 bytes (486 KB)
+"
+"2","downloaded 486 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/gh_1.4.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 126229 bytes (123 KB)
+"
+"2","downloaded 123 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/gert_2.0.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 3492457 bytes (3.3 MB)
+"
+"2","downloaded 3.3 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/desc_1.4.3.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 329512 bytes (321 KB)
+"
+"2","downloaded 321 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/crayon_1.5.2.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 162530 bytes (158 KB)
+"
+"2","downloaded 158 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/clipr_0.8.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 54650 bytes (53 KB)
+"
+"2","downloaded 53 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/dplyr_1.1.4.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 1560200 bytes (1.5 MB)
+"
+"2","downloaded 1.5 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/units_0.8-5.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 800324 bytes (781 KB)
+"
+"2","downloaded 781 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/s2_1.1.6.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 3504378 bytes (3.3 MB)
+"
+"2","downloaded 3.3 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/DBI_1.2.2.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 910620 bytes (889 KB)
+"
+"2","downloaded 889 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/classInt_0.4-10.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 503779 bytes (491 KB)
+"
+"2","downloaded 491 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/mapproj_1.2.11.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 59263 bytes (57 KB)
+"
+"2","downloaded 57 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/dichromat_2.0-0.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 149661 bytes (146 KB)
+"
+"2","downloaded 146 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/timechange_0.3.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 507702 bytes (495 KB)
+"
+"2","downloaded 495 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/scales_1.3.0.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 703632 bytes (687 KB)
+"
+"2","downloaded 687 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/isoband_0.2.7.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 1968422 bytes (1.9 MB)
+"
+"2","downloaded 1.9 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/gtable_0.3.5.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 225738 bytes (220 KB)
+"
+"2","downloaded 220 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/usethis_2.2.3.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 898680 bytes (877 KB)
+"
+"2","downloaded 877 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/tidyr_1.3.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 1266881 bytes (1.2 MB)
+"
+"2","downloaded 1.2 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/sf_1.0-16.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 39221868 bytes (37.4 MB)
+"
+"2","downloaded 37.4 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/pals_1.8.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 1905868 bytes (1.8 MB)
+"
+"2","downloaded 1.8 MB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/lubridate_1.9.3.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 984878 bytes (961 KB)
+"
+"2","downloaded 961 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/httr_1.4.7.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 485681 bytes (474 KB)
+"
+"2","downloaded 474 KB
+
+"
+"2","trying URL 'https://cran.rstudio.com/bin/windows/contrib/4.3/ggplot2_3.5.1.zip'
+"
+"2","Content type 'application/zip'"
+"2"," length 4953509 bytes (4.7 MB)
+"
+"2","downloaded 4.7 MB
+
+"
+"1","package ‘sys’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘askpass’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘withr’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘openssl’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘curl’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘ini’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘httr2’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘gitcreds’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘zip’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘rstudioapi’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘credentials’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘utf8’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘fansi’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘pkgconfig’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘pillar’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘tidyselect’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘tibble’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘generics’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘Rcpp’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘wk’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘proxy’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘e1071’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘maps’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘cpp11’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘colorspace’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘viridisLite’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘RColorBrewer’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘munsell’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘labeling’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘farver’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘whisker’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘rprojroot’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘purrr’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘gh’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘gert’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘desc’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘crayon’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘clipr’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘dplyr’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘units’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘s2’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘DBI’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘classInt’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘mapproj’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘dichromat’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘timechange’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘scales’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘isoband’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘gtable’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘usethis’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘tidyr’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘sf’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘pals’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘lubridate’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘httr’ successfully unpacked and MD5 sums checked
+"
+"1","package ‘ggplot2’ successfully unpacked and MD5 sums checked
+"
+"1","
+"
+"1",""
+"1","The downloaded binary packages are in
+	C:\Users\Greig\AppData\Local\Temp\RtmpmSoxKX\downloaded_packages"
+"1",""
+"1","
+"
+"2","Running `R CMD build`...
+"
+"1","* checking for file 'C:\Users\Greig\AppData\Local\Temp\RtmpmSoxKX\remotes46d4656c5071\pbs-assess-pacea-ed23442/DESCRIPTION' ... OK"
+"1","
+"
+"1","* preparing 'pacea':"
+"1","
+"
+"1","* checking DESCRIPTION meta-information ... OK"
+"1","
+"
+"1","* checking for LF line-endings in source and make files and shell scripts"
+"1","
+"
+"1","* checking for empty or unneeded directories"
+"1","
+"
+"1","Removed empty directory 'pacea/vignettes'"
+"1","
+"
+"1","* building 'pacea_1.0.0.tar.gz'"
+"1","
+"
+"2","Installing package into ‘C:/Users/Greig/AppData/Local/R/win-library/4.3’
+(as ‘lib’ is unspecified)
+"
+"1","* installing *source* package 'pacea' ...
+"
+"1","** using staged installation
+"
+"1","** R
+"
+"1","** data
+"
+"1","*** moving datasets to lazyload DB
+"
+"1","** inst
+"
+"1","** byte-compile and prepare package for lazy loading
+"
+"1","** help
+"
+"1","*** installing help indices
+"
+"1","*** copying figures
+"
+"1","** building package indices
+"
+"1","** testing if installed package can be loaded from temporary location
+"
+"1","** testing if installed package can be loaded from final location
+"
+"1","** testing if installed package keeps a record of temporary installation path
+"
+"1","* DONE (pacea)
+"
