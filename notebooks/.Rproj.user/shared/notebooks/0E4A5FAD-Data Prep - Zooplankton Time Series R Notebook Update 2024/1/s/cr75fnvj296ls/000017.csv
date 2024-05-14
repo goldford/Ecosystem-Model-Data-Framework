@@ -1,0 +1,7 @@
+"0","# combined plot"
+"0","#options(repr.plot.width=2, repr.plot.height=80)"
+"0","theme_set(theme_cowplot())"
+"0","p_B_all <- plot_grid(p_B_DW, p_B_WW, p_B_C, labels = ""AUTO"", ncol=1, nrow=3)"
+"0",""
+"0","p_B_all"
+"0",""

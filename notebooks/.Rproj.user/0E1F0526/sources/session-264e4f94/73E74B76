@@ -1,0 +1,28 @@
+{
+    "id": "73E74B76",
+    "path": "~/github/Ecosystem-Model-Data-Framework/notebooks/Data Prep - Zooplankton Time Series R Notebook Update 2024.Rmd",
+    "project_path": "Data Prep - Zooplankton Time Series R Notebook Update 2024.Rmd",
+    "type": "r_markdown",
+    "hash": "3410122507",
+    "contents": "",
+    "dirty": false,
+    "created": 1715211124886.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "tempName": "Untitled1",
+        "chunk_output_type": "inline",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "781,37",
+        "scrollLine": "781"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1715708497,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1715708497845,
+    "read_only": false,
+    "read_only_alternatives": []
+}

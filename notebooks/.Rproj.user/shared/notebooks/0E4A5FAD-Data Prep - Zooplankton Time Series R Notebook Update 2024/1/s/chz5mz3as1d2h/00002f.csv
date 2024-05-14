@@ -1,0 +1,7 @@
+"0",""
+"0","df_2_summary %>% "
+"0","  filter(modelgroup == ""misc"") %>%"
+"0","  group_by(Genus_species) %>% "
+"0","  summarize(mean = mean(B_mean_g_m2_DW),"
+"0","            sum = sum(B_mean_g_m2_DW)) %>%"
+"0","    arrange(desc(sum), .by_group = FALSE)"

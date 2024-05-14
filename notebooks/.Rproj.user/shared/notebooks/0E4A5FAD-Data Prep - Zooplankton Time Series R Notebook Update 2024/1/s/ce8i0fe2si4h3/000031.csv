@@ -1,0 +1,7 @@
+"0",""
+"0","print(""Wet Weight B total"")"
+"1","[1]"
+"1"," ""Wet Weight B total"""
+"1","
+"
+"0","avg_B_modelgroups %>% ungroup() %>% summarise(sum_B_WW = sum(B_mean_g_m2_WW))"
