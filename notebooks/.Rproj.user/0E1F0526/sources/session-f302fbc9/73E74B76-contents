@@ -613,6 +613,11 @@ avg_B_modelgroups_better = inner_join(avg_B_WW_modelgroups_better, avg_B_C_model
 
 
 ```
+```{r}
+avg_B_modelgroups_better
+```
+
+
 
 ```{r}
 
@@ -767,7 +772,7 @@ p_B_WW
 p_B_C = avg_B_modelgroups_better %>%
 
     filter(B_mean_g_m2_C > 0.001 & modelgroup != "misc") %>%
-    ggplot(aes(area = B_mean_g_m2_C, fill = modelgroup, label = paste(modelgroup,round(B_mean_g_m2_C,digits=1),sep="\n"))) +
+    ggplot(aes(area = B_mean_g_m2_C, fill = modelgroup, label = paste(modelgroup,round(B_mean_g_m2_C,digits=2),sep="\n"))) +
     geom_treemap(show.legend = FALSE) + 
     geom_treemap_text(
          colour = "white",
