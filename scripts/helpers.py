@@ -219,3 +219,49 @@ def writebathy(filename,glamt,gphit,bathy):
 
     bnc.close()
 
+def find_nearest_point_from1D (lon_obs,lat_obs,lon_mod,lat_mod,mask,dx):
+
+    """Utility: Find closest model point to obs using type of nearest neighbour search
+                lon and lat - the coordinates of the obs
+                lon_mod and lat_mod - fields of coordinates from model grid
+                mask - the land mask, since if the closest point is on land it is not valid
+                dx - the radius in degrees around which to search
+                assumes lon_mod, lat_mod same shape
+                returns - index of closest point, distance in m to pt"""
+
+    # function modified by G Oldford but borrowed originally from pyap
+    # changelog
+    #  - made function for 1D instead of 2D arrays of model lats lons
+    # For multiple points, call this function repeatedly (once per point).
+
+    # Find the points within dx degrees of the specified lon,lat
+    b = np.nonzero((lon_mod[:] < lon_obs + dx) & (lon_mod[:] > lon_obs - dx) & (lat_mod[:] < lat_obs + dx) & (
+                lat_mod[:] > lat_obs - dx) & (mask[:] > 0))
+
+
+    npts = len(b[0])  # how many points are in the range?
+    print("npts")
+    print(npts)
+
+    if (len(b[0]) ==0) :
+        print(lat_obs, lon_obs)
+        return (np.nan, np.nan)
+
+    dist = np.zeros(npts)   # initialize variable
+
+    for n in range (npts):
+        idx = b[0][n]
+        dist[n] = haversine(lon_obs, lat_obs, lon_mod[idx], lat_mod[idx])
+
+    # Now get the minimum distance.
+    ind = np.argmin(dist)            # get the index of the minimum value
+    # ix = b[1][ind]; iy = b[0][ind]        # get the indicies of the relevant point in the search regions
+    idx = b[0][ind] # get the indicies of the relevant point in the search regions
+
+    # Return a named tuple with all the info: output
+
+    #nearest_pt = collections.namedtuple('nearest_pt', ['id','grp', 'glon', 'lat_mod', 'mask', 'dist', 'ix', 'iy'])
+    # p = (ix,iy, dist[ind]) #nearest_pt (id,grp,glon[iy,ix], lat_mod[iy,ix], mask[iy,ix], dist[ind], ix, iy)
+    # dist should be metres
+    p = (idx, dist[ind])  # nearest_pt (id,grp,glon[iy,ix], lat_mod[iy,ix], mask[iy,ix], dist[ind], ix, iy)
+    return p
