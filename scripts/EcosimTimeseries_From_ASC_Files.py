@@ -1,7 +1,8 @@
 import os 
 import pandas as pd
                  
- 
+# revisited this 2024-05-23 but not completed
+
 #xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 #Local Functions
 
@@ -15,10 +16,15 @@ def getDataFrame(fullPath,NaN):
 #xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 
-InputPath = "W:\\Sync\\PSF\\EwE\\Georgia Strait 2021\\LTL_model\\DATA\\SalishSea1500-RUN202\\NEMO_out_ASC\\MixingTurboZ"
-outputPath = "W:\\Sync\\PSF\\EwE\\Georgia Strait 2021\\LTL_model\\DATA\\SalishSea1500-RUN202\\NEMO_out_ASC\\TimeSeries_Files"
+#InputPath = "C:\\Sync\\PSF\\EwE\\Georgia Strait 2021\\LTL_model\\DATA\\SalishSea1500-RUN202\\NEMO_out_ASC\\MixingTurboZ"
+#outputPath = "C:\\Sync\\PSF\\EwE\\Georgia Strait 2021\\LTL_model\\DATA\\SalishSea1500-RUN202\\NEMO_out_ASC\\TimeSeries_Files"
 
-outfilename = "SalishSea1500-RUN202_{}_Timeseries.csv"
+inpath = "C://Users//Greig//Documents//github//Ecosystem-Model-Data-Framework//data//forcing//NEMO216_ECOSPACE_in_daily_vars_20240523//"
+outpath = "C://Users//Greig//Documents//github//Ecosystem-Model-Data-Framework//data//forcing//NEMO216_ECOSIM_in_daily_20240523//"
+
+
+
+outfilename = "SalishSea1500-RUN{}_{}_Daily_Timeseries.csv"
 
 minDepth = 0.01
 
