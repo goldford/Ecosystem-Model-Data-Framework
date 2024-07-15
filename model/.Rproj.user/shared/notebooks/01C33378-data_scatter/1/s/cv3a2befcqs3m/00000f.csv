@@ -1,0 +1,7 @@
+"0","# Shouldn't we also be stratifying / grouping by FIPEX_sub / FIPEX_seg?"
+"0","result_grp_seg <- result %>%"
+"0","  group_by(STREAM, FIPEX_sub, FIPEX_seg) %>%"
+"0","  summarise(across(where(is.numeric), mean, na.rm = TRUE))"
+"2","`summarise()` has grouped output by 'STREAM', 'FIPEX_sub'. You can override using the `.groups` argument."
+"0","# Display the result"
+"0","print(result_grp_seg)"

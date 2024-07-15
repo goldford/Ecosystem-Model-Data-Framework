@@ -1,2 +1,4 @@
 # Ecosystem Model Data Framework
- A data framework for marine ecosystem models
+ This started as a model framework for any ecosystem model but since drifted. 
+ Currently it contains a hodge podge of scripts. 
+ 

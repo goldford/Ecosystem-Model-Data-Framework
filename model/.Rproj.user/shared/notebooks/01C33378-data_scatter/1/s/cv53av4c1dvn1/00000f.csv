@@ -1,0 +1,41 @@
+"0","library(dplyr)"
+"2","Warning: package ‘dplyr’ was built under R version 4.3.3"
+"2","
+Attaching package: ‘dplyr’
+
+"
+"2","The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+"
+"2","The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+"
+"0","library(ggplot2)"
+"2","Warning: package ‘ggplot2’ was built under R version 4.3.3"
+"0","library(tidyr)"
+"2","Warning: package ‘tidyr’ was built under R version 4.3.3"
+"0","library(patchwork)"
+"2","Warning: package ‘patchwork’ was built under R version 4.3.3"
+"0","path_f = ""C:/Users/Greig/Sync/1. UBC-Laptop/42. Ontario Mahlum Re-analysis/3_ReAnalysis_Spring2021/Results/"""
+"0",""
+"0","rslts_wilmot = ""Sc2_Wilmot_FishSurveyDCI.csv"""
+"0","rslts_oshawa= ""Sc2_Oshawa_FishSurveyDCI.csv"""
+"0","rslts_duffins= ""Sc2_Duffins_FishSurveyDCI.csv"""
+"0","rslts_ganaraska= ""Sc2_Ganaraska_FishSurveyDCI.csv"""
+"0","rslts_cobourg= ""Sc2_Cobourg_FishSurveyDCI.csv"""
+"0",""
+"0","data_wilmot <- read.csv(paste(path_f,rslts_wilmot,sep=""""))"
+"0","data_oshawa <- read.csv(paste(path_f, rslts_oshawa,sep=""""))"
+"0","data_duffins <- read.csv(paste(path_f, rslts_duffins,sep=""""))"
+"0","data_ganaraska <- read.csv(paste(path_f, rslts_ganaraska,sep=""""))"
+"0","data_cobourg <- read.csv(paste(path_f, rslts_cobourg,sep=""""))"
+"0",""
+"0","#combine"
+"0","combined_data <- bind_rows(data_wilmot, data_oshawa, data_duffins, data_ganaraska, data_cobourg)"
+"0",""
+"0","# Print the combined data"
+"0","print(combined_data)"

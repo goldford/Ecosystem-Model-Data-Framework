@@ -1,5 +1,17 @@
 import numpy as np
 import netCDF4 as nc
+import yaml
+import datetime as dt
+import os
+
+def is_leap_year(year):
+    return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+def buildSortableString(number, nZeros):
+    newstring = str(number)
+    while (len(newstring) < nZeros) :
+        tmpstr = "0" + newstring
+        newstring = tmpstr
+    return newstring
 
 def haversine(lon1, lat1, lon2, lat2):
     """ This is copied from salishsea_tools """
@@ -219,7 +231,47 @@ def writebathy(filename,glamt,gphit,bathy):
 
     bnc.close()
 
-def find_nearest_point_from1D (lon_obs,lat_obs,lon_mod,lat_mod,mask,dx):
+#from pypkg
+def find_nearest_point(lon,lat,glon,glat,mask,dx):
+    """Utility: Finds the indicies of a station.
+                lon and lat are the coordinates of the station
+                glon and glat are the fields of coordinates from coord file
+                    mask is the land mask, since if the closest point is on land it is not valid
+                dz is the radius in degrees around which to search"""
+
+    # This funciton only supports lon/lat values that are single floats, not arrays
+    # For multiple points, call this function repeatedly (once per point).
+
+    #lon=lon-0.04   # no clue why I put this in at some point
+
+    # Find the points within dx degrees of the specified lon,lat
+    b=np.nonzero( (glon[:,:] < lon+dx) & (glon[:,:] > lon-dx) & (glat[:,:] < lat+dx) & (glat[:,:]> lat-dx) & (mask[:,:]>0))
+    if (len(b[0]) ==0) :
+        return (np.nan, np.nan, np.nan)
+
+    npts = b[0].shape[0]    # how many points are in the range?
+    dist = np.zeros(npts)   # initialize variable
+
+    for n in range (npts):
+        # Get the indices in b in a shorter form
+        # note that since this uses netcdf 3 files and the scipy.io import regime, dimensions go (y,x) rather than (x,y).
+        # Make sure this is consistent with the calling program - don't use without verifying that this is sensible
+        # If you change the order here, change it a few lines down when you're getting the minimum distance too.
+        ix = b[1][n];  iy = b[0][n]
+
+        dist[n] = haversine(lon, lat, glon[iy,ix], glat[iy,ix])
+
+    # Now get the minimum distance.
+    ind= np.argmin(dist)            # get the index of the minimum value
+    ix = b[1][ind]; iy = b[0][ind]        # get the indicies of the relevant point in the search regions
+
+    # Return a named tuple with all the info: output
+
+    #nearest_pt = collections.namedtuple('nearest_pt', ['id','grp', 'glon', 'glat', 'mask', 'dist', 'ix', 'iy'])
+    p = (ix,iy, dist[ind]) #nearest_pt (id,grp,glon[iy,ix], glat[iy,ix], mask[iy,ix], dist[ind], ix, iy)
+    return p
+
+def find_nearest_point_from1D(lon_obs,lat_obs,lon_mod,lat_mod,mask,dx):
 
     """Utility: Find closest model point to obs using type of nearest neighbour search
                 lon and lat - the coordinates of the obs
@@ -238,13 +290,10 @@ def find_nearest_point_from1D (lon_obs,lat_obs,lon_mod,lat_mod,mask,dx):
     b = np.nonzero((lon_mod[:] < lon_obs + dx) & (lon_mod[:] > lon_obs - dx) & (lat_mod[:] < lat_obs + dx) & (
                 lat_mod[:] > lat_obs - dx) & (mask[:] > 0))
 
-
     npts = len(b[0])  # how many points are in the range?
-    print("npts")
-    print(npts)
 
     if (len(b[0]) ==0) :
-        print(lat_obs, lon_obs)
+        #print(lat_obs, lon_obs)
         return (np.nan, np.nan)
 
     dist = np.zeros(npts)   # initialize variable
@@ -265,3 +314,36 @@ def find_nearest_point_from1D (lon_obs,lat_obs,lon_mod,lat_mod,mask,dx):
     # dist should be metres
     p = (idx, dist[ind])  # nearest_pt (id,grp,glon[iy,ix], lat_mod[iy,ix], mask[iy,ix], dist[ind], ix, iy)
     return p
+
+def load_config_yaml(f):
+    configpath = os.path.normpath(os.path.dirname(__file__) + "/../config")
+    yamldata = load_yaml(os.path.join(configpath, f))
+    return yamldata
+
+def load_yaml(yamlfile):
+    """ Helper to load a YAML
+    """
+    def date_to_datetime(loader, node):
+        """ The default YAML loader interprets YYYY-MM-DD as a datetime.date object
+            Here we override this with a datetime.datetime object with implicit h,m,s=0,0,0 """
+        d = yaml.constructor.SafeConstructor.construct_yaml_timestamp(loader,node)
+        if type(d) is dt.date:
+            d = dt.datetime.combine(d, dt.time(0, 0, 0))
+        return d
+    yaml.constructor.SafeConstructor.yaml_constructors[u'tag:yaml.org,2002:timestamp'] = date_to_datetime
+    with open(yamlfile, 'r') as ya:
+        try:
+            yamldata = yaml.safe_load(ya)
+        except Exception as e:
+            print("Error importing YAML file {} {})".format(yamlfile,e))
+            raise
+    return yamldata
+
+# Function to find the closest date
+def find_closest_date(model_times, target_date):
+    return min(model_times, key=lambda x: abs(x - target_date))
+
+# Function to find the closest depth
+def find_closest_depth(obs_depth, possible_depths):
+    closest_depth = min(possible_depths, key=lambda x: abs(x - obs_depth))
+    return closest_depth

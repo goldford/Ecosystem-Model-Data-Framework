@@ -109,6 +109,7 @@ valid_years = (chl_years >= 2015) & (chl_years <= 2018)
 chl_years = chl_years[valid_years]
 chl_months = chl_months[valid_years]
 chl_days = chl_days[valid_years]
+chl_values = chl_values[valid_years]
 
 
 ####################### FIND CLOSEST MODEL POINT #########################
@@ -188,9 +189,10 @@ with open(output_file, mode='w', newline='', encoding='utf-8') as file:
 
     # Write the data rows
     for i in range(len(chl_years)):
-        writer.writerow([chl_years[i], chl_months[i], chl_days[i], chl_datetimes_pst[i], chl_lats[i], chl_lons[i], chl_datetimes_pst[i],
+        writer.writerow([chl_years[i], chl_months[i], chl_days[i], chl_datetimes_pst[i], chl_lats[i], chl_lons[i], chl_values[i],
                          mod_lons_nearest[i], mod_lats_nearest[i], mod_deps_nearest[i], mod_rows_nearest[i], mod_cols_nearest[i]])
 
+print("wrote file ", file)
 
 count_negative_999 = np.count_nonzero(mod_lons_nearest == -999)
 print("number of chla samples outside domain")
@@ -242,3 +244,42 @@ plt.savefig("..//figs//count_chla_pawlowicz_2015-2018.png", format='png', bbox_i
 plt.savefig("..//figs//count_chla_pawlowicz_2015-2018.pdf", format='pdf', bbox_inches='tight')
 
 plt.show()
+
+####################### VISUAL OF AVG CHLA BY DAY ########################
+# Combine into a DataFrame
+print(chl_years.shape, chl_months.shape, chl_days.shape, chl_values.shape)
+data = {
+    'year': chl_years,
+    'month': chl_months,
+    'day': chl_days,
+    'chl_value': chl_values,
+    'chl_obs_lat': chl_values
+}
+df = pd.DataFrame(data)
+
+# Create a column for day of the year (1 to 365/366)
+df['date'] = pd.to_datetime(df[['year', 'month', 'day']])
+df['day_of_year'] = df['date'].dt.dayofyear
+
+# Group by year and day of the year to calculate the average chl values
+daily_avg = df.groupby(['year', 'day_of_year'])['chl_value'].mean().reset_index()
+
+# Pivot the DataFrame to have days as rows and years as columns for easier plotting
+daily_avg_pivot = daily_avg.pivot(index='day_of_year', columns='year', values='chl_value')
+
+# Plotting
+plt.figure(figsize=(12, 6))
+for year in daily_avg['year'].unique():
+    yearly_data = daily_avg[daily_avg['year'] == year]
+    plt.scatter(yearly_data['day_of_year'], yearly_data['chl_value'], label=str(year), s=10)  # s is the size of the points
+
+plt.xlabel('Day of Year')
+plt.ylabel('Average Chlorophyll Value')
+plt.title('Average Chlorophyll Values by Day for Each Year')
+plt.legend(title='Year')
+plt.grid(True)
+plt.show()
+
+print(len(daily_avg))
+print(daily_avg)
+print(df)

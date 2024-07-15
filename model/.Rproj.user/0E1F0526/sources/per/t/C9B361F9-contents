@@ -1,0 +1,932 @@
+
+################################
+
+# Code for analyzing temperature-size scaling relationships.
+
+# Written by C.T. Kremer, last updated 10/2016
+
+################################
+
+# Contents:
+
+# 1) Set up
+
+# 2) Descriptive plots/analyses
+
+# 3) Eppley analyses
+
+# 4) MTE analyses
+
+# 5) Linking MTE to Eppley/quantile regressions
+
+#############################################
+
+#### 1) Set up libraries and tools ####
+
+library(ggplot2)
+library(lme4)
+library(pbkrtest)
+library(HLMdiag)
+library(MuMIn)
+library(multcomp)
+library(quantreg)
+library(bbmle)
+library(dplyr)
+library(gridExtra)
+
+# Function for testing differences in regression slopes (see Zar 1999)
+test.slp<-function(est.B1,se.B1,hyp.B1,df.B1){
+	tval<-(est.B1-hyp.B1)/se.B1	
+	est<-min(c(pt(tval,df=df.B1),pt(tval,df=df.B1,lower.tail=F)))
+	est/2	# 2-tailed test
+}
+
+#### Read in data:
+
+dat<-read.csv("LO-16-0291_Supplement_temp_size_scaling.csv")
+dat$log.m<-log10(exp(dat$ln.m))
+head(dat)
+
+# subset data for MTE analyses
+mte.dat<-dat[dat$mte.analysis==1,]
+dim(mte.dat)
+
+############################################
+
+#### 2) Descriptive plots/analyses ####
+
+# Calculate sample sizes:
+
+table(dat[,c('group')])
+#  cyanobacteria          diatoms  dinoflagellates           greens 
+#            968             1858              577              805
+
+table(dat[,c('environment')])
+# freshwater     marine 
+#       1507       2701
+
+
+### Plots:
+
+# Figure S.1: Mass in micrograms:
+g1<-ggplot(mte.dat,aes(y=log.m,group))+
+		geom_violin(aes(fill=group),adjust=4)+
+		scale_fill_manual(values=c('darkblue','brown','red','green3'),
+			guide=FALSE)+
+		scale_y_continuous(expression(paste("Dry weight,   log10(",mu,g," C)",sep="")))+
+		scale_x_discrete('')+
+		theme_bw()+
+		theme(legend.position="none",
+				axis.text.x=element_text(angle=25,vjust=0.5,hjust=0.5))
+g1
+
+
+#############################################
+
+#### 3) Eppley analyses ####
+
+# Quantile regressions:
+
+# Run weighted 99th quantile regressions:
+#	- avoid testing interactions due to limited data.
+qr.99.1<-rq(ln.r~1,data=dat,tau=0.99,weights=dat$wts)
+qr.99.t<-rq(ln.r~temperature,data=dat,tau=0.99,weights=dat$wts)
+qr.99.tM<-rq(ln.r~temperature+ln.m,
+						data=dat,tau=0.99,weights=dat$wts)
+qr.99.tg<-rq(ln.r~temperature+group,
+						data=dat,tau=0.99,weights=dat$wts)
+qr.99.gM<-rq(ln.r~group+ln.m,
+						data=dat,tau=0.99,weights=dat$wts)
+qr.99.tgM<-rq(ln.r~temperature+group+ln.m,
+						data=dat,tau=0.99,weights=dat$wts)
+
+# Model comparisons
+AICctab(qr.99.1,qr.99.t,qr.99.tM,qr.99.tg,qr.99.gM,qr.99.tgM)
+
+# Model summary:
+summary(qr.99.tgM)
+
+# confidence intervals:
+rq(ln.r~temperature+group+ln.m,data=dat,tau=0.99,weights=dat$wts,ci=T)
+
+# Save coefficient estimates
+cf.n<-coef(qr.99.tgM)	# coefficients of new best 99th qr
+
+# Test significance of 3-covariate, main effects model compared against intercept only model
+anova(qr.99.1,qr.99.tgM)	# better.
+
+# Test significance of each main effect:
+anova(qr.99.tM,qr.99.tgM)	# group significant
+anova(qr.99.tg,qr.99.tgM)	# mass significant
+anova(qr.99.gM,qr.99.tgM)	# temperature significant
+
+
+# stability of coefficient estimates:
+taus<-seq(1,99)/100
+fit1<-summary(rq(ln.r~temperature+group+ln.m,data=dat,tau=taus,weights=dat$wts))
+p1<-plot(fit1,parm=2,main='QR temperature coefficient plot',xlab='Quantile',ylab='Coefficient',level=0.95)
+
+efit1<-summary(rq(ln.r~temperature,data=dat,tau=taus))
+ep1<-plot(efit1,parm=2,main='QR temperature coefficient plot',xlab='Quantile',ylab='Coefficient',level=0.95)
+
+p1b<-p1[,1:3,]
+p1c<-as.data.frame(t(p1b))
+names(p1c)<-c('coef','lwr','upr')
+
+ep1b<-ep1[,1:3,]
+ep1c<-as.data.frame(t(ep1b))
+names(ep1c)<-c('coef','lwr','upr')
+
+# process row names
+f1<-function(x) strsplit(x," ")[[1]][2]
+rn<-row.names(p1c)
+p1c$tau<-as.numeric(sapply(rn,f1))
+ern<-row.names(ep1c)
+ep1c$tau<-as.numeric(sapply(ern,f1))
+
+# ols results
+p1d<-p1c[nrow(p1c),]
+p1c<-p1c[-nrow(p1c),]
+ep1d<-ep1c[nrow(ep1c),]
+ep1c<-ep1c[-nrow(ep1c),]
+
+# polygon
+xa<-c(p1c$tau,rev(p1c$tau))
+ya<-c(p1c$lwr,rev(p1c$upr))
+exa<-c(ep1c$tau,rev(ep1c$tau))
+eya<-c(ep1c$lwr,rev(ep1c$upr))
+
+par(mfrow=c(1,2))
+
+## Bissinger style:
+plot(coef~tau,data=ep1c,type='l',xlim=c(0,1),ylim=c(0,0.07),main='Eppley \n(classic)',xaxs='i',yaxs='i',ylab='Temperature coefficient',xlab='Quantile')
+polygon(exa,eya,col='gray',border=gray(0.5))
+lines(coef~tau,data=ep1c,type='l',ylim=c(0,0.07))
+abline(0.0631,0,col='red',lty=3)
+text(0.2,0.0631+0.003,col='red',cex=0.6,'Eppley prediction')
+abline(0.0498,0,col='blue',lty=2)
+text(0.18,0.0498+0.003,col='blue',cex=0.6,'MTE prediction')
+
+## New Eppley fit:
+plot(coef~tau,data=p1c,type='l',xlim=c(0,1),ylim=c(0,0.07),main='Eppley \n(group & mass)',xaxs='i',yaxs='i',ylab='Temperature coefficient',xlab='Quantile')
+polygon(xa,ya,col='gray',border=gray(0.5))
+lines(coef~tau,data=p1c,type='l',ylim=c(0,0.07))
+abline(0.0631,0,col='red',lty=3)
+text(0.2,0.0631+0.003,col='red',cex=0.6,'Eppley prediction')
+abline(0.0498,0,col='blue',lty=2)
+text(0.18,0.0498+0.003,col='blue',cex=0.6,'MTE prediction')
+
+
+
+### Close ups:
+
+par(mfrow=c(1,2))
+
+## New Eppley fit:
+plot(coef~tau,data=p1c,type='l',xlim=c(0.9,1),ylim=c(0,0.07),main='Eppley \n(group & mass)',xaxs='i',yaxs='i',ylab='Temperature coefficient',xlab='Quantile')
+polygon(xa,ya,col='gray',border=gray(0.5))
+lines(coef~tau,data=p1c,type='l',ylim=c(0,0.07))
+abline(0.0631,0,col='red',lty=3)
+text(0.2,0.0631+0.003,col='red',cex=0.6,'Eppley prediction')
+abline(0.0498,0,col='blue',lty=2)
+text(0.18,0.0498+0.003,col='blue',cex=0.6,'MTE prediction')
+
+## Bissinger style:
+plot(coef~tau,data=ep1c,type='l',xlim=c(0.9,1),ylim=c(0,0.07),main='Eppley \n(classic)',xaxs='i',yaxs='i',ylab='Temperature coefficient',xlab='Quantile')
+polygon(exa,eya,col='gray',border=gray(0.5))
+lines(coef~tau,data=ep1c,type='l',ylim=c(0,0.07))
+abline(0.0631,0,col='red',lty=3)
+text(0.2,0.0631+0.003,col='red',cex=0.6,'Eppley prediction')
+abline(0.0498,0,col='blue',lty=2)
+text(0.18,0.0498+0.003,col='blue',cex=0.6,'MTE prediction')
+
+
+
+
+###### Curves on original data @ multiple quantiles
+
+
+# Temperature-only
+
+par(mfrow=c(1,1))
+plot(ln.r~temperature,data=dat,cex=0.4,col=alpha('darkgray',0.3),main='',xlab='Temperature',ylab='ln(growth rate)',ylim=c(-4.5,2),xlim=c(-3,40))
+taus<-c(0.01,seq(0.25,0.75,0.25),0.99)
+for(i in 1:length(taus)){
+  sm<-summary(rq(ln.r~temperature,data=dat,tau=taus[i]))
+  cfs<-coef(sm)
+  curve((cfs[1]+cfs[2]*x),0,40,add=T,col='black')
+  text(-2,(cfs[1]+cfs[2]*-2),100*taus[i],cex=0.7)
+}
+lm1<-lm(ln.r~temperature,data=dat)
+curve(coef(lm1)[1]+coef(lm1)[2]*x,0,40,col='purple',add=T)
+
+
+# functional group model
+
+par(mfrow=c(2,2))
+taus<-c(0.01,seq(0.25,0.75,0.25),0.99)
+
+plot(ln.r~temperature,data=dat[dat$group=='Cyanobacteria',],cex=0.4,col=alpha('darkblue',0.3),main='Cyanobacteria',xlab='Temperature',ylab='ln(growth rate)',ylim=c(-4.5,2),xlim=c(-3,40))
+wt<-mean(dat$ln.m[dat$group=='Cyanobacteria'])
+for(i in 1:length(taus)){
+  sm<-summary(rq(ln.r~temperature+group+ln.m,data=dat,tau=taus[i],weights=dat$wts))
+  cfs<-coef(sm)
+  curve((cfs[1]+cfs[2]*x+cfs[6]*wt),0,40,add=T,col='black')
+  text(-2,(cfs[1]+cfs[2]*-2+cfs[6]*wt),100*taus[i],cex=0.7)
+}
+lm1<-lm(ln.r~temperature,data=dat[dat$group=='Cyanobacteria',])
+curve(coef(lm1)[1]+coef(lm1)[2]*x,0,40,col='purple',add=T)
+
+plot(ln.r~temperature,data=dat[dat$group=='Diatoms',],cex=0.4,col=alpha('brown',0.3),main='Diatoms',xlab='Temperature',ylab='ln(growth rate)',ylim=c(-4.5,2),xlim=c(-3,40))
+wt<-mean(dat$ln.m[dat$group=='Diatoms'])
+for(i in 1:length(taus)){
+  sm<-summary(rq(ln.r~temperature+group+ln.m,data=dat,tau=taus[i],weights=dat$wts))
+  cfs<-coef(sm)
+  curve((cfs[1]+cfs[2]*x+cfs[3]+cfs[6]*wt),0,40,add=T,col='black')
+  text(-2,(cfs[1]+cfs[2]*-2+cfs[3]+cfs[6]*wt),100*taus[i],cex=0.7)
+}
+lm1<-lm(ln.r~temperature,data=dat[dat$group=='Diatoms',])
+curve(coef(lm1)[1]+coef(lm1)[2]*x,0,40,col='purple',add=T)
+
+plot(ln.r~temperature,data=dat[dat$group=='Greens',],cex=0.4,col=alpha('green3',0.3),main='Greens',xlab='Temperature',ylab='ln(growth rate)',ylim=c(-4.5,2),xlim=c(-3,40))
+wt<-mean(dat$ln.m[dat$group=='Greens'])
+for(i in 1:length(taus)){
+  sm<-summary(rq(ln.r~temperature+group+ln.m,data=dat,tau=taus[i],weights=dat$wts))
+  cfs<-coef(sm)
+  curve((cfs[1]+cfs[2]*x+cfs[5]+cfs[6]*wt),0,40,add=T,col='black')
+  text(-2,(cfs[1]+cfs[2]*-2+cfs[5]+cfs[6]*wt),100*taus[i],cex=0.7)
+}
+lm1<-lm(ln.r~temperature,data=dat[dat$group=='Greens',])
+curve(coef(lm1)[1]+coef(lm1)[2]*x,0,40,col='purple',add=T)
+
+plot(ln.r~temperature,data=dat[dat$group=='Dinoflagellates',],cex=0.4,col=alpha('red',0.3),main='Dinoflagellates',xlab='Temperature',ylab='ln(growth rate)',ylim=c(-4.5,2),xlim=c(-3,40))
+wt<-mean(dat$ln.m[dat$group=='Dinoflagellates'])
+for(i in 1:length(taus)){
+  sm<-summary(rq(ln.r~temperature+group+ln.m,data=dat,tau=taus[i],weights=dat$wts))
+  cfs<-coef(sm)
+  curve((cfs[1]+cfs[2]*x+cfs[4]+cfs[6]*wt),0,40,add=T,col='black')
+  text(-2,(cfs[1]+cfs[2]*-2+cfs[4]+cfs[6]*wt),100*taus[i],cex=0.7)
+}
+lm1<-lm(ln.r~temperature,data=dat[dat$group=='Dinoflagellates',])
+curve(coef(lm1)[1]+coef(lm1)[2]*x,0,40,col='purple',add=T)
+
+
+
+
+
+
+### Repeat Bissinger et al. 2008 analysis
+
+# 99th quantile regression, ignore size, functional group, weights
+biss<-rq(ln.r~temperature,data=dat,tau=0.99,ci=T)	
+biss
+summary(biss)
+
+# save coefficients
+cf.b<-coef(biss)
+
+
+
+### Plot Eppley analysis results:
+
+
+# Figure 1A: Temperature effects
+
+# Separate panels:
+par(mfrow=c(2,2))
+
+# cyanobacteria
+par(mai=c(0.2,0.7,0.7,0))
+bob<-dat[dat$group=='Cyanobacteria',]
+plot(exp(ln.r)~temperature,data=bob,ylim=c(0.2,7.6),xlim=c(-2,40.5),
+	cex=0.5,pch=bob$symbol,xaxt="n",mgp=c(3,0.7,0),
+	col=alpha(bob$color,alpha=0.1),
+	bg=alpha(bob$color,alpha=0.15),
+	xlab="",
+	ylab="",
+	main='\n\nCyanobacteria')
+title(ylab=expression(paste('Growth rate (d'^'-1',')')),line=2)
+
+curve(0.81*exp(0.0613*x),-5,45,lty=3,add=T)				# Old bissinger curve
+curve(exp(cf.b[[1]]+cf.b[[2]]*x),-5,45,lty=2,add=T)		# new bissinger style curve.
+
+mn.M<-mean(dat$ln.m[dat$group=='Cyanobacteria'])
+lw<-min(dat$temperature[dat$group=='Cyanobacteria'])
+up<-max(dat$temperature[dat$group=='Cyanobacteria'])
+curve(exp(cf.n[[1]]+cf.n[[2]]*x+cf.n[[6]]*mn.M),lw,up,add=T,col='darkblue',lwd=2.5,lty=1)
+
+axis(1,labels=F)
+
+
+# diatoms
+par(mai=c(0.2,0.2,0.7,0.5))
+bob<-dat[dat$group=='Diatoms',]
+plot(exp(ln.r)~temperature,data=bob,ylim=c(0.2,7.6),xlim=c(-2,40.5),
+	cex=0.5,pch=bob$symbol,xaxt="n",yaxt="n",
+	col=alpha(bob$color,alpha=0.1),
+	bg=alpha(bob$color,alpha=0.15),
+	xlab='Temperature (˚C)',ylab='',main='\n\nDiatoms')
+curve(0.81*exp(0.0613*x),-5,45,lty=3,add=T)				# Old bissinger curve
+curve(exp(cf.b[[1]]+cf.b[[2]]*x),-5,45,lty=2,add=T)		# new bissinger style curve.
+
+mn.M<-mean(dat$ln.m[dat$group=='Diatoms'])
+lw<-min(dat$temperature[dat$group=='Diatoms'])
+up<-max(dat$temperature[dat$group=='Diatoms'])
+curve(exp(cf.n[[1]]+cf.n[[2]]*x+cf.n[[6]]*mn.M+cf.n[[3]]),lw,up,add=T,col='brown',lwd=2.5)
+
+axis(1,labels=F)
+axis(2,labels=F)
+
+
+# dinos
+par(mai=c(0.7,0.7,0.2,0))
+bob<-dat[dat$group=='Dinoflagellates',]
+plot(exp(ln.r)~temperature,data=bob,ylim=c(0.2,7.6),xlim=c(-2,40.5),
+	cex=0.5,pch=bob$symbol,mgp=c(3,0.7,0),
+	col=alpha(bob$color,alpha=0.1),
+	bg=alpha(bob$color,alpha=0.15),
+	xlab='',
+	ylab='',
+	main='Dinoflagellates')
+title(xlab='Temperature (˚C)',
+	ylab=expression(paste('Growth rate (d'^'-1',')')),line=2)
+	
+curve(0.81*exp(0.0613*x),-5,45,lty=3,add=T)				# Old bissinger curve
+curve(exp(cf.b[[1]]+cf.b[[2]]*x),-5,45,lty=2,add=T)		# new bissinger style curve.
+
+mn.M<-mean(dat$ln.m[dat$group=='Dinoflagellates'])
+lw<-min(dat$temperature[dat$group=='Dinoflagellates'])
+up<-max(dat$temperature[dat$group=='Dinoflagellates'])
+curve(exp(cf.n[[1]]+cf.n[[2]]*x+cf.n[[6]]*mn.M+cf.n[[4]]),lw,up,add=T,col='red',lwd=2.5,lty=1)
+
+
+
+# greens
+par(mai=c(0.7,0.2,0.2,0.5))
+bob<-dat[dat$group=='Greens',]
+plot(exp(ln.r)~temperature,data=bob,ylim=c(0.2,7.6),xlim=c(-2,40.5),
+	cex=0.5,pch=bob$symbol,yaxt="n",mgp=c(3,0.7,0),
+	col=alpha(bob$color,alpha=0.1),
+	bg=alpha(bob$color,alpha=0.15),
+	xlab='',ylab="",main='Greens')
+title(xlab='Temperature (˚C)',line=2)
+
+curve(0.81*exp(0.0613*x),-5,45,lty=3,add=T)				# Old bissinger curve
+curve(exp(cf.b[[1]]+cf.b[[2]]*x),-5,45,lty=2,add=T)		# new bissinger style curve.
+
+mn.M<-mean(dat$ln.m[dat$group=='Greens'])
+lw<-min(dat$temperature[dat$group=='Greens'])
+up<-max(dat$temperature[dat$group=='Greens'])
+curve(exp(cf.n[[1]]+cf.n[[2]]*x+cf.n[[6]]*mn.M+cf.n[[5]]),lw,up,add=T,col='green3',lwd=2.5,lty=1)
+
+axis(2,labels=F)
+
+
+legend(-3.7,7.8,cex=0.6,legend=c('99th quantile regression','Bissinger et al. 2008'),lty=c(2,3),col=c('black','black'),lwd=c(1,1),bty="n")
+
+
+
+###
+
+# Figure 1B: Mass effects
+
+# Separate panels:
+par(mfrow=c(2,2))
+
+cf.n<-coef(qr.99.tgM)	# coefficients of new best 99th qr
+
+# cyanos
+par(mai=c(0.2,0.7,0.7,0))
+bob<-dat[dat$group=='Cyanobacteria',]
+plot(exp(ln.r)~ln.m,data=bob,ylim=c(0,7),xlim=c(-17,2),cex=0.5,
+	col=alpha(bob$color,alpha=0.1),pch=bob$symbol,xaxt="n",mgp=c(3,0.7,0),
+	bg=alpha(bob$color,alpha=0.15),
+	xlab='',
+	ylab='',main='\n\nCyanobacteria')
+title(ylab=expression(paste('Growth rate (d'^'-1',')')),line=2)
+axis(1,labels=F)
+
+mn.T<-mean(dat$temperature[dat$group=='Cyanobacteria'])
+lw<-min(dat$ln.m[dat$group=='Cyanobacteria'])
+up<-max(dat$ln.m[dat$group=='Cyanobacteria'])
+curve(exp(cf.n[[1]]+cf.n[[2]]*mn.T+cf.n[[6]]*x),lw,up,add=T,col='darkblue',lwd=2.5,lty=1)
+
+
+# diatoms
+par(mai=c(0.2,0.2,0.7,0.5))
+bob<-dat[dat$group=='Diatoms',]
+plot(exp(ln.r)~ln.m,data=bob,ylim=c(0,7),xlim=c(-17,2),cex=0.5,
+	pch=bob$symbol,xaxt="n",yaxt="n",
+	col=alpha(bob$color,alpha=0.1),
+	bg=alpha(bob$color,alpha=0.15),
+	xlab='',
+	ylab='',main='\n\nDiatoms')
+axis(1,labels=F)
+axis(2,labels=F)
+
+mn.T<-mean(dat$temperature[dat$group=='Diatoms'])
+lw<-min(dat$ln.m[dat$group=='Diatoms'])
+up<-max(dat$ln.m[dat$group=='Diatoms'])
+curve(exp(cf.n[[1]]+cf.n[[6]]*x+cf.n[[2]]*mn.T+cf.n[[3]]),lw,up,add=T,col='brown',lwd=2.5)
+
+
+# dinos
+par(mai=c(0.7,0.7,0.2,0))
+bob<-dat[dat$group=='Dinoflagellates',]
+plot(exp(ln.r)~ln.m,data=bob,ylim=c(0,7),xlim=c(-17,2),cex=0.5,
+	pch=bob$symbol,mgp=c(3,0.7,0),
+	col=alpha(bob$color,alpha=0.1),
+	bg=alpha(bob$color,alpha=0.15),
+	xlab='',
+	ylab='',
+	main='Dinoflagellates')
+title(xlab=expression(paste('Mass, ln(',mu,'g)',sep='')),
+	ylab=expression(paste('Growth rate (d'^'-1',')')),line=2)
+
+mn.T<-mean(dat$temperature[dat$group=='Dinoflagellates'])
+lw<-min(dat$ln.m[dat$group=='Dinoflagellates'])
+up<-max(dat$ln.m[dat$group=='Dinoflagellates'])
+curve(exp(cf.n[[1]]+cf.n[[6]]*x+cf.n[[2]]*mn.T+cf.n[[4]]),lw,up,add=T,col='red',lwd=2.5,lty=1)
+
+
+# greens
+par(mai=c(0.7,0.2,0.2,0.5))
+bob<-dat[dat$group=='Greens',]
+plot(exp(ln.r)~ln.m,data=bob,ylim=c(0,7),xlim=c(-17,2),cex=0.5,
+	pch=bob$symbol,yaxt="n",mgp=c(3,0.7,0),
+	col=alpha(bob$color,alpha=0.1),
+	bg=alpha(bob$color,alpha=0.15),
+	xlab='',
+	ylab=expression(paste('Growth rate (d'^'-1',')')),
+	main='Greens')
+title(xlab=expression(paste('Mass, ln(',mu,'g)',sep='')),line=2)
+axis(2,label=F)
+
+mn.T<-mean(dat$temperature[dat$group=='Greens'])
+lw<-min(dat$ln.m[dat$group=='Greens'])
+up<-max(dat$ln.m[dat$group=='Greens'])
+curve(exp(cf.n[[1]]+cf.n[[6]]*x+cf.n[[2]]*mn.T+cf.n[[5]]),lw,up,add=T,col='green3',lwd=2.5,lty=1)
+
+
+###
+
+# Figure 2: Difference between new and old fits:
+
+dev.new()
+
+tmp<-dat[dat$group=='Diatoms',]
+mn.M<-mean(tmp$ln.m)
+lw<-min(tmp$temperature)
+up<-max(tmp$temperature)
+tfunc<-function(x){
+	(exp(cf.n[[1]]+cf.n[[2]]*x+cf.n[[6]]*mn.M+cf.n[[3]])-0.81*exp(0.0613*x))
+}
+curve(tfunc(x),lw,up,col='brown',lwd=2.5,xlim=c(-5,40),ylim=c(-6,0.5),xlab='Temperature (˚C)',ylab='Change in growth rate')
+abline(0,0)
+
+legend(-3,-3.25,legend=c("Diatoms","Green algae","Cyanobacteria","Dinoflagellates"),lty=c(1,4,3,2),col=c('brown','green3','darkblue','red'),cex=0.7)
+
+
+tmp<-dat[dat$group=='Greens',]
+mn.M<-mean(tmp$ln.m)
+lw<-min(tmp$temperature)
+up<-max(tmp$temperature)
+tfunc<-function(x){
+	(exp(cf.n[[1]]+cf.n[[2]]*x+cf.n[[6]]*mn.M+cf.n[[5]])-0.81*exp(0.0613*x))
+}
+curve(tfunc(x),lw,up,col='green3',lwd=2.5,lty=4,add=T)
+
+tmp<-dat[dat$group=='Dinoflagellates',]
+mn.M<-mean(tmp$ln.m)
+lw<-min(tmp$temperature)
+up<-max(tmp$temperature)
+tfunc<-function(x){
+	(exp(cf.n[[1]]+cf.n[[2]]*x+cf.n[[6]]*mn.M+cf.n[[4]])-0.81*exp(0.0613*x))
+}
+curve(tfunc(x),lw,up,col='red',lwd=2.5,lty=2,add=T)
+
+tmp<-dat[dat$group=='Cyanobacteria',]
+mn.M<-mean(tmp$ln.m)
+lw<-min(tmp$temperature)
+up<-max(tmp$temperature)
+tfunc<-function(x){
+	(exp(cf.n[[1]]+cf.n[[2]]*x+cf.n[[6]]*mn.M)-0.81*exp(0.0613*x))
+}
+curve(tfunc(x),lw,up,col='darkblue',lwd=2.5,lty=3,add=T)
+
+
+
+
+########################################
+
+#### 4) MTE Analyses ####
+
+# summary tables
+table(mte.dat[,c('group')])
+table(mte.dat[,c('environment')])
+
+
+# As a mixed effects model with a random effect for species.
+
+mm0<-lmer(ln.r~(1|name),data=mte.dat)
+mm1<-lmer(ln.r~inv.kT+(1|name),data=mte.dat)
+mm2<-lmer(ln.r~ln.m+(1|name),data=mte.dat)
+mm3<-lmer(ln.r~ln.m+inv.kT+(1|name),data=mte.dat)
+mm4<-lmer(ln.r~ln.m+inv.kT+group+(1|name),data=mte.dat)		# top model
+mm5<-lmer(ln.r~ln.m+group+(1|name),data=mte.dat)
+mm6<-lmer(ln.r~inv.kT+group+(1|name),data=mte.dat)			# almost top model
+mm7<-lmer(ln.r~ln.m+inv.kT*group+(1|name),data=mte.dat)
+mm8<-lmer(ln.r~ln.m*inv.kT+group+(1|name),data=mte.dat)		# interaction between mass and temperature?
+
+
+# mm4 is best (slightly better than mm6) - suggests weak effect of mass
+AICctab(mm0,mm1,mm2,mm3,mm4,mm5,mm6,mm7,mm8)
+
+# Best model
+summary(mm4)
+
+# Confidence intervals
+confint(mm4)
+
+# Save coefficients:
+cfs<-summary(mm4)$coefficients[,1]
+
+# Diagnostic plots
+#plot(mm4,group~resid(.,scaled=T))
+#plot(mm4,resid(.,scaled=T)~inv.kT)
+#plot(mm4,resid(.,scaled=T)~ln.m)
+
+
+### full main effects model better than intercept
+PBmodcomp(mm4,mm0,nsim=1000)
+
+# Parametric bootstrap test; time: 29.49 sec; samples: 1000 extremes: 0;
+# large : ln.r ~ ln.m + inv.kT + group + (1 | name)
+# small : ln.r ~ (1 | name)
+         # stat df   p.value    
+# LRT    121.08  5 < 2.2e-16 ***
+# PBtest 121.08     0.000999 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+### test significance of group
+PBmodcomp(mm4,mm3,nsim=1000)
+
+# Parametric bootstrap test; time: 35.12 sec; samples: 1000 extremes: 0;
+# large : ln.r ~ ln.m + inv.kT + group + (1 | name)
+# small : ln.r ~ ln.m + inv.kT + (1 | name)
+         # stat df   p.value    
+# LRT    75.954  3 2.22e-16 ***
+# PBtest 75.954    0.000999 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+### test significance of inv.kT
+PBmodcomp(mm4,mm5,nsim=1000)
+
+# Parametric bootstrap test; time: 36.57 sec; samples: 1000 extremes: 0;
+# large : ln.r ~ ln.m + inv.kT + group + (1 | name)
+# small : ln.r ~ ln.m + group + (1 | name)
+         # stat df   p.value    
+# LRT    69.221  1 < 2.2e-16 ***
+# PBtest 69.221     0.000999 ***
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+### test significance of ln.m
+PBmodcomp(mm4,mm6,nsim=1000)
+
+# Parametric bootstrap test; time: 30.08 sec; samples: 1000 extremes: 0;
+# large : ln.r ~ ln.m + inv.kT + group + (1 | name)
+# small : ln.r ~ inv.kT + group + (1 | name)
+        # stat df  p.value    
+# LRT    9.0424  1 0.002638 **
+# PBtest 9.0424    0.004995 **
+# ---
+# Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+
+### Test for interaction between group and inv.kT
+# - lack of significance is consistent with AICctab
+PBmodcomp(mm7,mm4,nsim=1000)
+
+# Parametric bootstrap test; time: 32.19 sec; samples: 1000 extremes: 966;
+# large : ln.r ~ ln.m + inv.kT * group + (1 | name)
+# small : ln.r ~ ln.m + inv.kT + group + (1 | name)
+         # stat df p.value
+# LRT    0.5262  3  0.9131
+# PBtest 0.5262     0.9261
+
+
+# Test significance of mass:temperature interaction effect
+PBmodcomp(mm8,mm4,nsim=1000)
+
+# Parametric bootstrap test; time: 27.53 sec; samples: 1000 extremes: 408;
+# large : ln.r ~ ln.m * inv.kT + group + (1 | name)
+# small : ln.r ~ ln.m + inv.kT + group + (1 | name)
+# stat df p.value
+# LRT    0.7557  1  0.3847
+# PBtest 0.7557     0.4086
+
+
+### Explanatory power of full model
+
+r.squaredGLMM(mm4)
+#       R2m       R2c 
+# 0.3316334 0.5245424
+# Rm = marginal (fixed effects)
+# Rc = conditional (fixed + random)
+
+
+# Post-hoc test of differences between groups:
+t1<-glht(mm4,linfct=mcp(group="Tukey"))
+summary(t1)
+
+
+
+### Plot MTE results
+
+# Figure 3: Temperature & Mass effects
+
+par(mfrow=c(1,2))
+
+par(mai=c(0.7,0.7,0.2,0.5))
+plot(ln.r~inv.kT,data=mte.dat,cex=0.6,pch=mte.dat$symbol,
+	col=alpha(colors,alpha=0.25),mgp=c(3,0.7,0),
+	bg=alpha(colors,alpha=0.15),
+	ylim=c(-2.5,2.5),xlim=c(37,42.5),
+	ylab='',
+	xlab='')
+title(xlab='Temperature (1/kT)',
+	ylab=expression(paste('ln(Growth rate d'^'-1',')')),line=2)
+
+mean.ln.m<-mean(mte.dat$ln.m[mte.dat$group=='Dinoflagellates'])
+curve(cfs[[1]]+cfs[[5]]+cfs[[2]]*mean.ln.m+cfs[[3]]*x,min(mte.dat$inv.kT[mte.dat$group=='Dinoflagellates']),max(mte.dat$inv.kT[mte.dat$group=='Dinoflagellates']),col='red',lty=2,add=T,lwd=2)
+
+mean.ln.m<-mean(mte.dat$ln.m[mte.dat$group=='Diatoms'])
+curve(cfs[[1]]+cfs[[4]]+cfs[[2]]*mean.ln.m+cfs[[3]]*x,min(mte.dat$inv.kT[mte.dat$group=='Diatoms']),max(mte.dat$inv.kT[mte.dat$group=='Diatoms']),col='brown',lty=1,add=T,lwd=2)
+
+mean.ln.m<-mean(mte.dat$ln.m[mte.dat$group=='Cyanobacteria'])
+curve(cfs[[1]]+cfs[[2]]*mean.ln.m+cfs[[3]]*x,min(mte.dat$inv.kT[mte.dat$group=='Cyanobacteria']),max(mte.dat$inv.kT[mte.dat$group=='Cyanobacteria']),col='darkblue',lty=3,add=T,lwd=2)
+
+mean.ln.m<-mean(mte.dat$ln.m[mte.dat$group=='Greens'])
+curve(cfs[[1]]+cfs[[6]]+cfs[[2]]*mean.ln.m+cfs[[3]]*x,min(mte.dat$inv.kT[mte.dat$group=='Greens']),max(mte.dat$inv.kT[mte.dat$group=='Greens']),col='green3',lty=4,add=T,lwd=2)
+
+
+par(mai=c(0.7,0.0,0.2,1.2))
+plot(ln.r~ln.m,data=mte.dat,cex=0.6,pch=mte.dat$symbol,
+	col=alpha(colors,alpha=0.2),yaxt="n",mgp=c(3,0.7,0),
+	bg=alpha(colors,alpha=0.1),
+	ylim=c(-2.5,2.5),main='',
+	ylab='',
+	xlab='')
+title(xlab=expression(paste('Mass, ln(',mu,'g)',sep='')),line=2)
+axis(2,labels=F)
+
+mean.inv.kT<-mean(mte.dat$inv.kT[mte.dat$group=='Dinoflagellates'])
+curve(cfs[[1]]+cfs[[5]]+cfs[[3]]*mean.inv.kT+cfs[[2]]*x,min(mte.dat$ln.m[mte.dat$group=='Dinoflagellates']),max(mte.dat$ln.m[mte.dat$group=='Dinoflagellates']),col='red',lty=2,add=T,lwd=2)
+
+mean.inv.kT<-mean(mte.dat$inv.kT[mte.dat$group=='Diatoms'])
+curve(cfs[[1]]+cfs[[4]]+cfs[[3]]*mean.inv.kT+cfs[[2]]*x,min(mte.dat$ln.m[mte.dat$group=='Diatoms']),max(mte.dat$ln.m[mte.dat$group=='Diatoms']),col='brown',lty=1,add=T,lwd=2)
+
+mean.inv.kT<-mean(mte.dat$inv.kT[mte.dat$group=='Cyanobacteria'])
+curve(cfs[[1]]+cfs[[3]]*mean.inv.kT+cfs[[2]]*x,min(mte.dat$ln.m[mte.dat$group=='Cyanobacteria']),max(mte.dat$ln.m[mte.dat$group=='Cyanobacteria']),col='darkblue',lty=3,add=T,lwd=2)
+
+mean.inv.kT<-mean(mte.dat$inv.kT[mte.dat$group=='Greens'])
+curve(cfs[[1]]+cfs[[6]]+cfs[[3]]*mean.inv.kT+cfs[[2]]*x,min(mte.dat$ln.m[mte.dat$group=='Greens']),max(mte.dat$ln.m[mte.dat$group=='Greens']),col='green3',lty=4,add=T,lwd=2)
+
+
+legend(-6.95,2.75,pch=c(21,22,24,23),
+	legend=c("Diatoms","Green algae","Cyanobacteria","Dinoflagellates"),
+	col=c('brown','green3','darkblue','red'),
+	pt.bg=alpha(c('brown','green3','darkblue','red'),alpha=0.2),
+	lty=c(1,4,3,2),cex=0.65,bty="n")
+
+
+
+
+#############################
+
+#### 5) Linking MTE to Eppley/quantile regressions ####
+
+# Extract numerical slope estimates from various regressions:
+# activation energies, exponents
+
+###
+
+# Target regressions:
+
+# 1)	 	MTE 1/kT 
+# 2)	 	99th Quantile (all temperature data)
+# 3) 	99th Quantile (Bissinger, all temperature data)
+
+
+# Re-fit best models:
+
+# 1)	 MTE 1/kT 
+md2<-lmer(ln.r ~ ln.m + inv.kT + group + (1 | name),data=mte.dat)
+cf2<-summary(md2)$coefficients[,1]
+
+# 2) 99th Quantile (all temperature data)
+q99w<-rq(ln.r~ln.m+temperature+group,data=dat,tau=0.99,weights=dat$wts)
+summary(q99w,ci=T)
+summary(q99w,se="boot")
+
+# hocus-pocus to extract desired 95% confidence interval, brought to you by quantreg...
+fit0<-summary(rq(ln.r~temperature+group+ln.m,data=dat,tau=c(0.1,0.99),weights=dat$wts))
+p2<-plot(fit0,parm=2,level=0.95)
+p2[,,2]
+
+# 3) 99th Quantile (Bissinger style)
+q99wB<-rq(ln.r~temperature,data=dat,tau=0.99,ci=T)
+summary(q99wB)
+
+# hocus-pocus to extract desired 95% confidence interval, brought to you by quantreg...
+fit0B<-summary(rq(ln.r~temperature,data=dat,tau=c(0.1,0.99)))
+p2B<-plot(fit0B,parm=2,level=0.95)
+p2B[,,2]
+
+# intercept CI's
+p1B<-plot(fit0B,parm=1,level=0.95)
+p1B[,,2]
+
+
+### Calculate activation energies:
+
+ae<-rep(NA,3)
+ae.se<-rep(NA,3)
+ae.ci.lw<-ae.ci.up<-rep(NA,3)
+
+# 1) MTE 1/kT 
+ae[1]<-cf2[[3]]*-1
+ae.se[1]<-summary(md2)$coefficients[3,2]
+ae.ci.lw[1]<- -1*confint(md2)[5,2]
+ae.ci.up[1]<- -1*confint(md2)[5,1]
+
+# 2) 99th Quantile (all temperature data)
+ae[2]<-coef(q99w)[[3]]*(273*273*8.6173*10^-5)
+ae.se[2]<-summary(q99w)$coefficients[3,2]*(273*273*8.6173*10^-5)
+ae.ci.lw[2]<-p2[,2,2]*(273*273*8.6173*10^-5)
+ae.ci.up[2]<-p2[,3,2]*(273*273*8.6173*10^-5)
+
+# 3) 99th Quantile (Bissinger)
+coef(q99wB)[[2]]
+ae[3]<-coef(q99wB)[[2]]*(273*273*8.6173*10^-5)
+ae.se[3]<-summary(q99wB)$coefficients[2,2]*(273*273*8.6173*10^-5)
+ae.ci.lw[3]<-p2B[,2,2]*(273*273*8.6173*10^-5)
+ae.ci.up[3]<-p2B[,3,2]*(273*273*8.6173*10^-5)
+
+ae
+ae.se
+
+
+### Calculate Eppley exponents:
+
+exps<-rep(NA,3)
+exps.se<-rep(NA,3)
+exps.ci.lw<-exps.ci.up<-rep(NA,3)
+
+# 1)	 MTE 1/kT 
+exps[1]<-cf2[[3]]*-1/(273*273*8.6173*10^-5)
+exps.se[1]<-summary(md2)$coefficients[3,2]*1/(273*273*8.6173*10^-5)
+exps.ci.lw[1]<-confint(md2)[5,2]*-1/(273*273*8.6173*10^-5)
+exps.ci.up[1]<-confint(md2)[5,1]*-1/(273*273*8.6173*10^-5)
+
+# 2) 99th Quantile (all temperature data)
+exps[2]<-coef(q99w)[[3]]
+exps.se[2]<-summary(q99w)$coefficients[3,2]
+exps.ci.lw[2]<-p2[,2,2]
+exps.ci.up[2]<-p2[,3,2]
+
+# 3) 99th Quantile (Bissinger)
+exps[3]<-coef(q99wB)[[2]]
+exps.se[3]<-summary(q99wB)$coefficients[2,2]
+exps.ci.lw[3]<-p2B[,2,2]
+exps.ci.up[3]<-p2B[,3,2]
+
+
+exps
+exps.se
+
+
+### Combine output:
+
+sm<-data.frame(id=seq(1,3),ae,ae.se,ae.ci.lw,ae.ci.up,exps,exps.se,exps.ci.lw,exps.ci.up)
+sm$mods<-c('MTE 1/kT','99 QR all','99 QR Bissinger')
+sm$MTE.pred.ae<-0.32
+sm$Epp.pred.ae<-0.405
+sm$MTE.pred.exps<-0.0498
+sm$Epp.pred.exps<-0.0631
+sm$df<-c(nrow(mte.dat) - 7,nrow(dat)-6,nrow(dat))-2
+# this adjusts for degrees of freedom, too
+
+sm
+
+
+### Calculate significance of estimated slopes relative to predicted slopes:
+
+# Run tests using slope estimates and standard errors (for models where these values are directly estimated) to test significance against predicted value of Eppley or MTE coefficients, where appropriate
+
+mob<-sm %>% group_by(id) %>% 
+	summarize(p.MTE.ae=test.slp(ae,ae.se,MTE.pred.ae,df),	# ae against MTE.ae
+			p.Epp.ae=test.slp(ae,ae.se,Epp.pred.ae,df),	# ae against Eppley.ae
+			p.MTE.exps=test.slp(exps,exps.se,MTE.pred.exps,df),	# exps against MTE.exps
+			p.Epp.exps=test.slp(exps,exps.se,Epp.pred.exps,df))	# exps against Eppley exps
+	
+			
+# Final table:			
+res<-data.frame(sm$mods,sm$df,mob[,-1])
+res
+
+# Check eppley vs. eppley test:
+#test.slp(0.047,0.007,0.0631,4202)
+#test.slp(0.055,0.003,0.0631,4206)
+#test.slp(0.055,0.003,0.0498,4206)
+
+
+
+
+### Figure 4: Visual comparison of estimated vs. predicted slope coefficients.
+
+# As Eppley exponents:
+
+mt<-melt(sm[,c('mods','ae','ae.ci.lw','ae.ci.up','exps','exps.ci.lw','exps.ci.up')],id.vars='mods')
+mt$variable<-as.character(mt$variable)
+
+helpf<-function(x,n) strsplit(x,'[.]')[[1]][n]
+mt$type<-sapply(mt$variable,helpf,1)
+mt$side<-sapply(mt$variable,helpf,3)
+mt$side<-ifelse(is.na(mt$side),'mid',mt$side)
+
+ct<-dcast(mt,mods+type~side)
+
+ct$mods<-factor(ct$mods,levels=c('99 QR all','MTE 1/kT','99 QR Bissinger'),labels=c('Eppley\n (group & mass)','MTE','Eppley\n (classic)'))
+
+
+g1<-ggplot(ct[ct$type=='exps',],aes(x=mods,y=mid))+geom_point()+
+  geom_errorbar(aes(ymin=lw,ymax=up),width=0.2)+
+  geom_hline(yintercept=0.0631,col='red',lty=3)+
+  geom_hline(yintercept=0.0498,col='blue',lty=2)+
+  scale_x_discrete('')+
+  scale_y_continuous('Eppley exponent\n')+
+  theme_bw()
+
+g2<-ggplot(ct[ct$type=='ae',],aes(x=mods,y=mid))+geom_point()+
+  geom_errorbar(aes(ymin=lw,ymax=up),width=0.2)+
+  geom_hline(yintercept=0.405,col='red',lty=3)+
+  geom_hline(yintercept=0.32,col='blue',lty=2)+
+  scale_x_discrete('')+
+  scale_y_continuous('Activation energy (eV)\n')+
+  theme_bw()
+
+grid.arrange(g1,g2,nrow=1)
+
+
+
+
+
+########  6) Sensitivity to mass/volume conversion #########
+
+
+# Alternative volume to mass conversion:  M ~= V^0.71
+#   based on Strathmann (1967)
+log.m2 <-  -0.314 + 0.712*mte.dat$bv   # this is mass in log10(picograms)
+m2.pg <- (10^log.m2)  # mass in picograms
+m2.ug <- m2.pg*10^-6  # mass in micrograms
+ln.m2 <- log(m2.ug)   # ln(mass in micrograms)
+
+# add to mte data
+mte.dat$ln.m2<-ln.m2
+
+# relationship between mass estimates:
+plot(ln.m2~ln.m,data=mte.dat,ylim=c(-17,2))
+
+# ln.m2 leads to a narrower range of sizes on the x-axis
+par(mfrow=c(2,1))
+plot(ln.r~ln.m,data=mte.dat)
+plot(ln.r~ln.m2,data=mte.dat)
+
+
+# Compare coefficient estimates:
+
+# based on Reynolds
+summary(mm4)
+confint(mm4)
+
+# based on Strathmann
+mm12<-lmer(ln.r~ln.m2+inv.kT+group+(1|name),data=mte.dat)		
+summary(mm12)
+confint(mm12)
+
+# based on biovolume
+mte.dat2$ln.bv<-log(10^mte.dat2$bv)
+mm13<-lmer(ln.r~ln.bv+inv.kT+group+(1|name),data=mte.dat)		
+summary(mm13)
+confint(mm13)
+
+
+
