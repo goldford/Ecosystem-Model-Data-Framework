@@ -3,6 +3,9 @@ import netCDF4 as nc
 import yaml
 import datetime as dt
 import os
+from scipy import interpolate
+import matplotlib.pyplot as plt
+import xarray as xr
 
 def is_leap_year(year):
     return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
@@ -347,3 +350,197 @@ def find_closest_date(model_times, target_date):
 def find_closest_depth(obs_depth, possible_depths):
     closest_depth = min(possible_depths, key=lambda x: abs(x - obs_depth))
     return closest_depth
+
+# reads the subdomain coords
+def read_sdomains(domain_file):
+    try:
+        data = load_yaml(domain_file)
+    except FileNotFoundError:
+        print("WARNING:\n domain_file {} not found".format(domain_file))
+
+    coords = {}
+    for c in data['polygon_coords'].keys():
+        coords[c] = np.asarray(data['polygon_coords'][c])
+        # make sure the polygon is closed
+        if not np.all(coords[c][-1] == coords[c][0]):
+            coords[c] = np.vstack([coords[c], coords[c][0, :]])
+
+    return coords
+
+
+class new_utils_GO():
+
+    # interpolated to given depths, takes nc as input
+    # adapted from fn in Nanoose ipynb's 202304
+    def get_model_interpolated(ncname, mod_dlevs, verbose=False):
+
+        tobs = xr.open_dataset(ncname)
+        obs_d = tobs['Pres'].values
+        obs_t = tobs['cTemp'].values
+        obs_s = tobs['aSal'].values
+        ttime = tobs['time'][0].values
+
+        # throw out stuff below 400
+        filt = obs_d > 400
+        obs_d[filt] = np.nan
+        obs_t[filt] = np.nan
+        obs_s[filt] = np.nan
+
+        try:
+            f = interpolate.interp1d(obs_d, obs_t)  # temperature
+            f2 = interpolate.interp1d(obs_d, obs_s)  # salinity
+
+            ## can only interpolate to model points that are within observations
+            mod_d = mod_dlevs[(mod_dlevs < max(obs_d)) & (mod_dlevs > min(obs_d))]
+            firstind = np.where(mod_dlevs == np.min(mod_d))[0][0]  ## first model index we were able to interpolate to
+            interp_t = f(mod_d)  # use interpolation function returned by `interp1d`
+            interp_s = f2(mod_d)
+
+            ###
+            t_full = np.zeros(40)
+            t_full[:] = -999
+            t_full[firstind:firstind + len(mod_d)] = interp_t
+            t_full[t_full < -900] = np.nan
+            t_full[t_full > 100] = np.nan
+
+            s_full = np.zeros(40)
+            s_full[:] = -999
+            s_full[firstind:firstind + len(mod_d)] = interp_s
+            s_full[s_full < -900] = np.nan
+            s_full[s_full > 100] = np.nan
+
+            if verbose:
+                fig, axs = plt.subplots(1, 2)
+                axs = axs.ravel()
+                axs[0].plot(obs_t, obs_d, 'ob', interp_t, mod_d, 'or')
+                axs[1].plot(obs_s, obs_d, 'ob', interp_s, mod_d, 'or')
+                axs[0].set_title('temperature cons')
+                axs[1].set_title('salinity abs')
+                axs[0].invert_yaxis()
+                axs[1].invert_yaxis()
+
+                fig.suptitle(f'blue is CTD, red is interp. to mod depths \n date of cast: {ttime}')
+                plt.tight_layout()
+                plt.show()
+        except:
+
+            t_full = np.zeros(40)
+            t_full[:] = -999
+            t_full[t_full < -900] = np.nan
+            s_full = np.zeros(40)
+            s_full[:] = -999
+            s_full[s_full < -900] = np.nan
+
+        return t_full, s_full, ttime  # not sure ttime is needed -GO 202304
+
+    # interpolated to given depths, takes np arrays as input
+    # adapted from fn in Nanoose ipynb's 202304
+    def get_model_interpolated_ar(d_pres, d_salt, d_temp, d_time, mod_dlevs, verbose=False):
+
+        obs_d = d_pres
+        obs_t = d_temp
+        obs_s = d_salt
+        ttime = d_time
+
+        # throw out stuff below 400
+        filt = obs_d > 400
+        obs_d[filt] = np.nan
+        obs_t[filt] = np.nan
+        obs_s[filt] = np.nan
+
+        try:
+            f = interpolate.interp1d(obs_d, obs_t)  # temperature
+            f2 = interpolate.interp1d(obs_d, obs_s)  # salinity
+
+            ## can only interpolate to model points that are within observations
+            mod_d = mod_dlevs[(mod_dlevs < max(obs_d)) & (mod_dlevs > min(obs_d))]
+            firstind = np.where(mod_dlevs == np.min(mod_d))[0][0]  ## first model index we were able to interpolate to
+            interp_t = f(mod_d)  # use interpolation function returned by `interp1d`
+            interp_s = f2(mod_d)
+
+            ###
+            t_full = np.zeros(40)
+            t_full[:] = -999
+            t_full[firstind:firstind + len(mod_d)] = interp_t
+            t_full[t_full < -900] = np.nan
+            t_full[t_full > 100] = np.nan
+
+            s_full = np.zeros(40)
+            s_full[:] = -999
+            s_full[firstind:firstind + len(mod_d)] = interp_s
+            s_full[s_full < -900] = np.nan
+            s_full[s_full > 100] = np.nan
+
+            if verbose:
+                fig, axs = plt.subplots(1, 2)
+                axs = axs.ravel()
+                axs[0].plot(obs_t, obs_d, 'ob', interp_t, mod_d, 'or')
+                axs[1].plot(obs_s, obs_d, 'ob', interp_s, mod_d, 'or')
+                axs[0].set_title('temperature cons')
+                axs[1].set_title('salinity abs')
+                axs[0].invert_yaxis()
+                axs[1].invert_yaxis()
+
+                fig.suptitle(f'blue is CTD, red is interp. to mod depths \n date of cast: {ttime}')
+                plt.tight_layout()
+                plt.show()
+        except:
+
+            t_full = np.zeros(40)
+            t_full[:] = -999
+            t_full[t_full < -900] = np.nan
+            s_full = np.zeros(40)
+            s_full[:] = -999
+            s_full[s_full < -900] = np.nan
+
+        return t_full, s_full
+
+# Function get SSCast grid indices and lats lons from BATHY file
+def get_sscast_grd_idx(file_path):
+    if os.path.exists(file_path):
+        try:
+            with nc.Dataset(file_path, 'r') as dataset:
+                metadata = {
+                    "Dimensions": {dim: len(dataset.dimensions[dim]) for dim in dataset.dimensions},
+                    "Variables": {var: dataset.variables[var].dimensions for var in dataset.variables}
+                }
+
+                # Assuming 'lat' and 'lon' are the variable names for latitude and longitude in the file
+                lats = dataset.variables['latitude'][:]
+                lons = dataset.variables['longitude'][:]
+
+                # Assuming 'gridY' and 'gridX' are the variable names for grid indices in the file
+                gridY = dataset.variables['gridY'][:]
+                gridX = dataset.variables['gridX'][:]
+
+                bathy = dataset.variables['bathymetry'][:]
+
+            return metadata, lats, lons, gridY, gridX, bathy
+        except OSError as e:
+            return {"Error": str(e)}, None
+    else:
+        return {"Error": "File not found."}, None
+
+# Function to get data from salishseacast model output file
+def get_sscast_data(file_path):
+    if os.path.exists(file_path):
+        try:
+            with nc.Dataset(file_path, 'r') as dataset:
+                metadata = {
+                    "Dimensions": {dim: len(dataset.dimensions[dim]) for dim in dataset.dimensions},
+                    "Variables": {var: dataset.variables[var].dimensions for var in dataset.variables}
+                }
+                time_var = dataset.variables['time']
+                time_units = time_var.units
+                time_calendar = time_var.calendar if 'calendar' in time_var.ncattrs() else 'standard'
+                times = nc.num2date(time_var[:], units=time_units, calendar=time_calendar)
+
+                ciliates = dataset.variables['ciliates'][:]
+                flagellates = dataset.variables['flagellates'][:]
+                diatoms = dataset.variables['diatoms'][:]
+
+            return metadata, times, ciliates, flagellates, diatoms
+        except OSError as e:
+            return {"Error": str(e)}, None, None, None, None
+    else:
+        return {"Error": "File not found."}, None, None, None, None

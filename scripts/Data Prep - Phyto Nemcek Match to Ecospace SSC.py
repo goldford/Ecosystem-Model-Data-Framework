@@ -24,19 +24,21 @@
 import os
 import pandas as pd
 import netCDF4 as nc
-from helpers import load_yaml
+from helpers import load_yaml, get_sscast_grd_idx
 import numpy as np
 import os
 import requests
 from matplotlib.path import Path as Path
 # match points to do (blind) using both model and SSC to compare to obs
-from helpers import find_nearest_point, find_nearest_point_from1D, find_closest_date, find_closest_depth
+from helpers import find_nearest_point, find_nearest_point_from1D
+from helpers import find_closest_date, find_closest_depth, read_sdomains, get_sscast_data
 
 # Paths to the files
 path_SSC = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/28. Phytoplankton/SalishSeaCast_BioFields_2008-2018/ORIGINAL"
 path_Ecospace = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/ECOSPACE_OUT"
 path_Nemcek = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/28. Phytoplankton/Phytoplankton Salish Sea Nemcek2023 2015-2019/MODIFIED"
 path_evalout = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation"
+path_ecospace_map = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/basemap"
 
 file_SSC_mo = "SalishSeaCast_biology_2008.nc"
 # https://salishsea.eos.ubc.ca/erddap/griddap/ubcSSnBathymetryV21-08.nc?bathymetry[(0.0):1:(897.0)][(0.0):1:(397.0)],latitude[(0.0):1:(897.0)][(0.0):1:(397.0)],longitude[(0.0):1:(897.0)][(0.0):1:(397.0)]
@@ -44,6 +46,7 @@ file_SSC_grd = "ubcSSnBathymetryV21-08_a29d_efc9_4047.nc"
 file_Ecospace = "Scv7-PARMixingNut90Temp_2003-2018.nc"
 file_Nemcek = "Nemcek_Supp_Data.csv"
 file_Nemcek_matched = "Nemcek_matched_to_model_out.csv"
+file_ecospace_map = "Ecospace_grid_20210208_rowscols.csv"
 
 # Function to get metadata from a CSV file
 # Function to get metadata from a CSV file
@@ -58,57 +61,8 @@ def get_csv_metadata(file_path):
     else:
         return {"Error": "File not found."}, None
 
-# Function get SSCast grid index given lat lon
-def get_sscast_grd_idx(file_path):
-    if os.path.exists(file_path):
-        try:
-            with nc.Dataset(file_path, 'r') as dataset:
-                metadata = {
-                    "Dimensions": {dim: len(dataset.dimensions[dim]) for dim in dataset.dimensions},
-                    "Variables": {var: dataset.variables[var].dimensions for var in dataset.variables}
-                }
 
-                # Assuming 'lat' and 'lon' are the variable names for latitude and longitude in the file
-                lats = dataset.variables['latitude'][:]
-                lons = dataset.variables['longitude'][:]
-
-                # Assuming 'gridY' and 'gridX' are the variable names for grid indices in the file
-                gridY = dataset.variables['gridY'][:]
-                gridX = dataset.variables['gridX'][:]
-
-                bathy = dataset.variables['bathymetry'][:]
-
-            return metadata, lats, lons, gridY, gridX, bathy
-        except OSError as e:
-            return {"Error": str(e)}, None
-    else:
-        return {"Error": "File not found."}, None
-
-# Function to get metadata from a NetCDF file
-def get_sscast_data(file_path):
-    if os.path.exists(file_path):
-        try:
-            with nc.Dataset(file_path, 'r') as dataset:
-                metadata = {
-                    "Dimensions": {dim: len(dataset.dimensions[dim]) for dim in dataset.dimensions},
-                    "Variables": {var: dataset.variables[var].dimensions for var in dataset.variables}
-                }
-                time_var = dataset.variables['time']
-                time_units = time_var.units
-                time_calendar = time_var.calendar if 'calendar' in time_var.ncattrs() else 'standard'
-                times = nc.num2date(time_var[:], units=time_units, calendar=time_calendar)
-
-                ciliates = dataset.variables['ciliates'][:]
-                flagellates = dataset.variables['flagellates'][:]
-                diatoms = dataset.variables['diatoms'][:]
-
-            return metadata, times, ciliates, flagellates, diatoms
-        except OSError as e:
-            return {"Error": str(e)}, None, None, None, None
-    else:
-        return {"Error": "File not found."}, None, None, None, None
-
-def get_ecospace_data(file_path):
+def get_ecospace_times(file_path):
     if os.path.exists(file_path):
         try:
             with nc.Dataset(file_path, 'r') as dataset:
@@ -127,32 +81,17 @@ def get_ecospace_data(file_path):
     else:
         return {"Error": "File not found."}, None, None
 
-# reads the subdomain coords
-def read_sdomains(domain_file):
-    try:
-        data = load_yaml(domain_file)
-    except FileNotFoundError:
-        print("WARNING:\n domain_file {} not found".format(domain_file))
-
-    coords = {}
-    for c in data['polygon_coords'].keys():
-        coords[c] = np.asarray(data['polygon_coords'][c])
-        # make sure the polygon is closed
-        if not np.all(coords[c][-1] == coords[c][0]):
-            coords[c] = np.vstack([coords[c], coords[c][0, :]])
-
-    return coords
 
 
 
-# Paths to the files
+# Paths to files
 ssc_file_path = os.path.join(path_SSC, file_SSC_mo)
 ecospace_file_path = os.path.join(path_Ecospace, file_Ecospace)
 nemcek_file_path = os.path.join(path_Nemcek, file_Nemcek)
 
-# Get metadata from the files
+# Get metadata from files
 ssc_metadata, ssc_times, _, _, _ = get_sscast_data(ssc_file_path)
-ecospace_metadata, ecospace_times = get_ecospace_data(ecospace_file_path)
+ecospace_metadata, ecospace_times = get_ecospace_times(ecospace_file_path)
 nemcek_metadata, nemcek_df = get_csv_metadata(nemcek_file_path)
 
 # Print the metadata
@@ -200,10 +139,7 @@ sdomains = read_sdomains(domain_fullp)
 nemcek_df['sdomain'] = ""
 
 # get ECOSPACE MODEL domain map with lats / lons
-ecospace_map_p = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/basemap"
-ecospace_map_f = "Ecospace_grid_20210208_rowscols.csv"
-
-ecospace_coords_md, ecospace_coords_df = get_csv_metadata(os.path.join(ecospace_map_p, ecospace_map_f))
+ecospace_coords_md, ecospace_coords_df = get_csv_metadata(os.path.join(path_ecospace_map, file_ecospace_map))
 
 print("Ecospace coords metadata: ")
 print(ecospace_coords_md)

@@ -31,6 +31,8 @@ df_filtered['Month'] = df_filtered['Date.Time'].dt.month
 # Group by 'Month' and 'sdomain' and count the number of samples
 samples_by_month_sdomain = df_filtered.groupby(['Month', 'sdomain']).size().reset_index(name='Sample Count')
 
+
+
 # Bar Plot
 fig, ax = plt.subplots(figsize=(12, 6))
 
