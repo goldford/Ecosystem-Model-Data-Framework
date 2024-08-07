@@ -29,8 +29,36 @@ from datetime import datetime, timedelta
 #path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v3 - MixingxPAR - 3DAY 1yr10yr//asc//"
 #ecospace_code = "Scv5-PARMixingNut90"
 #path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v5 - PARMixingNut90 - 3DAY 1yr10yr//asc//"
-ecospace_code = "Scv7-PARMixingNut90Temp"
-path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v7 - PARMixingNut90Temp - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv7-PARMixingNut90Temp"
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v7 - PARMixingNut90Temp - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv4_2-MixingxPARLimitZ"
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v4 - MixingxPARLimitZ - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv24-PAR_PI_Temp"
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v25 - PAR_PI_Temp - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv26-PAR_PI_Temp_mixing"
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v26 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv27-PAR_PI_Temp_mixing_habcap"
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v27 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv28-PAR_PI_Temp_mixing" # trying non-linear mixing
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v28 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv29-PAR_shallowPI_Temp_mixing" # very shallow PI slope
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v29 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv30-PARenv_shallowPI_Temp_mixing" # very shallow PI slope, PAR is now an enviro driver again (was PP)
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v30 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv31-PARenv_shallowPI_Temp_MixingXPARHab" # very shallow PI slope, PAR is now an enviro driver again, MixingxPAR driving hab cap (crazy response from PIC and NAN)
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v31 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv32-PARenv_shallowPI_MixingSteep" # very shallow PI slope, PAR is now an enviro driver again, MixingxPAR driving hab cap (crazy response from PIC and NAN)
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v32 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv33-PARenv_lessshallowPI_MixingSteep" # very shallow PI slope, PAR is now an enviro driver again, MixingxPAR driving hab cap (crazy response from PIC and NAN)
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v33 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv34-PARenv_lessshallowPI_MixingSteep" # very shallow PI slope, PAR enviro driver again, MixingxPAR driving hab cap (crazy response from PIC and NAN)
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v34 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv35-PARenv_lessshallowPI_MixingSteep" #
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v35 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv36-PARenv_lessshallowPI_MixingSteep" #
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v36 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
+ecospace_code = "Scv37-PARenv_lessshallowPI_MixingSteep_Temp" #
+path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v37 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
 
 
 path_out = "..//data//ecospace_out//"
@@ -93,19 +121,23 @@ def asc_to_nc_3day(v_f, outfilename, nemo_ewe_csv,
             'lat': (('row', 'col'), np.full((rows, cols), np.nan)),
             'lon': (('row', 'col'), np.full((rows, cols), np.nan)),
             'depth': (('row', 'col'), np.full((rows, cols), np.nan)),
+            'EWE_col': (('row', 'col'), np.full((rows, cols), np.nan)),
+            'EWE_row': (('row', 'col'), np.full((rows, cols), np.nan)),
             'NEMO_col': (('row', 'col'), np.full((rows, cols), np.nan)),
             'NEMO_row': (('row', 'col'), np.full((rows, cols), np.nan)),
         },
         attrs={'description': 'dataset of monthly ASC files'}
     )
 
-    # Populate the dataset with lat, lon, depth, NEMO_col, NEMO_row from the CSV file
+    # Populate the dataset with lat, lon, depth, EWE_col, EWE_row from the CSV file
     for _, row in df.iterrows():
         ewe_row = int(row['EWE_row']) - 1
         ewe_col = int(row['EWE_col']) - 1
         ds['lat'][ewe_row, ewe_col] = row['lat']
         ds['lon'][ewe_row, ewe_col] = row['lon']
         ds['depth'][ewe_row, ewe_col] = row['depth']
+        ds['EWE_col'][ewe_row, ewe_col] = row['EWE_col']
+        ds['EWE_row'][ewe_row, ewe_col] = row['EWE_row']
         ds['NEMO_col'][ewe_row, ewe_col] = row['NEMO_col']
         ds['NEMO_row'][ewe_row, ewe_col] = row['NEMO_row']
 
@@ -193,7 +225,6 @@ mo_strt = 1
 da_strt = 2
 mo_end = 12
 da_end = 30
-
 
 out_filename = ecospace_code + "_" + str(yr_strt) + "-" + str(yr_end) + ".nc"
 out_filename = os.path.join(path_out, out_filename)

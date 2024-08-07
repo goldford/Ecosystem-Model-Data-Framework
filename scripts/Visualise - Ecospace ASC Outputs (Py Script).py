@@ -88,6 +88,7 @@ ds_loaded = xr.open_dataset(ecospace_nc)
 print(ds_loaded)
 
 # load bathy and tmask for plotting
+
 with nc.Dataset('..//data//basemap//bathy_salishsea_1500m_20210706.nc') as bath:
     navlon = bath.variables['nav_lon'][:]
     navlat = bath.variables['nav_lat'][:]
@@ -103,6 +104,7 @@ grid_f = 'bathy_salishsea_1500m_20210706.nc'
 grid = xr.open_dataset(os.path.join(grid_p, grid_f), mask_and_scale=False)
 
 ################## MAP TEMPLATE ############################
+# made a copy of this in helpers 2024-07-30
 def make_map(ax, grid, w_map=[-124, -123.9, 47.7, 50.6],
              rotation=39.2,
              par_inc=0.25,
@@ -135,7 +137,7 @@ def make_map(ax, grid, w_map=[-124, -123.9, 47.7, 50.6],
 
     return m
 
-
+# made copy of this in helpers 2024-07-30
 def adjust_map(ax,
                lat_bl=47.8,
                lon_bl=-123.2,

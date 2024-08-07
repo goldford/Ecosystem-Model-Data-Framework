@@ -13,6 +13,7 @@
 #    plots of data desriptors and distributions, monthly boxplots of model vs obs phytoplankton
 #
 import pandas as pd
+import calendar
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -35,6 +36,8 @@ QU39_df = QU39_df.groupby(groupby_columns)[sum_columns].sum().reset_index()
 QU39_df['QU39'] = QU39_df['measurementValue']
 QU39_df['logQU39'] = np.log(QU39_df['measurementValue'])
 QU39_df['log_PP1-DIA'] = np.log(QU39_df['PP1-DIA'])
+QU39_df['log_PP2-NAN'] = np.log(QU39_df['PP2-NAN'])
+QU39_df['log_PP3-PIC'] = np.log(QU39_df['PP3-PIC'])
 QU39_df['log_ssc-DIA'] = np.log(QU39_df['ssc-DIA'])
 QU39_df['log_ssc-FLA'] = np.log(QU39_df['ssc-FLA'])
 QU39_df['log_ssc-CIL'] = np.log(QU39_df['ssc-CIL'])
@@ -107,15 +110,15 @@ groupon = 'class'
 valuefield = 'ssc-DIA'
 valuefield = 'log_ssc-DIA'
 print(QU39_df.columns)
-QU39_df = calculate_anomalies(QU39_df, valuefield, groupon)
+QU39_df_anom = calculate_anomalies(QU39_df, valuefield, groupon)
 
 valuefield = 'log_PP1-DIA'
-QU39_df = calculate_anomalies(QU39_df, valuefield, groupon)
+QU39_df_anom = calculate_anomalies(QU39_df_anom, valuefield, groupon)
 
 # I calculated anomalies previously but am doing it again here to get it right
 valuefield = 'QU39'
 valuefield = 'logQU39'
-QU39_df = calculate_anomalies(QU39_df, valuefield, groupon)
+QU39_df_anom = calculate_anomalies(QU39_df_anom, valuefield, groupon)
 
 
 # Configuration
@@ -141,7 +144,7 @@ widths = 0.25
 plt.figure(figsize=(15, 10))
 
 # Data filtering
-class_data = QU39_df[QU39_df[groupon] == taxon]
+class_data = QU39_df_anom[QU39_df_anom[groupon] == taxon]
 condition = class_data[field_codes[0] + '_anomaly_fr_mean'] > -999
 class_data = class_data.loc[condition]
 
@@ -213,16 +216,19 @@ plt.savefig('..//figs//' + 'Diatoms_Monthly_QU39_vs_Ecospace_vs_SSC_2016_2018.pn
 plt.show()
 
 ##########################
+######## PP1-DIA #########
 
 # Configuration
 taxon = 'Bacillariophyceae'
+plot_label = 'Diatoms'
 # taxon = 'Chaetocerotaceae'
 # taxon = 'Thalassiosiraceae'
+
 
 # field_codes = ['PP1-DIA', 'ssc-DIA', 'QU39']
 field_codes = ['log_PP1-DIA', 'logQU39']
 # source_names = ['Ecospace', 'SalishSeaCast', 'QU39']
-source_names = ['logEcospace', 'logQU39']
+source_names = ['Ecospace PP1-DIA', 'QU39 Diatoms']
 
 # Colors for each model_code
 # colors = {'PP1-DIA': 'blue', 'ssc-DIA': 'orange', 'logQU39': 'pink'}
@@ -234,10 +240,11 @@ positions_ecospace = months - 0.2 # adjust slightly right
 positions_qu39 = months + 0.2  # Adjust positions slightly to the left
 widths = 0.35
 
-plt.figure(figsize=(15, 10))
+plt.figure(figsize=(8, 4))
+fig, ax = plt.subplots()
 
 # Data filtering
-class_data = QU39_df[QU39_df[groupon] == taxon]
+class_data = QU39_df_anom[QU39_df_anom[groupon] == taxon]
 condition = class_data[field_codes[0] + '_anomaly_fr_mean'] > -999
 class_data = class_data.loc[condition]
 
@@ -285,13 +292,14 @@ for month in months:
                 capprops=dict(color='black'),
                 showfliers=False)
 
-plt.title(f'Anomaly from Means Rel to Std Dev by Month for {taxon}')
+# plt.title(f'Anomaly from Means Rel to Std Dev by Month for {plot_label}')
 plt.suptitle('')  # Suppress the default title to keep it clean
 plt.xlabel('Month')
-plt.ylabel('Mean')
+plt.ylabel('Anomaly')
 
 # Adjust x-axis ticks and labels
-plt.xticks(months, [f'Month {m}' for m in months])
+# plt.xticks(months, [f'Month {m}' for m in months])
+plt.xticks(months, [calendar.month_abbr[m] for m in months])
 
 # Create custom legend
 # leg_codes = ['PP1-DIA', 'ssc-DIA', 'logQU39']
@@ -304,9 +312,241 @@ for leg_code in leg_codes:
 handles = [plt.Line2D([0], [0], color=colors[leg_code], lw=4) for leg_code in leg_codes]
 plt.legend(handles, source_names, loc='upper right')
 
+plt.text(0.02, 0.95, '(a)', transform=ax.transAxes,  fontsize=14, verticalalignment='top')
+
 plt.tight_layout()
 plt.savefig('..//figs//' + 'Diatoms_Monthly_QU39_vs_Ecospace_2016_2018.png')
 plt.show()
+
+#########################
+###### PP2-NAN ##########
+
+valuefield = 'ssc-NAN'
+valuefield = 'log_ssc-FLA'
+print(QU39_df.columns)
+QU39_df_anom = calculate_anomalies(QU39_df, valuefield, groupon)
+
+valuefield = 'log_PP2-NAN'
+QU39_df_anom = calculate_anomalies(QU39_df_anom, valuefield, groupon)
+
+# I calculated anomalies previously but am doing it again here to get it right
+valuefield = 'QU39'
+valuefield = 'logQU39'
+QU39_df_anom = calculate_anomalies(QU39_df_anom, valuefield, groupon)
+
+# Define the taxa of interest
+nanophytoplankton_taxa = [
+    'Choanoflagellatea', 'Dictyochophyceae', 'Cryptophyceae', 'Metromonadea',
+    'Chrysophyceae', 'Telonemea', 'Chlorodendrophyceae', 'Bicosoecophyceae',
+    'Xanthophyceae', 'Coccolithophyceae', 'Euglenophyceae', 'Raphidophyceae'
+]
+
+# Configuration
+# taxon = 'Bacillariophyceae'
+# taxon = 'Chaetocerotaceae'
+# taxon = 'Thalassiosiraceae'
+
+# Example: for nanophytoplankton group
+taxa_to_plot = nanophytoplankton_taxa
+plot_label = 'nanophytoplankton'
+
+# Example: for a single taxon
+# taxa_to_plot = ['Bacillariophyceae']
+# plot_label = 'Bacillariophyceae'
+
+# field_codes = ['PP1-DIA', 'ssc-DIA', 'QU39']
+field_codes = ['log_PP2-NAN', 'logQU39']
+# source_names = ['Ecospace', 'SalishSeaCast', 'QU39']
+source_names = ['Ecospace PP2-NAN', 'QU39 nanophytoplankton']
+
+# Colors for each model_code
+colors = {'log_PP2-NAN': 'blue', 'logQU39': 'orange'}
+
+months = np.arange(1, 13)
+positions_ecospace = months - 0.2 # adjust slightly right
+positions_qu39 = months + 0.2  # Adjust positions slightly to the left
+widths = 0.35
+
+plt.figure(figsize=(8, 4))
+fig, ax = plt.subplots()
+
+# Data filtering
+class_data = QU39_df_anom[QU39_df_anom[groupon].isin(taxa_to_plot)]
+condition = class_data[field_codes[0] + '_anomaly_fr_mean'] > -999
+class_data = class_data.loc[condition]
+
+print(len(class_data['eventID'].unique()))
+
+# Create a dictionary to hold data by month for each model
+data_by_month = {month: {} for month in months}
+
+# Extract data for each model and each month
+for field_code in field_codes:
+    for month in months:
+        month_data = class_data[class_data['month'] == month]
+        data_by_month[month][field_code] = month_data[field_code + '_anomaly_fr_mean_std_norm'].dropna().values
+
+# Plot boxplots for both models side-by-side for each month
+for month in months:
+    print("month: " + str(month))
+
+    # Data for both models for the current month
+    ecospace_data = data_by_month[month].get('log_PP2-NAN', [])
+    qu39_data = data_by_month[month].get('logQU39', [])
+
+    # Plot the first model
+    plt.boxplot(ecospace_data, positions=[positions_ecospace[month - 1]], widths=widths, patch_artist=True,
+                boxprops=dict(facecolor=colors['log_PP2-NAN'], color='black'),
+                medianprops=dict(color='black'),
+                whiskerprops=dict(color='black'),
+                capprops=dict(color='black'),
+                showfliers=False)
+
+    # Plot the second model
+    plt.boxplot(qu39_data, positions=[positions_qu39[month - 1]], widths=widths, patch_artist=True,
+                boxprops=dict(facecolor=colors['logQU39'], color='black'),
+                medianprops=dict(color='black'),
+                whiskerprops=dict(color='black'),
+                capprops=dict(color='black'),
+                showfliers=False)
+
+# plt.title(f'Anomaly from Means Rel to Std Dev by Month for {plot_label}')
+plt.suptitle('')  # Suppress the default title to keep it clean
+plt.xlabel('Month')
+plt.ylabel('Anomaly')
+
+# Adjust x-axis ticks and labels
+plt.xticks(months, [calendar.month_abbr[m] for m in months])
+
+# Create custom legend
+leg_codes = ['log_PP2-NAN', 'logQU39']
+print(leg_codes)
+
+for leg_code in leg_codes:
+    print(leg_code)
+    print(colors[leg_code])
+handles = [plt.Line2D([0], [0], color=colors[leg_code], lw=4) for leg_code in leg_codes]
+plt.legend(handles, source_names, loc='upper right')
+
+plt.text(0.02, 0.95, '(b)', transform=ax.transAxes,  fontsize=14, verticalalignment='top')
+
+plt.tight_layout()
+plt.savefig('..//figs//' + plot_label + '_Monthly_QU39_vs_Ecospace_2016_2018.png')
+plt.show()
+
+#########################
+###### PP3-PIC ##########
+
+# valuefield = 'ssc-PIC'
+# valuefield = 'log_ssc-PIC'
+# print(QU39_df.columns)
+# QU39_df_anom = calculate_anomalies(QU39_df, valuefield, groupon)
+
+valuefield = 'log_PP3-PIC'
+QU39_df_anom = calculate_anomalies(QU39_df, valuefield, groupon)
+
+# I calculated anomalies previously but am doing it again here to get it right
+valuefield = 'QU39'
+valuefield = 'logQU39'
+QU39_df_anom = calculate_anomalies(QU39_df_anom, valuefield, groupon)
+
+
+# Define the taxa of interest
+picophytoplankton_taxa = ['Pyramimonadophyceae']
+
+# Configuration
+# taxon = 'Bacillariophyceae'
+# taxon = 'Chaetocerotaceae'
+# taxon = 'Thalassiosiraceae'
+
+# Example: for nanophytoplankton group
+taxa_to_plot = picophytoplankton_taxa
+plot_label = 'picoplankton'
+
+# Example: for a single taxon
+# taxa_to_plot = ['Bacillariophyceae']
+# plot_label = 'Bacillariophyceae'
+
+# field_codes = ['PP1-DIA', 'ssc-DIA', 'QU39']
+field_codes = ['log_PP3-PIC', 'logQU39']
+# source_names = ['Ecospace', 'SalishSeaCast', 'QU39']
+source_names = ['Ecospace', 'QU39']
+
+# Colors for each model_code
+colors = {'log_PP3-PIC': 'blue', 'logQU39': 'orange'}
+
+months = np.arange(1, 13)
+positions_ecospace = months - 0.2 # adjust slightly right
+positions_qu39 = months + 0.2  # Adjust positions slightly to the left
+widths = 0.35
+
+plt.figure(figsize=(8, 6))
+
+# Data filtering
+class_data = QU39_df_anom[QU39_df_anom[groupon].isin(taxa_to_plot)]
+condition = class_data[field_codes[0] + '_anomaly_fr_mean'] > -999
+class_data = class_data.loc[condition]
+
+print(len(class_data['eventID'].unique()))
+
+# Create a dictionary to hold data by month for each model
+data_by_month = {month: {} for month in months}
+
+# Extract data for each model and each month
+for field_code in field_codes:
+    for month in months:
+        month_data = class_data[class_data['month'] == month]
+        data_by_month[month][field_code] = month_data[field_code + '_anomaly_fr_mean_std_norm'].dropna().values
+
+# Plot boxplots for both models side-by-side for each month
+for month in months:
+    print("month: " + str(month))
+
+    # Data for both models for the current month
+    ecospace_data = data_by_month[month].get('log_PP3-PIC', [])
+    qu39_data = data_by_month[month].get('logQU39', [])
+
+    # Plot the first model
+    plt.boxplot(ecospace_data, positions=[positions_ecospace[month - 1]], widths=widths, patch_artist=True,
+                boxprops=dict(facecolor=colors['log_PP3-PIC'], color='black'),
+                medianprops=dict(color='black'),
+                whiskerprops=dict(color='black'),
+                capprops=dict(color='black'),
+                showfliers=False)
+
+    # Plot the second model
+    plt.boxplot(qu39_data, positions=[positions_qu39[month - 1]], widths=widths, patch_artist=True,
+                boxprops=dict(facecolor=colors['logQU39'], color='black'),
+                medianprops=dict(color='black'),
+                whiskerprops=dict(color='black'),
+                capprops=dict(color='black'),
+                showfliers=False)
+
+plt.title(f'Anomaly from Means Rel to Std Dev by Month for {plot_label}')
+plt.suptitle('')  # Suppress the default title to keep it clean
+plt.xlabel('Month')
+plt.ylabel('Mean')
+
+# Adjust x-axis ticks and labels
+plt.xticks(months, [calendar.month_abbr[m] for m in months])
+
+# Create custom legend
+leg_codes = ['log_PP3-PIC', 'logQU39']
+print(leg_codes)
+
+for leg_code in leg_codes:
+    print(leg_code)
+    print(colors[leg_code])
+handles = [plt.Line2D([0], [0], color=colors[leg_code], lw=4) for leg_code in leg_codes]
+plt.legend(handles, source_names, loc='upper right')
+
+plt.tight_layout()
+plt.savefig('..//figs//' + plot_label + '_Monthly_QU39_vs_Ecospace_2016_2018.png')
+plt.show()
+
+
+
+
 
 ##########################
 
@@ -321,6 +561,7 @@ for taxonomic_class in classes:
         plt.hist(class_data['QU39'] + 1, bins=bins, alpha=0.5,
                  label=taxonomic_class)  # Shift by 1 to avoid log(0)
         plt.xscale('log')
+
 
         # plt.hist(class_data['measurementValue'], bins=50, alpha=0.5, label=taxonomic_class, log=True)
         # plt.xscale('log')
@@ -397,6 +638,15 @@ plt.grid(axis='y')
 
 plt.tight_layout()
 plt.show()
+
+###############################################
+############### PANEL OF PLOTS ################
+
+
+##############################################
+##############################################
+
+
 
 # # visuals, monthly pairwise boxplots
 # taxonomic_class = 'Bacillariophyceae'

@@ -5,7 +5,9 @@ import datetime as dt
 import os
 from scipy import interpolate
 import matplotlib.pyplot as plt
+from matplotlib import patches
 import xarray as xr
+from mpl_toolkits.basemap import Basemap
 
 def is_leap_year(year):
     return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
@@ -544,3 +546,221 @@ def get_sscast_data(file_path):
             return {"Error": str(e)}, None, None, None, None
     else:
         return {"Error": "File not found."}, None, None, None, None
+
+# made a copy of this in helpers 2024-07-30
+def make_map(ax, grid, w_map=[-124, -123.9, 47.7, 50.6],
+             rotation=39.2,
+             par_inc=0.25,
+             mer_inc=0.5,
+             fs=14,
+             bg_color='#e5e5e5'
+             ):
+    """
+    """
+    # fcolor='burlywood'
+    fcolor = 'white'
+    # Make projection
+    m = Basemap(ax=ax,
+                projection='lcc', resolution='c',
+                lon_0=(w_map[1] - w_map[0]) / 2 + w_map[0] + rotation,
+                lat_0=(w_map[3] - w_map[2]) / 2 + w_map[2],
+                llcrnrlon=w_map[0], urcrnrlon=w_map[1],
+                llcrnrlat=w_map[2], urcrnrlat=w_map[3])
+
+    # Add features and labels
+    x, y = m(grid.nav_lon.values, grid.nav_lat.values)
+    ax.contourf(x, y, grid.Bathymetry, [-0.01, 0.01], colors=fcolor)
+    ax.contour(x, y, grid.Bathymetry, [-0.01, 0.01], colors='black', linewidths=0.1)
+    ax.contourf(x, y, grid.Bathymetry, [0.011, 500], colors=bg_color)
+
+    #     m.drawmeridians(np.arange(-125.5, -122, mer_inc), labels=[0, 0, 0, 1], linewidth=0.2, fontsize=fs)
+    m.drawmeridians(np.arange(-125.5, -122, mer_inc), labels=[0, 0, 0, 0], linewidth=0.2, fontsize=fs)
+    #     m.drawparallels(np.arange(48, 51, par_inc), labels=[1, 0, 0, 0], linewidth=0.2, fontsize=fs)
+    m.drawparallels(np.arange(47, 51, par_inc), labels=[0, 0, 0, 0], linewidth=0.2, fontsize=fs)
+
+    return m
+
+# made copy of this in helpers 2024-07-30
+def adjust_map(ax,
+               lat_bl=47.8,
+               lon_bl=-123.2,
+               lat_br=48.8,
+               lon_br=-122.28,
+               lat_tl=50.3,
+               lon_tl=-124.75,
+               lat_bl2=48.2,
+               lon_bl2=-123.5,
+               label_grid=False
+               ):
+    # fcolor='burlywood'
+    fcolor = 'white'
+
+    w_map = [-124, -123.9, 47.7, 50.6]
+    rotation = 39.2
+    m = Basemap(ax=ax,
+                projection='lcc', resolution='c',
+                lon_0=(w_map[1] - w_map[0]) / 2 + w_map[0] + rotation,
+                lat_0=(w_map[3] - w_map[2]) / 2 + w_map[2],
+                llcrnrlon=w_map[0], urcrnrlon=w_map[1],
+                llcrnrlat=w_map[2], urcrnrlat=w_map[3])
+
+    # set width using map units
+    # bottom left
+    x_bl, y_bl = m(lon_bl, lat_bl)
+    x_br, _ = m(lon_br, lat_br)
+    ax.set_xlim(x_bl, x_br)
+
+    # top left
+    x_tl, y_tl = m(lon_tl, lat_tl)
+    x_bl, y_bl = m(lon_bl2, lat_bl2)
+    ax.set_ylim(y_bl, y_tl)
+
+    # fix a little path in bottom right
+    lccx_TL, lccy_TL = m(-122.83, 49.4)
+    lccx_BR, lccy_BR = m(-122.58, 48.7)
+    lccx_BL, lccy_BL = m(-122.33, 48.7)
+    lccw = lccx_BL - lccx_BR
+    lcch = lccy_TL - lccy_BL
+
+    ax.add_patch(patches.Rectangle(
+        (lccx_BL, lccy_BL), lccw, lcch,
+        facecolor=fcolor, edgecolor='k',
+        linewidth=0,
+        zorder=0))
+
+    if label_grid:
+        #         rotation = 0
+        #         ax.annotate("49.5 N", xy=(m(-124.8, 49.5)), xytext=(m(-125, 49.5)),
+        #                     xycoords='data', textcoords='data',
+        #                     ha='right', va='center', fontsize=8, rotation=rotation)
+        fsmer = 7.5
+        ax.annotate("50.5N", xy=(m(-123.99, 50.43)), xytext=(m(-123.95, 50.43)),
+                    xycoords='data', textcoords='data',
+                    ha='left', va='center', fontsize=fsmer, rotation=-30)
+
+        ax.annotate("123.5W", xy=(m(-123.65, 50.05)), xytext=(m(-123.65, 50.15)),
+                    xycoords='data', textcoords='data',
+                    ha='left', va='center', fontsize=fsmer, rotation=60)
+        ax.annotate("50N", xy=(m(-123.5, 49.94)), xytext=(m(-123.42, 49.94)),
+                    xycoords='data', textcoords='data',
+                    ha='left', va='center', fontsize=fsmer, rotation=-30)
+        ax.annotate("49.5N", xy=(m(-123.06, 49.4)), xytext=(m(-122.9, 49.4)),
+                    xycoords='data', textcoords='data',
+                    ha='left', va='center', fontsize=fsmer, rotation=-30)
+
+        ax.annotate("122.5W", xy=(m(-122.8, 49.15)), xytext=(m(-122.61, 49.15)),
+                    xycoords='data', textcoords='data',
+                    ha='left', va='center', fontsize=fsmer, rotation=60)
+
+        ax.annotate("49N", xy=(m(-122.65, 49)), xytext=(m(-122.4, 48.93)),
+                    xycoords='data', textcoords='data',
+                    ha='left', va='center', fontsize=fsmer, rotation=-30)
+
+
+#         ax.annotate("", xy=(m(-123.5, 50)), xytext=(m(-123.4, 50)),
+#                     xycoords='data', textcoords='data',
+#                     ha='left', va='center', fontsize=8, rotation=rotation)
+
+#         rotation = -30
+#         ax.annotate("50 N", xy=(m(-124.3, 50)), xytext=(m(-124.3, 50.08)),
+#                     xycoords='data', textcoords='data',
+#                     ha='right', va='center', fontsize=8, rotation=rotation)
+#         ax.annotate("49 N", xy=(m(-124.3, 49)), xytext=(m(-124.3, 49.08)),
+#                     xycoords='data', textcoords='data',
+#                     ha='right', va='center', fontsize=8, rotation=rotation)
+
+
+def custom_formatter(x, pos):
+    return f'{x:.2f}'
+
+
+def custom_formatter2(x, pos):
+    return f'{x:.1f}'
+
+def find_bloom_doy(df, df_field, thrshld_fctr=1.05, sub_thrshld_fctr=0.7,
+                   average_from="annual", mean_or_median="median"):
+
+
+    # Create lists to hold the results
+    bloom_dates = []
+    bloom_days_of_year = []
+    bloom_earlylate = []
+
+    # match spreadsheet method:
+    # method: median est set fixed to 1.05x 1.65 based on med of all yrs
+    # they don't quite match (2008 and 2011 are the issues)
+    # if median value is set to 1.65 and is based on median across all years and threshold is high
+    # secondary criteria is average of one of two following weeks must be 0.95 threshold.
+    # then all years except 3 match: 2006, 2008, 2011. 2006 is probably never going to work,
+    # 2008 is on cusp, 2011 is issue because either early or late but should be avg
+    # if you use a median or threshold val of aroun 1.65 and a higher sub-threshold than suchy then it works
+    # results overall indicate the model is generally slightly early
+    #
+    # match suchy method (median from within year, threshold 70% median
+    # results: model tool early consistently
+
+    # Group by year
+    df['Year'] = df['Date'].dt.year
+    if average_from=="all":
+        median_value = df[df_field].median()
+        mean_value = df[df_field].mean()
+    # median_value = 1.65
+    # median_value = 1.9
+    grouped = df.groupby('Year')
+
+    # Iterate through each year
+    for year, group in grouped:
+
+        if average_from=="annual":
+            median_value = group[df_field].median()
+            mean_value = group[df_field].mean()
+
+        if mean_or_median == "mean":
+            threshold = thrshld_fctr * mean_value
+        else:
+            threshold = thrshld_fctr * median_value
+
+        print("year " + str(year))
+        print("threshold " + str(threshold))
+        sub_threshold = sub_thrshld_fctr * threshold
+        # sub_threshold = sub_thrshld_fctr * threshold
+
+        bloom_found = False
+
+        # Iterate through the time steps of the year
+        for i in range(len(group) - 2):  # Ensure we have at least two subsequent steps
+            if group.iloc[i][df_field] >= threshold:
+                # print("possible bloom found")
+                # print(group.iloc[i + 1]['PP1-DIA'])
+                # print(group.iloc[i + 2]['PP1-DIA'])
+                # print(group.iloc[i + 3]['PP1-DIA'])
+                if (
+                        (group.iloc[i + 1][df_field] + group.iloc[i + 2][df_field]) / 2
+                        > sub_threshold
+                ) or (
+                        (group.iloc[i + 3][df_field] + group.iloc[i + 4][df_field]) / 2
+                        > sub_threshold
+                ):
+                    # print("bloom passes second crit")
+                    bloom_dates.append(group.iloc[i]['Date'])
+                    bloom_doy = group.iloc[i]['Date'].timetuple().tm_yday
+                    bloom_days_of_year.append(bloom_doy)
+                    bloom_found = True
+                    print(group.iloc[i + 1][df_field])
+                    if bloom_doy < 68:
+                        bloom_earlylate.append("early")
+                    elif bloom_doy <= 107:
+                        bloom_earlylate.append("avg")
+                    elif bloom_doy >= 108:
+                        bloom_earlylate.append("late")
+                    else:
+                        print("problem finding bloom timing category")
+                    break
+
+        # If no bloom is found for the year, append None
+        if not bloom_found:
+            bloom_dates.append(None)
+            bloom_days_of_year.append(None)
+            bloom_earlylate.append(None)
+
+    return bloom_dates, bloom_days_of_year, bloom_earlylate
