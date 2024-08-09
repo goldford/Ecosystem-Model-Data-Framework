@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib import patches
 import xarray as xr
 from mpl_toolkits.basemap import Basemap
+import pandas as pd
 
 def is_leap_year(year):
     return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
@@ -747,7 +748,7 @@ def find_bloom_doy(df, df_field, thrshld_fctr=1.05, sub_thrshld_fctr=0.7,
                     bloom_days_of_year.append(bloom_doy)
                     bloom_found = True
                     print(group.iloc[i + 1][df_field])
-                    if bloom_doy < 68:
+                    if bloom_doy <= 68:
                         bloom_earlylate.append("early")
                     elif bloom_doy <= 107:
                         bloom_earlylate.append("avg")
@@ -764,3 +765,38 @@ def find_bloom_doy(df, df_field, thrshld_fctr=1.05, sub_thrshld_fctr=0.7,
             bloom_earlylate.append(None)
 
     return bloom_dates, bloom_days_of_year, bloom_earlylate
+
+
+# GO2021-12-22 fmt= has big effect on ASC file size, added argument for this
+def saveASCFile(filename, data, bottomleft_row_ewe, upperleft_row_ewe, upperleft_col_ewe, sigdigfmt, ASCheader,
+                dfPlumeMask=None, dfLandMask=None):
+    # Greig's bounds clipping from "Basemap Converter (Py3).ipynb"
+    # I don't know why this works but it does... -JB
+    # (due to how indexing is done in ASC vs NC -GO)
+    trimmedData = []
+    i = bottomleft_row_ewe
+    while i < upperleft_row_ewe:
+        trimmedData.append(data[i, upperleft_col_ewe:])
+        i += 1
+    trimmedData.reverse()
+
+    dfEwEGrid = pd.DataFrame(data=trimmedData)
+
+    if not (dfPlumeMask is None):
+        dfEwEGrid = dfEwEGrid.mask(dfPlumeMask)
+
+    if not (dfLandMask is None):
+        dfEwEGrid = dfEwEGrid.mask(dfLandMask)
+
+    dfEwEGrid.fillna(0.0, inplace=True)
+
+    np.savetxt(filename, dfEwEGrid.to_numpy(), fmt=sigdigfmt, delimiter=" ", comments='',
+               header=ASCheader)  # GO 20211222 - change from %0.5f
+
+
+# Open a Dataframe
+def getDataFrame(fullPath, NaN):
+    if os.path.exists(fullPath):
+        nas = [NaN]
+        df = pd.read_table(fullPath, skiprows=6, header=None, delim_whitespace=True, na_values=nas)
+        return df

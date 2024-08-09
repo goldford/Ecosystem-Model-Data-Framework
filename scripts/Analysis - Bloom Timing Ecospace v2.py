@@ -53,21 +53,25 @@ path_ecospace_out = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_
 # - NO RESPONSE HOOKED UP BUT NONETHELESS THE EXTERNAL DRIVER WAS ACTIVE
 # scenario = 'SC34' # Less Shallow PI, new mixing curve, w/ temp now
 # ecospace_code = "Scv34-PARenv_lessshallowPI_MixingSteep"
-# scenario = 'SC35' # Less Shallow PI, new mixing curve, w/ temp now
+# scenario = 'SC35' # Less Shallow PI, new mixing curve, w/ temp now -- this one can't trust - some enviro stuck off
 # ecospace_code = "Scv35-PARenv_lessshallowPI_MixingSteep"
-# scenario = 'SC36' # Less Shallow PI, new mixing curve, w/ temp now
+# scenario = 'SC36' # Less Shallow PI, new mixing curve, w/ temp now - - this one can't trust - some enviro stuck off
 # ecospace_code = "Scv36-PARenv_lessshallowPI_MixingSteep"
-scenario = 'SC37' # Less Shallow PI, new mixing curve, w/ temp now
-ecospace_code = "Scv37-PARenv_lessshallowPI_MixingSteep_Temp"
-
+# scenario = 'SC37' # Less Shallow PI, new mixing curve, w/ temp now - this one can't trust - some enviro stuck off
+# ecospace_code = "Scv37-PARenv_lessshallowPI_MixingSteep_Temp"
+# scenario = 'SC38' # Has temp, wind, PAR
+# ecospace_code = "Scv38-PARenv_PI_Temp_Wind"
+scenario = 'SC39' # like 38 but adjusted wind repsonse
+ecospace_code = "Scv39-PARenv_PI_Temp_Wind"
 
 log_transform = True # following suchy, make true
 # log transforming follows Suchy (though theirs is chl)
 mean_or_median = "median" # use mean or median for def of bloom?
-average_from = "annual"   # to follow suchy, set bloom def based on annual avg (alt: "all")
+average_from = "annual"   # 'annual' to follow suchy, set bloom def based on annual avg (alt: "all")
 thrshld_fctr = 1.05 # threshold above avg, suchy used 1.05
 sub_thrshold_fctr = 0.7 # the secondary threshold, if first met, the test of 1/2 following 2 weeks (does it stay in bloom)
-
+min_y_tick = 0 # 38 in previous plots
+display_gower = False # true in most previous plots
 
 v_f = {#"NK1-COH": path_ecospace_out + "EcospaceMapBiomass-NK1-COH-{}.asc",
        # "NK2-CHI": path_ecospace_out + "EcospaceMapBiomass-NK2-CHI-{}.asc",
@@ -377,7 +381,9 @@ fig, ax = plt.subplots(figsize=(10, 6))
 ax.errorbar(df['Year'], df['Day of Year_x'], yerr=3, fmt='s', color='blue', label='Ecospace Model', capsize=5)
 # Plotting the Suchy data
 ax.errorbar(df['Year'], df['Day of Year_y'], yerr=8, fmt='s', color='red', label='Suchy Data', capsize=5)
-ax.errorbar(df['Year'], df['Day of Year_Gower'], yerr=7, fmt='s', color='orange', label='Gower Data', capsize=5)
+
+if display_gower:
+    ax.errorbar(df['Year'], df['Day of Year_Gower'], yerr=7, fmt='s', color='orange', label='Gower Data', capsize=5)
 
 # Adding horizontal dashed lines
 ax.axhline(y=68, color='black', linestyle='--')
@@ -389,6 +395,8 @@ x_min, x_max = ax.get_xlim()
 # Adding a rectangle filled with light grey that spans the entire width of the plot
 ax.fill_between([x_min, x_max], 68, 108, color='lightgrey', alpha=0.5, zorder=0)
 ax.set_xlim([2002.5, 2016.5])
+y_min, y_max = ax.get_ylim()
+ax.set_ylim([min_y_tick, y_max])
 ax.set_xlabel('Year')
 ax.set_ylabel('Day of Year')
 # ax.set_title('Diatom Bloom Timing Comparison')

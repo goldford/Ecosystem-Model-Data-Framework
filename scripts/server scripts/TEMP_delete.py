@@ -1,21 +1,3 @@
-# Created by G Oldford
-# Aug 7-8, 2024
-# Purpose: process daily RDRS v2.1 wind files (NC) to 3-day fields for testing of forcing Ecospace
-#
-# Input:
-#   1/ NC files of RDRS daily processed on server to daily averages
-#
-# Output:
-#   1/ Ecospace ASC in 3 day blocked MAXIMUM daily means of wind speed (sqrt(u^2 + v^2)) and stress (u^2 + v^2)
-#   2/ Ecosim TS, same as above, but averaged Max (this is probably a bit convoluted
-#
-# note:
-#   - not running this on the graham server because it seems to be down.
-#   - 2024-08-08 - since maximum winds (sustained for some threshold period) are what is important for disrupting spring
-#     PP blooms, I am using the maximum 3-day wind speeds and stress, but these are computed from daily mean
-#     wind speeds. I can't do anything about this because the original data are stuck on graham and must be processed
-#     there, practically speaking. I also don't know the threshold, so daily is probably okay.
-
 import os
 import numpy as np
 import netCDF4 as nc
@@ -25,10 +7,10 @@ import csv
 
 wind_daily_p = "C:/Users/Greig/Downloads/RDRS_Wind/"
 wind_daily_f = "RDRS21_NEMOgrid_wind_daily_{}.nc"
-ecospace_out_p = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/RDRS forcings/Wind_RDRS/Ecospace"
+ecospace_out_p = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/NEMO forcings/Wind_RDRS/Ecospace"
 ecospace_out_speed_subdir = "speed/"
 ecospace_out_stress_subdir = "stress"
-ecosim_out_p = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/RDRS forcings/Wind_RDRS/Ecosim"
+ecosim_out_p = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/NEMO forcings/Wind_RDRS/Ecosim"
 
 plume_dir = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/basemap/"
 ecospacegrid_dir = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/basemap/"
@@ -241,3 +223,5 @@ if save_ecosim:
         writer = csv.writer(file)
         writer.writerow(column_names)
         writer.writerows(var_ecosim_all_expnd_idx)
+
+

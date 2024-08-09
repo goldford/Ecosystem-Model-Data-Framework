@@ -53,12 +53,16 @@ from datetime import datetime, timedelta
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v33 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
 # ecospace_code = "Scv34-PARenv_lessshallowPI_MixingSteep" # very shallow PI slope, PAR enviro driver again, MixingxPAR driving hab cap (crazy response from PIC and NAN)
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v34 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
-# ecospace_code = "Scv35-PARenv_lessshallowPI_MixingSteep" #
+# ecospace_code = "Scv35-PARenv_lessshallowPI_MixingSteep" # this one might be messed up - enviro drivers not working
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v35 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
-# ecospace_code = "Scv36-PARenv_lessshallowPI_MixingSteep" #
+# ecospace_code = "Scv36-PARenv_lessshallowPI_MixingSteep" # # this one might be messed up - enviro drivers not working
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v36 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
-ecospace_code = "Scv37-PARenv_lessshallowPI_MixingSteep_Temp" #
-path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v37 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv37-PARenv_lessshallowPI_MixingSteep_Temp" # this one might be messed up - enviro drivers not working
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v37 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv38-PARenv_PI_Temp_Wind" # introduces wind, drivers working, 2003 poor but other yrs generally better
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v38 - PAR_PI_Temp_Wind - 3DAY 1yr10yr//asc//"
+ecospace_code = "Scv39-PARenv_PI_Temp_Wind" # like 38 but sensitivity test of slope of wind response
+path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v39 - PAR_PI_Temp_Wind - 3DAY 1yr10yr//asc//"
 
 
 path_out = "..//data//ecospace_out//"

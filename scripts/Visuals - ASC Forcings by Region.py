@@ -1,11 +1,9 @@
-# DELETE THIS, CHANGED TO ADD RDRS FORCINGS FOR WINDS - SEE 'ASC Forcings by region'
 # Created by G Oldford
 # July 24, 2024
 # Purpose:
-#   - visualise forcings by reading NEMO output files prepped for Ecospace (3 day blocks)
-#     to help understand whether it's the model or the forcings preventing precise bloom
-#     date prediction. Data can be compared to any model but Suchy data is probably best
-#     which is 'region 2' in Ecospace outputs, aka central SoG
+#   - visualise forcings by reading NEMO and RDRS output files prepped for Ecospace (3 day blocks)
+#     to help  with calibrating bloom timing in ECOSPACE model
+#     'region 2' in Ecospace outputs, aka central SoG corresponding to Suchy et al., 2021, approximately
 #
 # Source:
 #
@@ -20,21 +18,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
-# 1/ Point to a set of ECOSPACE ASC Out files
-# 2/ Open the required ECOSPACE row / col / lat / lon file
-# 3/ Open a region definition file
 
-# For each ECOSPACE out file
-# Open and read it
-# Get just the data from rows and cols within region and flatten
-# compute the mean for the region
-# next file
 
 # paths
 path_ecospace_map = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/basemap"
 file_ecospace_map = "Ecospace_grid_20210208_rowscols.csv"
 
 path_NEMO_ASCs_root = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/forcing"
+# after processing to NC they are too large for github, so moved here
+path_NEMO_NCs_root = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/NEMO forcings"
+path_RDRS_ASCs_root = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/RDRS forcings/Wind_RDRS/Ecospace/"
+path_RDRS_NCs_root = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/RDRS forcings/Wind_RDRS/Ecospace/"
+
 subpath_NEMO_ASCs_PAR = "/ECOSPACE_in_3day_PAR3_Sal4m_2003-2018_20240527/PAR-VarZ-VarK"
 subpath_NEMO_ASCs_vars = "/ECOSPACE_in_3day_vars_2003-2018_20240527/ECOSPACE_in_3day_vars"
 subfolder_NEMO_PAR = "/PAR-VarZ-VarK"
@@ -43,9 +38,11 @@ subfolder_NEMO_temp0to10m = "/vartemp1_C_0-10mAvg"
 subfolder_NEMO_mixing = "/varmixing_m"
 
 subfolders = {
-    "PAR":         "ECOSPACE_in_3day_PAR3_Sal4m_2003-2018_20240527/PAR-VarZ-VarK",
-    "PARxMixing":  "ECOSPACE_in_3day_PAR3_Sal4m_2003-2018_20240527/RUN216_PARxMixing",
-    "MixingZ":     "ECOSPACE_in_3day_vars_2003-2018_20240527/ECOSPACE_in_3day_vars/varmixing_m",
+    "PAR":         path_NEMO_ASCs_root + "ECOSPACE_in_3day_PAR3_Sal4m_2003-2018_20240527/PAR-VarZ-VarK",
+    "PARxMixing":  path_NEMO_ASCs_root + "ECOSPACE_in_3day_PAR3_Sal4m_2003-2018_20240527/RUN216_PARxMixing",
+    "MixingZ":     path_NEMO_ASCs_root + "ECOSPACE_in_3day_vars_2003-2018_20240527/ECOSPACE_in_3day_vars/varmixing_m",
+    "Wind_Stress_10m_RDRS":     path_RDRS_ASCs_root + "stress",
+    "Wind_Speed_10m_RDRS":     path_RDRS_ASCs_root + "speed",
     "Temp_0to10m": "ECOSPACE_in_3day_vars_2003-2018_20240527/ECOSPACE_in_3day_vars/vartemp1_C_0-10mAvg",
     "Salt_0to4m":"ECOSPACE_in_3day_vars_2003-2018_20240527/ECOSPACE_in_3day_vars/varsalt2_PSU_0-4m"
 }
@@ -53,6 +50,8 @@ subfolders = {
 ASC_file_fmts = {"PAR": "PAR-VarZ-VarK_{}_{}.asc", # month, doy
                  "PARxMixing": "RUN216_PARxMixing_{}_{}.asc",
                  "MixingZ": "varmixing_m_{}_{}.asc",
+                 "Wind_Stress_10m_RDRS": "RDRS_windstress10m_{}_{}.asc",
+                 "Wind_Speed_10m_RDRS": "RDRS_windspeed10m_{}_{}.asc",
                  "Temp_0to10m": "vartemp1_C_0-10mAvg_{}_{}.asc",
                  "Salt_0to4m": "varsalt2_PSU_0-4m_{}_{}.asc"
                  }
@@ -88,8 +87,12 @@ process_asc = False
 if process_asc:
     # Loop over subfolders and files
     for var, subfolder in subfolders.items():
-        # if var != 'Salt_0to4m':
+
+        ####################################
+        # if var != 'Wind_Speed_10m_RDRS':
         #     continue
+        ####################################
+
         timestamps = []
         file_paths = []
         folder_path = os.path.join(path_NEMO_ASCs_root, subfolder)
@@ -150,8 +153,12 @@ if process_asc:
                 ds[var][t-1, :, :] = data
 
         # Save the dataset to a file
-        ds.to_netcdf(os.path.join(path_NEMO_ASCs_root, f'{var}.nc'))
-        print(f"Saved {var}.nc to {path_NEMO_ASCs_root}")
+        if (var != "Wind_Stress_10m_RDRS") & (var != "Wind_Speed_10m_RDRS"):
+            ds.to_netcdf(os.path.join(path_NEMO_NCs_root, f'{var}.nc'))
+            print(f"Saved {var}.nc to {path_NEMO_NCs_root}")
+        else:
+            ds.to_netcdf(os.path.join(path_RDRS_NCs_root, f'{var}.nc'))
+            print(f"Saved {var}.nc to {path_RDRS_NCs_root}")
 
 doy_suchy = [100, 68, 50, 83, 115, 115, 100, 100, 92, 88, 92, 92, 55, 77]
 
@@ -172,7 +179,7 @@ print(dates_suchy)
 print(dates_suchy_lag1)
 
 # List of variables
-vars = ["PAR", "PARxMixing", "MixingZ", "Temp_0to10m", "Salt_0to4m"]
+vars = ["PAR", "PARxMixing", "MixingZ", "Wind_Stress_10m_RDRS", "Wind_Speed_10m_RDRS", "Temp_0to10m", "Salt_0to4m"]
 
 # Create a figure with subplots
 fig, axes = plt.subplots(len(vars), 1, figsize=(12, len(vars) * 3), sharex=False)
@@ -180,6 +187,8 @@ fig, axes = plt.subplots(len(vars), 1, figsize=(12, len(vars) * 3), sharex=False
 # Initialize lists to store the extracted values - for scatter plot investigation
 par_values = []
 mixing_values = []
+wind_stress_values = []
+wind_speed_values = []
 par_values_lag1 = []
 mixing_values_lag1 = []
 years = []
@@ -194,7 +203,10 @@ alt_Mixing = False # flag to use just the cells that actually vary in terms of M
 # Loop over the variables and create a subplot for each
 for i, var in enumerate(vars):
     # Load the dataset
-    ds = xr.open_dataset(os.path.join(path_NEMO_ASCs_root, f'{var}.nc'))
+    if (var != 'Wind_Stress_10m_RDRS') & (var != 'Wind_Speed_10m_RDRS'):
+        ds = xr.open_dataset(os.path.join(path_NEMO_NCs_root, f'{var}.nc'))
+    else:
+        ds = xr.open_dataset(os.path.join(path_RDRS_NCs_root, f'{var}.nc'))
 
     # Compute the average for the region where dat_regions == 2
     if (var == 'MixingZ') & alt_Mixing:
@@ -208,7 +220,7 @@ for i, var in enumerate(vars):
 
 
     # find the matching data corresponding to bloom
-    if var == 'MixingZ' or var == 'PAR':
+    if var == 'MixingZ' or var == 'PAR' or var =='Wind_Stress_10m_RDRS' or var =='Wind_Speed_10m_RDRS':
 
         # Extract values for each date in dates_suchy
         for date in dates_suchy:
@@ -219,6 +231,10 @@ for i, var in enumerate(vars):
                 par_values.append(value)
             elif var == 'MixingZ':
                 mixing_values.append(value)
+            elif var == 'Wind_Stress_10m_RDRS':
+                wind_stress_values.append(value)
+            elif var == 'Wind_Speed_10m_RDRS':
+                wind_speed_values.append(value)
 
         # Lag 1  - Extract values for each date in dates_suchy (using time delta)
         for date in dates_suchy:
@@ -261,9 +277,9 @@ for i, var in enumerate(vars):
 axes[-1].set_xlabel('Time')
 plt.suptitle('Time Series of Variables')
 if alt_Mixing:
-    plt.savefig('..//figs//' + 'nemo_asc_ts_altMixing.png', bbox_inches='tight', dpi=300)
+    plt.savefig('..//figs//' + 'forcing_asc_ts_altMixing.png', bbox_inches='tight', dpi=300)
 else:
-    plt.savefig('..//figs//' + 'nemo_asc_ts.png', bbox_inches='tight', dpi=300)
+    plt.savefig('..//figs//' + 'forcing_asc_ts.png', bbox_inches='tight', dpi=300)
 plt.show()
 
 
@@ -361,5 +377,20 @@ plt.title('Scatter Plot of PAR vs Mixing Values - 3Day Lag')
 plt.grid(True)
 plt.savefig('..//figs//' + 'scatter_PAR_vs_Mixing_3DayLag.png', bbox_inches='tight', dpi=300)
 plt.show()
-###################
 
+
+# /7 scatter plot - wind stress versus bloom day suchy
+plt.figure(figsize=(10, 6))
+plt.scatter(doy_suchy, wind_stress_values, c='blue', marker='o')
+# Annotate each point with the year
+for i, date in enumerate(dates_suchy):
+    plt.annotate(str(date.year) + ", " + str(date.timetuple().tm_yday), (doy_suchy[i], wind_stress_values[i]),
+                 textcoords="offset points", xytext=(5,5), ha='center', fontsize=8)
+plt.xlabel('Bloom Day')
+plt.ylabel('Wind Stress')
+plt.title('Scatter Plot of Bloom Day vs Wind Stress')
+plt.grid(True)
+plt.savefig('..//figs//' + 'scatter_WindStress_vs_BloomDay.png', bbox_inches='tight', dpi=300)
+plt.show()
+
+###################
