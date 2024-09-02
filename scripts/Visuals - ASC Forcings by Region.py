@@ -44,7 +44,8 @@ subfolders = {
     "Wind_Stress_10m_RDRS":     path_RDRS_ASCs_root + "stress",
     "Wind_Speed_10m_RDRS":     path_RDRS_ASCs_root + "speed",
     "Temp_0to10m": "ECOSPACE_in_3day_vars_2003-2018_20240527/ECOSPACE_in_3day_vars/vartemp1_C_0-10mAvg",
-    "Salt_0to4m":"ECOSPACE_in_3day_vars_2003-2018_20240527/ECOSPACE_in_3day_vars/varsalt2_PSU_0-4m"
+    "Salt_0to4m": "ECOSPACE_in_3day_vars_2003-2018_20240527/ECOSPACE_in_3day_vars/varsalt2_PSU_0-4m",
+    "Temp_0to4m": "ECOSPACE_in_3day_vars_2003-2018_20240527/ECOSPACE_in_3day_vars/vartemp2_C_0-4m"
 }
 
 ASC_file_fmts = {"PAR": "PAR-VarZ-VarK_{}_{}.asc", # month, doy
@@ -53,7 +54,8 @@ ASC_file_fmts = {"PAR": "PAR-VarZ-VarK_{}_{}.asc", # month, doy
                  "Wind_Stress_10m_RDRS": "RDRS_windstress10m_{}_{}.asc",
                  "Wind_Speed_10m_RDRS": "RDRS_windspeed10m_{}_{}.asc",
                  "Temp_0to10m": "vartemp1_C_0-10mAvg_{}_{}.asc",
-                 "Salt_0to4m": "varsalt2_PSU_0-4m_{}_{}.asc"
+                 "Salt_0to4m": "varsalt2_PSU_0-4m_{}_{}.asc",
+                 "Temp_0to4m": "vartemp2_C_0-4mAvg_{}_{}.asc"
                  }
 
 path_regions_asc = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/basemap"
@@ -83,14 +85,14 @@ rows = dat_regions.shape[0]
 cols = dat_regions.shape[1]
 print(rows, cols)
 
-process_asc = False
+process_asc = True
 if process_asc:
     # Loop over subfolders and files
     for var, subfolder in subfolders.items():
 
         ####################################
-        # if var != 'Wind_Speed_10m_RDRS':
-        #     continue
+        if var != 'Temp_0to4m':
+            continue
         ####################################
 
         timestamps = []
@@ -179,7 +181,7 @@ print(dates_suchy)
 print(dates_suchy_lag1)
 
 # List of variables
-vars = ["PAR", "PARxMixing", "MixingZ", "Wind_Stress_10m_RDRS", "Wind_Speed_10m_RDRS", "Temp_0to10m", "Salt_0to4m"]
+vars = ["PAR", "PARxMixing", "MixingZ", "Wind_Stress_10m_RDRS", "Wind_Speed_10m_RDRS", "Temp_0to10m", "Salt_0to4m", "Temp_0to4m"]
 
 # Create a figure with subplots
 fig, axes = plt.subplots(len(vars), 1, figsize=(12, len(vars) * 3), sharex=False)
@@ -209,13 +211,12 @@ for i, var in enumerate(vars):
         ds = xr.open_dataset(os.path.join(path_RDRS_NCs_root, f'{var}.nc'))
 
     # Compute the average for the region where dat_regions == 2
+    mask = (dat_regions == 2) & (ds[var] > 0)
     if (var == 'MixingZ') & alt_Mixing:
         # mask = ((dat_regions == 2) & ((ds[var] > 10.1)))
-        mask = (dat_regions == 2)
         ds[var] = np.log(ds[var]+0.1)
         var_avg = ds[var].where(mask).mean(dim=['row', 'col'])
     else:
-        mask = (dat_regions == 2)
         var_avg = ds[var].where(mask).mean(dim=['row', 'col'])
 
 

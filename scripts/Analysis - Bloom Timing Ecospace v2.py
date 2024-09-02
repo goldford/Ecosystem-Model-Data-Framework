@@ -61,8 +61,16 @@ path_ecospace_out = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_
 # ecospace_code = "Scv37-PARenv_lessshallowPI_MixingSteep_Temp"
 # scenario = 'SC38' # Has temp, wind, PAR
 # ecospace_code = "Scv38-PARenv_PI_Temp_Wind"
-scenario = 'SC39' # like 38 but adjusted wind repsonse
-ecospace_code = "Scv39-PARenv_PI_Temp_Wind"
+# scenario = 'SC39' # like 38 but adjusted wind repsonse
+# ecospace_code = "Scv39-PARenv_PI_Temp_Wind"
+# scenario = 'SC40' # like 39 but now w/ mixing to help with habitat cap
+# ecospace_code = "Scv40-PARenv_PI_Temp_Wind"
+# scenario = 'SC41' # like 39 or 40 (not sure which) but different results?! bug? Seems changes made in 40 did not take effect? RE runnin 40 gave similar result to 41
+# ecospace_code = "Scv41-PARenv_PI_Temp_Wind"
+# scenario = 'SC42' # is 41 but with the same PI as 39, to double check
+# ecospace_code = "Scv42-PARenv_PI_Temp_Wind_Mixing"
+scenario = 'SC43' # is 41 but with the same PI as 39, to double check
+ecospace_code = "Scv43-All_Groups_Temp"
 
 log_transform = True # following suchy, make true
 # log transforming follows Suchy (though theirs is chl)

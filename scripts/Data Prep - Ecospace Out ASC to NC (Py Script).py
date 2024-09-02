@@ -1,7 +1,7 @@
 # Create 2024-31
 # G Oldford
 # Purpose: convert Ecospace ASC out to NetCDF
-# SAVES IN 3DAY BLOCKS
+#          For use with the 3Day Model
 
 import numpy as np
 import xarray as xr
@@ -61,8 +61,18 @@ from datetime import datetime, timedelta
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v37 - PAR_PI_Temp_mixing - 3DAY 1yr10yr//asc//"
 # ecospace_code = "Scv38-PARenv_PI_Temp_Wind" # introduces wind, drivers working, 2003 poor but other yrs generally better
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v38 - PAR_PI_Temp_Wind - 3DAY 1yr10yr//asc//"
-ecospace_code = "Scv39-PARenv_PI_Temp_Wind" # like 38 but sensitivity test of slope of wind response
-path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v39 - PAR_PI_Temp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv39-PARenv_PI_Temp_Wind" # like 38 but sensitivity test of slope of wind response
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v39 - PAR_PI_Temp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv40-PARenv_PI_Temp_Wind" # like 39 but with mixing response for simulating habitat volume
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v40 - PAR_PI_Temp_Wind_mixing - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv41-PARenv_PI_Temp_Wind" # should be identical to 39 or 40 (check which) but getting different results
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v41 - PAR_PI_Temp_Wind_mixing - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv42-PARenv_PI_Temp_Wind_Mixing" # should be identical to 39 or 40 (check which) but getting different results
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v42 - PAR_PI_Temp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv43-All_Groups_Temp" # should be identical to 39 or 40 (check which) but getting different results
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v43 - All Groups w Temp - 3DAY 1yr10yr//asc//"
+ecospace_code = "Scv45-All_Groups_Temp" # should be identical to 39
+path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v45 - All Groups w Temp - 3DAY 1yr10yr//asc//"
 
 
 path_out = "..//data//ecospace_out//"

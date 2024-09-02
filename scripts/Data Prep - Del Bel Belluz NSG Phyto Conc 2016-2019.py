@@ -97,6 +97,21 @@ plt.xticks(sampling_events_count['month'])
 plt.grid(axis='y')
 plt.show()
 
+# Summarize the count of sampling events by each season
+sampling_events_count = merged_df.groupby('season')['eventID'].nunique().reset_index()
+sampling_events_count.columns = ['season', 'sampling_events_count']
+print(sampling_events_count)
+
+# Plot the histogram of sampling events by month
+plt.figure(figsize=(10, 6))
+plt.bar(sampling_events_count['season'], sampling_events_count['sampling_events_count'], color='blue', edgecolor='black')
+plt.xlabel('Season')
+plt.ylabel('Number of Sampling Events')
+plt.title('Number of Sampling Events by Season')
+plt.xticks(sampling_events_count['season'])
+plt.grid(axis='y')
+plt.show()
+
 # Plot the histogram of measurement values by class
 plt.figure(figsize=(15, 10))
 classes = merged_df['class'].unique()

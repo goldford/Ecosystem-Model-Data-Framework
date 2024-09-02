@@ -32,7 +32,9 @@ path_SSC_dwnld = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/28. Phytop
 path_Ecospace_out = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/ECOSPACE_OUT"
 path_Ecospace_map = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/basemap"
 
-file_Ecospace_out = "Scv7-PARMixingNut90Temp_2003-2018.nc"
+# file_Ecospace_out = "Scv7-PARMixingNut90Temp_2003-2018.nc"
+file_Ecospace_out = "Scv39-PARenv_PI_Temp_Wind_2003-2018.nc"
+
 file_Ecospace_map = "Ecospace_grid_20210208_rowscols.csv"
 file_SSC_bathy = "ubcSSnBathymetryV21-08_a29d_efc9_4047.nc"
 file_SSC_meshm_3D = 'ubcSSn3DMeshMaskV17-02.nc'

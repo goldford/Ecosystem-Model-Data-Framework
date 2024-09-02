@@ -46,8 +46,8 @@ from GO_helpers import is_leap_year, buildSortableString, saveASCFile, getDataFr
 # - GO 2024-05-21 edits to write out daily files for non-depth integrated salinity (e.g., just 4 m)
 # - GO 2024-05-23 mod for 3-day means
 # - GO 2024-05-27 option to lump final 3-day groups into one so not to exceed 120 blocks per year
-# - GO 2025-05-28 added another layer - multiplication of depth-int average PAR and mixing (to get 'volume hab')
-# - GO 2025-05-29 created this script for 2b since I'm suspicious of the depth int calc
+# - GO 2024-05-28 added another layer - multiplication of depth-int average PAR and mixing (to get 'volume hab')
+# - GO 2024-05-29 created this script for 2b since I'm suspicious of the depth int calc
 #xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # //////////////////////////////////// FUNCTIONS //////////////////////////////////////

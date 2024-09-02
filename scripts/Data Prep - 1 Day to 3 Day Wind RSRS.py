@@ -34,8 +34,8 @@ plume_dir = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data
 ecospacegrid_dir = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/basemap/"
 
 scaling = "sqrt"
-startyear = 2003
-endyear = 2018
+startyear = 1980
+endyear = 2002
 startMonth = 1
 endMonth = 12
 out_code = "var"

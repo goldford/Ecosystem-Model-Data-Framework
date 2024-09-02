@@ -14,8 +14,8 @@
 #  - Scv7-PARMixingNut90Temp_2003-2018.nc
 # Metadata:
 #  Years Covered:
-#    SSCast - 2008 - 2018
-#    Nemcek et al. 2023 - 2015 - 2019
+#    SSCast: 2008 - 2018
+#    Nemcek et al. 2023: 2015 - 2019
 #    Ecospace - 2003 - 2018 (limited to years with adequate bloom timing data analysed elsewhere)
 #
 # Notes:
@@ -80,8 +80,6 @@ def get_ecospace_times(file_path):
             return {"Error": str(e)}, None, None
     else:
         return {"Error": "File not found."}, None, None
-
-
 
 
 # Paths to files

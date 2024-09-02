@@ -370,6 +370,87 @@ def read_sdomains(domain_file):
 
     return coords
 
+def convert_times(times, time_units, time_calendar):
+    times = nc.num2date(times, units=time_units, calendar=time_calendar)
+    times = np.array([np.datetime64(t) for t in times])
+    return times
+
+# computes monthly averages (year-month mean)
+def reshape_to_year_month(data, years, months):
+    unique_years = np.unique(years)
+    unique_months = np.unique(months)
+
+    year_dim = len(unique_years)
+    month_dim = len(unique_months)
+
+    reshaped_data = np.empty((year_dim, month_dim, data.shape[1], data.shape[2]))
+
+    for i, year in enumerate(unique_years):
+        for j, month in enumerate(unique_months):
+            mask = (years == year) & (months == month)
+            reshaped_data[i, j, :, :] = data.sel(time=mask).mean(dim='time')
+
+    return reshaped_data
+
+def get_ecospace_data_3(file_path, start_year=None, end_year=None, monthly_averages=False):
+    if os.path.exists(file_path):
+        try:
+            with (nc.Dataset(file_path, 'r') as dataset):
+                metadata = {
+                    "Dimensions": {dim: len(dataset.dimensions[dim]) for dim in dataset.dimensions},
+                    "Variables": {var: dataset.variables[var].dimensions for var in dataset.variables}
+                }
+                time_var = dataset.variables['time']
+                time_units = time_var.units
+                time_calendar = time_var.calendar if 'calendar' in time_var.ncattrs() else 'standard'
+                times = convert_times(time_var[:], time_units, time_calendar)
+
+                if start_year is not None and end_year is not None:
+                    start_date = np.datetime64(f'{start_year}-01-01')
+                    end_date = np.datetime64(f'{end_year}-12-31')
+                    time_mask = (times >= start_date) & (times <= end_date)
+                    times = times[time_mask]
+                else:
+                    time_mask = slice(None)
+
+                PZ1_CIL = dataset.variables['PZ1-CIL'][time_mask]
+                PZ2_DIN = dataset.variables['PZ2-DIN'][time_mask]
+                PZ3_HNF = dataset.variables['PZ3-HNF'][time_mask]
+                PP1_DIA = dataset.variables['PP1-DIA'][time_mask]
+                PP2_NAN = dataset.variables['PP2-NAN'][time_mask]
+                PP3_PIC = dataset.variables['PP3-PIC'][time_mask]
+
+                EWE_row = dataset.variables['row'][:]
+                EWE_col = dataset.variables['col'][:]
+                EWE_depth = dataset.variables['depth'][:]
+                row_indices = EWE_row
+                col_indices = EWE_col
+
+                ds = xr.Dataset({
+                    'PZ1_CIL': (['time', 'EWE_row', 'EWE_col'], PZ1_CIL),
+                    'PZ2_DIN': (['time', 'EWE_row', 'EWE_col'], PZ2_DIN),
+                    'PZ3_HNF': (['time', 'EWE_row', 'EWE_col'], PZ3_HNF),
+                    'PP1_DIA': (['time', 'EWE_row', 'EWE_col'], PP1_DIA),
+                    'PP2_NAN': (['time', 'EWE_row', 'EWE_col'], PP2_NAN),
+                    'PP3_PIC': (['time', 'EWE_row', 'EWE_col'], PP3_PIC)
+                }, coords={'time': times, 'EWE_row': row_indices, 'EWE_col': col_indices})
+
+                if monthly_averages:
+                    ds = ds.resample(time='1M').mean()
+
+                reshaped_data = {}
+                for var in ds.data_vars:
+                    data = ds[var]
+                    years = data['time.year']
+                    months = data['time.month']
+                    reshaped_data[var] = reshape_to_year_month(data, years, months)
+
+                return metadata, reshaped_data, row_indices, col_indices, EWE_depth
+        except OSError as e:
+            return {"Error": str(e)}, None, None, None, None
+    else:
+        return {"Error": "File not found."}, None, None, None, None
+
 
 class new_utils_GO():
 
