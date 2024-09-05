@@ -91,9 +91,34 @@ path_ecospace_out = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_
 # ecospace_code = "Scv52-RSPI_AllTemp_Wind"
 # scenario = 'SC53' # is 52 but now with proxy shallow temp PROD response in lieu of nutrients, applied to DIA
 # ecospace_code = "Scv53-RSPI_AllTemp_Wind"
-scenario = 'SC54' # is 53 but now with proxy shallow temp MORT response in lieu of nutrients, applied to DIA
-ecospace_code = "Scv54-RSPI_AllTemp_Wind"
+# scenario = 'SC54' # is 53 but now with proxy shallow temp MORT response in lieu of nutrients, applied to DIA
+# ecospace_code = "Scv54-RSPI_AllTemp_Wind"
+# scenario = 'SC56' # is 54, 55 but with Hab Cap as dynamic driver directly by light, keeping also the responses w/
+#                   # like proxy shallow temp MORT response in lieu of nutrients, applied to DIA
+#                   # The hab cap driver seems to bump the variability of growth rates up
+#                   # whereas the enviro response method seems only to penalise
+# ecospace_code = "Scv56-RSPI_AllTemp_Wind"
+# scenario = 'SC58' # is 54, 55 but with Hab Cap as dynamic driver directly by light, keeping also the responses w/
+#                   # like proxy shallow temp MORT response in lieu of nutrients, applied to DIA
+#                   # The hab cap driver seems to bump the variability of growth rates up
+#                   # so removed temp penalty driver on DIA to see how much variability is reduced
+# ecospace_code = "Scv58-RSPI_AllTemp_Wind"
+# scenario = 'SC59' # is 58 but with no hab capacity as driver and with spinup data (day 200 repeated)
+#                   # and B initialised is Ecospace's habitat adjusted B
+# ecospace_code = "Scv59-RSPI_AllTemp_Wind"
+# scenario = 'SC64' # is 58 but with no hab capacity as driver and with spinup data (day 200 repeated)
+#                   # and B initialised is Ecospace's habitat adjusted B
+# ecospace_code = "Scv64-RSPI_AllTemp_Wind"
+# scenario = 'SC56_2' # 56, trying to recreate it, ecopath adj b's, pbmax dia 20
+# ecospace_code = "Scv56_2-RSPI_AllTemp_Wind"
+# scenario = 'SC56_3' # 56, trying to recreate it, ecopath adj b's, pbmax 1000
+# ecospace_code = "Scv56_3-RSPI_AllTemp_Wind"
+# scenario = 'SC56_4' # 56, trying to recreate it, ecopath hab adj b's, pbmax 1000
+# ecospace_code = "Scv56_4-RSPI_AllTemp_Wind"
+scenario = 'SC56_5' # 56, trying to recreate it, ecopath hab adj b's, pbmax 20 all
+ecospace_code = "Scv56_5-RSPI_AllTemp_Wind"
 
+filenm_yr_strt = 2000
 
 log_transform = True # following suchy, make true
 # log transforming follows Suchy (though theirs is chl)
@@ -127,7 +152,6 @@ v_f = {#"NK1-COH": path_ecospace_out + "EcospaceMapBiomass-NK1-COH-{}.asc",
 
 # read the data into an xarray object which is versatile
 yr_strt = 2003
-filenm_yr_strt = 2000
 yr_end = 2018
 mo_strt = 1
 da_strt = 2
@@ -463,7 +487,7 @@ def color_rows(row):
 styled_table = table_df.style.apply(color_rows, axis=1)
 
 # Display the styled table
-styled_table.to_html('..//..//figs//' + 'bloom_timing_comparison_' + scenario + '.html')
+# styled_table.to_html('..//..//figs//' + 'bloom_timing_comparison_' + scenario + '.html')
 
 
 fig, ax = plt.subplots(figsize=(3, 4))  # Adjust the figure size as needed
@@ -489,7 +513,7 @@ table = ax.table(
 table.set_fontsize(9)
 table.scale(1.2, 1.2)
 
-plt.savefig('..//..//figs//' + scenario + '_' + trnsfrm + '_bloom_timing_comparison.pdf', bbox_inches='tight')
+# plt.savefig('..//..//figs//' + scenario + '_' + trnsfrm + '_bloom_timing_comparison.pdf', bbox_inches='tight')
 plt.savefig('..//..//figs//' + scenario + '_' + trnsfrm + '_bloom_timing_comparison.png', bbox_inches='tight', dpi=300)
 
 # Display the table

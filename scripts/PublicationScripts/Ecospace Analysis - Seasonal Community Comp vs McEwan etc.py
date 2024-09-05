@@ -38,8 +38,26 @@ ecospace_p = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/ECOSPACE
 # ecospace_code = 'SC51'
 # ecospace_f = "Scv53-RSPI_AllTemp_Wind_2000-2018.nc"
 # ecospace_code = 'SC53' # same as 52 but with temp PROD response applied to DIA (proxy for nutrients)
-ecospace_f = "Scv54-RSPI_AllTemp_Wind_2000-2018.nc"
-ecospace_code = 'SC54' # same as 53 but with temp MORT response applied to DIA (proxy for nutrients)
+# ecospace_f = "Scv54-RSPI_AllTemp_Wind_2000-2018.nc"
+# ecospace_code = 'SC54' # same as 53 but with temp MORT response applied to DIA (proxy for nutrients)
+# ecospace_f = "Scv56-RSPI_AllTemp_Wind_2000-2018.nc"
+# ecospace_code = 'SC56' # same as 54 and 55 but with temp MORT response applied to DIA (proxy for nutrients)
+#                        # AND hab cap driver (PAR) - this seems to make variability higher
+# ecospace_f = "Scv58-RSPI_AllTemp_Wind_2000-2018.nc"
+# ecospace_code = 'SC58' # same as 54 and 55 but with temp MORT response applied to DIA (proxy for nutrients)
+#                        # AND hab cap driver (PAR) - this seems to make variability higher
+#                        # with temp penalty response driver for DIA removed to compared variability to 56
+# ecospace_f = "Scv59-RSPI_AllTemp_Wind_2001-2018.nc"
+# ecospace_code = 'SC59' # same as 58 with temp MORT response applied to DIA (proxy for nutrients)
+#                        # NO hab capacity driver data connected and with SPIN UP data properly repeated
+# ecospace_f = "Scv64-RSPI_AllTemp_Wind_2001-2018.nc"
+# ecospace_code = 'SC64' #
+# ecospace_f = "Scv56_2-RSPI_AllTemp_Wind_2000-2018.nc"
+# ecospace_code = 'SC56_2' #
+# ecospace_f = "Scv56_3-RSPI_AllTemp_Wind_2000-2018.nc"
+# ecospace_code = 'SC56_3' #
+ecospace_f = "Scv56_5-RSPI_AllTemp_Wind_2000-2018.nc"
+ecospace_code = 'SC56_5' #
 
 
 # path_Nemcek = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/28. Phytoplankton/Phytoplankton Salish Sea Nemcek2023 2015-2019/MODIFIED"

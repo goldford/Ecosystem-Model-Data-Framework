@@ -96,8 +96,33 @@ from datetime import datetime, timedelta
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v52 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
 # ecospace_code = "Scv53-RSPI_AllTemp_Wind" # same as 52 but with inital Ecopath B's and w/ shallow temp response for DIA (proxy for nutrients)
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v53 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
-ecospace_code = "Scv54-RSPI_AllTemp_Wind" # same as 52 but with inital Ecopath B's and w/ shallow temp response for DIA (proxy for nutrients)
-path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v54 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv54-RSPI_AllTemp_Wind" # same as 53 but with inital Ecopath B's and w/ shallow temp response for DIA (proxy for nutrients)
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v54 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv56-RSPI_AllTemp_Wind" # same as 54 and 55 w/ inital Ecopath B's and w/ shallow temp response for DIA (proxy for nutrients) AND Hab cap driven by light
+#                # The hab cap driver seems to bump the variability of growth rates up
+#                 # whereas the enviro response method seems only to penalise
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v56 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv58-RSPI_AllTemp_Wind" # same as 57 w/ inital Ecopath B's and w/ shallow temp response for DIA (proxy for nutrients) AND Hab cap driven by light
+#                # The hab cap driver seems to bump the variability of growth rates up, removed temp response.
+#                # hab cap drivers make it more variable but hope this dampens it
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v58 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv59-RSPI_AllTemp_Wind" # same as 58 w/ inital Ecopath B's and w/ shallow temp response for DIA (proxy for nutrients) AND Hab cap driven by light
+#                # The hab cap driver seems to bump the variability of growth rates up, removed temp response.
+#                # hab cap drivers make it more variable but hope this dampens it, PB max is 3 or 4 (1000 in others) and nutrients at 95
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v59 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# learned from 59 that PBmax matters, lowering it makes results more variable but possibly to downside
+# ecospace_code = "Scv64-RSPI_AllTemp_Wind" # major revamp, ran with the debug version to fix issues
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v15 - DEBUG2//Sc216 v64- PAR_PI_AllPPTemp_Wind - 3DAY//asc//"
+# ecospace_code = "Scv56_2-RSPI_AllTemp_Wind" # re run of 56 to cross check results can be repeated
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v56_2 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv56_3-RSPI_AllTemp_Wind" #
+# path_ecospace_out = "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v56_3- PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv56_4-RSPI_AllTemp_Wind" #
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v56_4- PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+ecospace_code = "Scv56_5-RSPI_AllTemp_Wind" #
+path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v16//Sc216 v56_5 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+
+
 
 
 # NOTE yr_strt should be 2003 for all runs except 51 onward!
