@@ -14,6 +14,7 @@
 import os
 import xarray as xr
 from helpers import read_sdomains, make_map, adjust_map, buildSortableString, find_bloom_doy
+from helpers import find_nearest_point_from1D, find_nearest_point
 from matplotlib.path import Path as Path
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
@@ -115,10 +116,28 @@ path_ecospace_out = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_
 # ecospace_code = "Scv56_3-RSPI_AllTemp_Wind"
 # scenario = 'SC56_4' # 56, trying to recreate it, ecopath hab adj b's, pbmax 1000
 # ecospace_code = "Scv56_4-RSPI_AllTemp_Wind"
-scenario = 'SC56_5' # 56, trying to recreate it, ecopath hab adj b's, pbmax 20 all
-ecospace_code = "Scv56_5-RSPI_AllTemp_Wind"
+# scenario = 'SC56_5' # 56, trying to recreate it, ecopath hab adj b's, pbmax 20 all
+# ecospace_code = "Scv56_5-RSPI_AllTemp_Wind"
+# scenario = 'SC51_2' # 56, trying to recreate it, ecopath hab adj b's, pbmax 20 all
+# ecospace_code = "Scv51_2-PAR_PI_AllPPTemp_Wind"
+# scenario = 'SC51_3' # 56, trying to recreate it, ecopath hab adj b's, pbmax 20 all
+# ecospace_code = "Scv51_3-PAR_PI_AllPPTemp_Wind"
+# scenario = 'SC50_2' # 50 attempt 2, to recreate...  ecosim nut_f 90, PBMax 1000, ecopath hab adjst B
+# ecospace_code = "Scv50_2-PAR_PI_AllPPTemp_Wind"
+# scenario = 'SC50_3' # 50 attempt to recreate...  ecosim nut_f 95, PBMax 1000, ecopath hab adjst B
+# ecospace_code = "Scv50_3-PAR_PI_AllPPTemp_Wind"
+# scenario = 'SC51_4' #
+# ecospace_code = "Scv51_4-PAR_PI_AllPPTemp_Wind"
+# scenario = 'SC51_4_2' #
+# ecospace_code = "Scv51_4_2-PAR_PI_AllPPTemp_Wind"
+# scenario = 'SC70' # same as 4_2, debug mode, but with 4 threads
+# ecospace_code = "Scv70-PAR_PI_AllPPTemp_Wind"
+# scenario = 'SC71' # same as 70, with all v's = 2 and with 4 threads
+# ecospace_code = "Sc71-PAR_PI_AllPPTemp_Wind"
+scenario = 'FULLKEY_SC51_5'
+ecospace_code = "FULLKEY_Scv51_5-PAR_PI_AllPPTemp_Wind"
 
-filenm_yr_strt = 2000
+filenm_yr_strt = 1978
 
 log_transform = True # following suchy, make true
 # log transforming follows Suchy (though theirs is chl)
@@ -127,7 +146,8 @@ average_from = "annual"   # 'annual' to follow suchy, set bloom def based on ann
 thrshld_fctr = 1.05 # threshold above avg, suchy used 1.05
 sub_thrshold_fctr = 0.7 # the secondary threshold, if first met, the test of 1/2 following 2 weeks (does it stay in bloom)
 min_y_tick = 30 # 38 in previous plots
-display_gower = True # true in most previous plots
+display_gower = False # true in most previous plots
+display_allen = True
 
 v_f = {#"NK1-COH": path_ecospace_out + "EcospaceMapBiomass-NK1-COH-{}.asc",
        # "NK2-CHI": path_ecospace_out + "EcospaceMapBiomass-NK2-CHI-{}.asc",
@@ -151,15 +171,21 @@ v_f = {#"NK1-COH": path_ecospace_out + "EcospaceMapBiomass-NK1-COH-{}.asc",
       }
 
 # read the data into an xarray object which is versatile
-yr_strt = 2003
+yr_strt = 1980
 yr_end = 2018
 mo_strt = 1
 da_strt = 2
 mo_end = 12
 da_end = 30 #unused?
 
+# first indices below are for year 2003
 doy_suchy = [100, 68, 50, 83, 115, 115, 100, 100, 92, 88, 92, 92, 55, 77]
 doy_gower = [81, 72, 58, 84, 48, 72, 58] # gower via allen
+
+# first indices below are 1980 (+/- 4 days should be used for error bars)
+doy_allen = [94, 78, 81, 82, 87, 76, 75, 87, 99, 76,
+             81, 78, 77, 55, 86, 86, 67, 87, 77, 104,
+             66, 70, 92, 86, 81, 62, 88, 100 ,90, 97, 104] # from 1D hindcast, peak bloom dates
 
 dates_suchy = []
 for i, doy in enumerate(doy_suchy):
@@ -188,13 +214,28 @@ gower_bloom_timing_df = pd.DataFrame({
     "Bloom Early Late Gower": ['na', 'na', 'na', 'na', 'na', 'na', 'na']
 })
 
+dates_allen = []
+for i, doy in enumerate(doy_allen):
+    year = 1980 + i
+    date = datetime(year, 1, 1) + timedelta(days=doy - 1)
+    dates_allen.append(date)
+
+allen_bloom_timing_df = pd.DataFrame({
+    'Year_Allen': range(1980, 2010 + 1),
+    'Bloom Date_Allen': dates_allen,
+    'Day of Year_Allen': doy_allen,
+    "Bloom Early Late Allen": np.full(len(range(1980,2010+1)), 'na')
+})
+
+
 ######### ECOSPACE OUT NC FILE ############
 ecospace_file = ecospace_code + "_" + str(filenm_yr_strt) + "-" + str(yr_end) + ".nc"
 ecospace_nc = os.path.join(path_ecospace_out, ecospace_file)
 ds = xr.open_dataset(ecospace_nc)
 print(ds)
 
-############ REGION DEF FILE ###############
+############################################
+############ MASKS - REGIONS ###############
 domain_p = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation"
 # domain_f = "analysis_domains_jarnikova.yml"
 domain_f = "analysis_domains_suchy.yml"
@@ -244,6 +285,170 @@ mask = mask_ds['mask'].values
 # masked_pp1_dia = masked_data['PP1-DIA']
 # print(np.nanmean(masked_pp1_dia))
 
+#############################################
+############## MASK ALLEN 1D ################
+
+create_allen_mask = False
+if create_allen_mask:
+
+    lat_allen1D = 49.1887166
+    lon_allen1D = -123.4966697
+    lats_mod = ds['lat'].values
+    lons_mod = ds['lon'].values
+    deps_mod = ds['depth'].values
+    mask_ecospace = deps_mod != 0
+    dx = 0.01  # 0.01 deg lat = ~1.1 km
+    allen1d_idx_and_depth = find_nearest_point(lon_allen1D, lat_allen1D, lons_mod, lats_mod, mask_ecospace, dx)
+    nearest_idx = allen1d_idx_and_depth[0]
+    if not nearest_idx is np.nan:
+        print('found it')
+        print(allen1d_idx_and_depth)
+    else:
+        print('did not find it')
+
+allen1d_idx_and_depth = [52, 100, 370.68523301071156] # row, col, depth of allen 1d model location
+
+
+#############################################
+# get the data for a single model point
+annual_means_allen = [] # allen refers to location of allen 1D model
+annual_medians_allen = []
+ts_reg_means_allen = []
+ts_reg_medians_allen = []
+timestamps_allen = []
+
+v = list(v_f)[0] # hard coding to DIA
+print('ecospace model data at allen 1D model location')
+for year in range(yr_strt, yr_end + 1):
+    ############################################
+    # pull model results for location corresponding to allen's 1D model
+
+    print(year)
+    year_data = ds.sel(time=str(year))
+    masked_ds = ds.sel(row=allen1d_idx_and_depth[1],
+                       col=allen1d_idx_and_depth[0])
+    if log_transform:
+        masked_ds[v] = np.log(masked_ds[v]+0.01)
+    masked_var = masked_ds[v]
+    mean_value = np.nanmean(masked_var)
+    annual_means_allen.append(mean_value)
+    median_value = np.nanmedian(masked_var)
+    annual_medians_allen.append(median_value)
+
+    mo_strt = 1
+    mo_end = 12
+    da_srt = 1
+    da_end = 30
+
+    # Select time period to plot figs (one per timestep)
+    start_date = pd.Timestamp(year=year, month=mo_strt, day=da_srt)
+    end_date = pd.Timestamp(year=year, month=mo_end, day=da_end)
+
+    # Get the timestep start, end from dates
+    time_coords = masked_ds.time.to_index()
+    # ts_strt = time_coords.get_loc(start_date, method='bfill') # deprecated
+    # ts_end = time_coords.get_loc(end_date, method='ffill') + 1
+    ts_strt = time_coords.get_indexer([start_date], method='bfill')[0]
+    ts_end = time_coords.get_indexer([end_date], method='ffill')[0] + 1
+
+    for ts in range(ts_strt, ts_end):
+        # for ts in range(ts_strt - 1, ts_end - 1):
+
+        v1 = masked_var  # to further develop, to loop over v's
+        d1 = v1[ts]
+        ts_mean = np.nanmean(d1)
+        ts_median = np.nanmedian(d1)
+        ts_reg_means_allen.append(ts_mean)
+        ts_reg_medians_allen.append(ts_median)
+
+        timestamp = pd.Timestamp(d1.time.values)
+        timestamps_allen.append(timestamp)
+
+print(len(ts_reg_medians_allen))
+
+
+
+################################################
+############### DOY PLOT 1 - long ###############
+### Shows Allen's 1D versus Ecospace output ###
+### Bloom timing based on Allen 1D location ###
+print("DoY bloom comparison plot 1")
+# Create a DataFrame to display the results
+
+xlim_min = 1979.5
+xlim_max = 2016.5
+
+if mean_or_median == "median":
+    var_avg = ts_reg_medians_allen
+else:
+    var_avg = ts_reg_means_allen
+
+# create a simple df to pass to function
+ecospace_df = pd.DataFrame({
+    'Year': pd.to_datetime(timestamps_allen).year,
+    'Date': pd.to_datetime(timestamps_allen),
+    v: var_avg
+})
+
+bloom_dates, bloom_days_of_year, bloom_earlylate = find_bloom_doy(ecospace_df, v,
+                                                                  thrshld_fctr=thrshld_fctr,
+                                                                  sub_thrshld_fctr=sub_thrshold_fctr,
+                                                                  average_from=average_from,
+                                                                  mean_or_median=mean_or_median
+                                                                  )
+ecospace_bloom_timing_df = pd.DataFrame({
+    'Year': range(yr_strt, yr_end + 1),
+    'Bloom Date': bloom_dates,
+    'Day of Year': bloom_days_of_year,
+    "Bloom Early Late": bloom_earlylate
+})
+
+# join the model and obs bloom info
+bloom_timing_df = ecospace_bloom_timing_df.merge(allen_bloom_timing_df, left_on='Year', right_on='Year_Allen', how='left')
+print(bloom_timing_df.columns)
+bloom_timing_df['bloom_match'] = bloom_timing_df.apply(lambda row: row['Bloom Early Late'] == row['Bloom Early Late Allen'], axis=1)
+print(bloom_timing_df.columns)
+df = bloom_timing_df
+
+# Plotting
+fig_width = 12
+fig_height = 6
+fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+
+# Plotting the Ecospace model data
+ax.errorbar(df['Year'], df['Day of Year'], yerr=3, fmt='s', color='blue', label='Ecospace Model', capsize=3)
+ax.errorbar(df['Year'], df['Day of Year_Allen'], yerr=8, fmt='s', color='green', label='C09 1D Model', capsize=3)
+
+# Adding horizontal dashed lines
+ax.axhline(y=68, color='black', linestyle='--')
+ax.axhline(y=108, color='black', linestyle='--')
+
+# Setting the x-limits to ensure the grey rectangle fills the entire plot width
+x_min, x_max = ax.get_xlim()
+
+# Adding a rectangle filled with light grey that spans the entire width of the plot
+ax.fill_between([xlim_min, x_max], 68, 108, color='lightgrey', alpha=0.5, zorder=0)
+ax.set_xlim([xlim_min, xlim_max])
+y_min, y_max = ax.get_ylim()
+ax.set_ylim([min_y_tick, y_max])
+ax.set_xlabel('Year')
+ax.set_ylabel('Day of Year')
+# ax.set_title('Diatom Bloom Timing Comparison')
+ax.legend()
+
+if log_transform:
+    trnsfrm = "logDIA"
+else:
+    trnsfrm = ""
+
+plt.title(scenario + " " + trnsfrm)
+plt.savefig('..//..//figs//' + 'smBloomTiming_Ecospace_vs_Allen_' + str(yr_strt) + '_' + str(yr_end) + 'alttosuchymethod_' + scenario + '_' + trnsfrm + '_rev2.png')
+plt.show()
+
+exit()
+
+
+#############################################
 create_maps = False
 
 # Loop over the years and select data based on the 'time' coordinate
@@ -252,8 +457,11 @@ annual_medians = []
 ts_reg_means = []
 ts_reg_medians = []
 timestamps = []
+
 v = list(v_f)[0] # hard coding to DIA
 for year in range(yr_strt, yr_end + 1):
+    ############################################
+    # pull model results for 'region' (mask corresponding to suchy)
     print(year)
     year_data = ds.sel(time=str(year))
     masked_ds = year_data.where(mask) # apply 'regional' mask
@@ -352,50 +560,20 @@ for year in range(yr_strt, yr_end + 1):
             map_num += 1
 
 
-#####################################################
-############## VISUALISE AS TIME SERIES #############
-# visualise as time series
-# Plot the regional average values in a TS
-# using horizontal lines to show annual avg and vertical lines to show satellite derived bloom timing
-v = list(v_f)[0]
-if log_transform:
-    outfigname = '..//..//figs//' + 'Ecospace_out_suchy_region_LOG' + v + '_' + scenario + '.png'
-else:
-    outfigname = '..//..//figs//' + 'Ecospace_out_suchy_region_' + v + '_' + scenario + '.png'
-
-fig, axes = plt.subplots(1, 1, figsize=(10, 3), sharex=False)
-axes.plot(timestamps, ts_reg_means, label=v, linewidth=0.6)
-axes.plot(timestamps, ts_reg_medians, label="", linewidth=0.4)
-
-axes.set_ylabel(v)
-
-# Add vertical dashed lines at each date in dates_suchy
-for date in dates_suchy:
-    axes.axvline(date, color='black', linestyle='--', linewidth=1)
-
-for date in dates_suchy:
-    axes.axvline(datetime(date.year, 1, 1), color='blue', linestyle='--', linewidth=0.6)
-
-# note I am using the suchy threshold (median * 1.05)
-
-i = 0
-for year in range(yr_strt, yr_end + 1):
-    start_of_year = pd.Timestamp(f'{year}-01-01')
-    end_of_year = pd.Timestamp(f'{year}-12-31')
-    axes.hlines(annual_means[i] * 1.05, start_of_year, end_of_year, colors='red', linestyle='-', linewidth=1)
-    axes.hlines(annual_medians[i] * 1.05, start_of_year, end_of_year, colors='orange', linestyle='-', linewidth=1)
-    i += 1
-
-plt.savefig(outfigname, bbox_inches='tight', dpi=300)
-axes.legend()
-plt.show()
-
 
 ################################################
-############### DOY PLOT #######################
+############### DOY PLOT 2 #####################
+### Shows Suchy et al and optionally Allen's ###
+### With bloom timing based on suchy region ####
+
 print("DoY bloom comparison plot")
 # Create a DataFrame to display the results
 
+xlim_min = 1979.5
+xlim_max = 2016.5
+
+if display_allen: # rescale x
+    xlim_min = 1979.5
 
 if mean_or_median == "median":
     var_avg = ts_reg_medians
@@ -424,22 +602,35 @@ ecospace_bloom_timing_df = pd.DataFrame({
 
 # join the model and obs bloom info
 bloom_timing = ecospace_bloom_timing_df
-bloom_timing_df = bloom_timing.merge(suchy_bloom_timing_df, left_on='Year', right_on='Year')
+bloom_timing_df = bloom_timing.merge(suchy_bloom_timing_df, left_on='Year', right_on='Year', how='left')
 bloom_timing_df = bloom_timing_df.merge(gower_bloom_timing_df, left_on='Year', right_on='Year_Gower', how='left')
+if display_allen:
+    bloom_timing_df = bloom_timing_df.merge(allen_bloom_timing_df, left_on='Year', right_on='Year_Allen', how='left')
 bloom_timing_df['bloom_match'] = bloom_timing_df.apply(lambda row: row['Bloom Early Late_x'] == row['Bloom Early Late_y'], axis=1)
 print(bloom_timing_df.columns)
 df = bloom_timing_df
 
 # Plotting
-fig, ax = plt.subplots(figsize=(10, 6))
+if display_allen:
+    # fig_width = 17
+    # fig_height = 7
+    fig_width = 10 # 2024-09
+    fig_height = 4
+else:
+    fig_width = 10
+    fig_height = 6
+fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
 # Plotting the Ecospace model data
 ax.errorbar(df['Year'], df['Day of Year_x'], yerr=3, fmt='s', color='blue', label='Ecospace Model', capsize=5)
 # Plotting the Suchy data
-ax.errorbar(df['Year'], df['Day of Year_y'], yerr=8, fmt='s', color='red', label='Suchy Data', capsize=5)
+ax.errorbar(df['Year'], df['Day of Year_y'], yerr=8, fmt='s', color='red', label='Satellite Data', capsize=5)
 
 if display_gower:
     ax.errorbar(df['Year'], df['Day of Year_Gower'], yerr=7, fmt='s', color='orange', label='Gower Data', capsize=5)
+
+if display_allen:
+    ax.errorbar(df['Year'], df['Day of Year_Allen'], yerr=8, fmt='s', color='green', label='C09 1D Model', capsize=5)
 
 # Adding horizontal dashed lines
 ax.axhline(y=68, color='black', linestyle='--')
@@ -449,8 +640,8 @@ ax.axhline(y=108, color='black', linestyle='--')
 x_min, x_max = ax.get_xlim()
 
 # Adding a rectangle filled with light grey that spans the entire width of the plot
-ax.fill_between([x_min, x_max], 68, 108, color='lightgrey', alpha=0.5, zorder=0)
-ax.set_xlim([2002.5, 2016.5])
+ax.fill_between([xlim_min, x_max], 68, 108, color='lightgrey', alpha=0.5, zorder=0)
+ax.set_xlim([xlim_min, xlim_max])
 y_min, y_max = ax.get_ylim()
 ax.set_ylim([min_y_tick, y_max])
 ax.set_xlabel('Year')
@@ -465,8 +656,11 @@ else:
 
 plt.title(scenario + " " + trnsfrm)
 # plt.savefig('..//..//figs//' + 'BloomTiming_Ecospace_vs_Suchy_2003_2016_altmethod_' + scenario + '_' + trnsfrm + '.png')
-plt.savefig('..//..//figs//' + 'BloomTiming_Ecospace_vs_Suchy_2003_2016_suchymethod_' + scenario + '_' + trnsfrm + '_rev2.png')
+plt.savefig('..//..//figs//' + 'BloomTiming_Ecospace_vs_Suchy_' + str(yr_strt) + '_2016_suchymethod_' + scenario + '_' + trnsfrm + '_rev2.png')
 plt.show()
+
+
+exit()
 
 
 ################################################
@@ -517,4 +711,45 @@ table.scale(1.2, 1.2)
 plt.savefig('..//..//figs//' + scenario + '_' + trnsfrm + '_bloom_timing_comparison.png', bbox_inches='tight', dpi=300)
 
 # Display the table
+plt.show()
+
+
+
+
+#####################################################
+############## VISUALISE AS TIME SERIES #############
+# visualise as time series
+# Plot the regional average values in a TS
+# using horizontal lines to show annual avg and vertical lines to show satellite derived bloom timing
+v = list(v_f)[0]
+if log_transform:
+    outfigname = '..//..//figs//' + 'Ecospace_out_suchy_region_LOG' + v + '_' + scenario + '.png'
+else:
+    outfigname = '..//..//figs//' + 'Ecospace_out_suchy_region_' + v + '_' + scenario + '.png'
+
+fig, axes = plt.subplots(1, 1, figsize=(10, 3), sharex=False)
+axes.plot(timestamps, ts_reg_means, label=v, linewidth=0.6)
+axes.plot(timestamps, ts_reg_medians, label="", linewidth=0.4)
+
+axes.set_ylabel(v)
+
+# Add vertical dashed lines at each date in dates_suchy
+for date in dates_suchy:
+    axes.axvline(date, color='black', linestyle='--', linewidth=1)
+
+for date in dates_suchy:
+    axes.axvline(datetime(date.year, 1, 1), color='blue', linestyle='--', linewidth=0.6)
+
+# note I am using the suchy threshold (median * 1.05)
+
+i = 0
+for year in range(yr_strt, yr_end + 1):
+    start_of_year = pd.Timestamp(f'{year}-01-01')
+    end_of_year = pd.Timestamp(f'{year}-12-31')
+    axes.hlines(annual_means[i] * 1.05, start_of_year, end_of_year, colors='red', linestyle='-', linewidth=1)
+    axes.hlines(annual_medians[i] * 1.05, start_of_year, end_of_year, colors='orange', linestyle='-', linewidth=1)
+    i += 1
+
+plt.savefig(outfigname, bbox_inches='tight', dpi=300)
+axes.legend()
 plt.show()

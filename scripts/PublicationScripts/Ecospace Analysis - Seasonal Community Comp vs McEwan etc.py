@@ -34,6 +34,13 @@ import pandas as pd
 # ecospace
 ecospace_p = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/ECOSPACE_OUT"
 # file_Ecospace = "Scv7-PARMixingNut90Temp_2003-2018.nc"
+
+# ecospace_f = "Scv46-PARPI_AllTemp_Wind_2003-2018.nc"
+# ecospace_code = 'SC46' #
+
+# ecospace_f = "Scv50-RSPI_AllTemp_Wind_2003-2018.nc"
+# ecospace_code = 'SC50' #
+
 # ecospace_f = "Scv51-RSPI_AllTemp_Wind_2000-2018.nc"
 # ecospace_code = 'SC51'
 # ecospace_f = "Scv53-RSPI_AllTemp_Wind_2000-2018.nc"
@@ -56,9 +63,16 @@ ecospace_p = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/ECOSPACE
 # ecospace_code = 'SC56_2' #
 # ecospace_f = "Scv56_3-RSPI_AllTemp_Wind_2000-2018.nc"
 # ecospace_code = 'SC56_3' #
-ecospace_f = "Scv56_5-RSPI_AllTemp_Wind_2000-2018.nc"
-ecospace_code = 'SC56_5' #
-
+# ecospace_f = "Scv56_5-RSPI_AllTemp_Wind_2000-2018.nc"
+# ecospace_code = 'SC56_5' #
+# ecospace_f = "Scv51_3-PAR_PI_AllPPTemp_Wind_2000-2018.nc"
+# ecospace_code = 'SC51_3' #
+# ecospace_f = "Scv51_4-PAR_PI_AllPPTemp_Wind_2000-2018.nc"
+# ecospace_code = 'SC51_4' #
+# ecospace_f = "Scv70-PAR_PI_AllPPTemp_Wind_2000-2018.nc"
+# ecospace_code = 'SC70' #
+ecospace_f = "Scv71-PAR_PI_AllPPTemp_Wind_2000-2018.nc"
+ecospace_code = 'SC71' #
 
 # path_Nemcek = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/28. Phytoplankton/Phytoplankton Salish Sea Nemcek2023 2015-2019/MODIFIED"
 
@@ -81,7 +95,7 @@ path_evalout = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/d
 
 yr_st = 2008
 yr_en = 2018
-
+mean_or_median = 'median'
 
 def main():
     # Load Ecospace data as monthly averages
@@ -201,14 +215,14 @@ def main():
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
 
     # Function to plot a stacked bar chart on a given axis
-    def plot_stacked_bars(ax, region, title):
+    def plot_stacked_bars(ax, region, title, group_keys, mean_or_median):
         print('region')
         print(region)
-        PP_PZ_keys = [key for key in results[region] if key.startswith('PP') or key.startswith('PZ')]
+
 
         # Stacking the bars
         bottom = np.zeros(len(seasons))
-        for key in PP_PZ_keys:
+        for key in group_keys:
             print(key)
 
             # Adjust for proportion mixotrophs
@@ -225,10 +239,15 @@ def main():
             stds = []
             for season in seasons:
                 mean = results[region][key][season]['mean']
+                median = results[region][key][season]['median']
                 std = results[region][key][season]['std']  # Assuming your data structure has 'std'
                 mean_adjusted = PP_scale * mean
+                median_adjusted = PP_scale * median
                 std_adjusted = PP_scale * std # wrong, to do - fix
-                values.append(mean_adjusted)
+                if mean_or_median == 'mean':
+                    values.append(mean_adjusted)
+                else:
+                    values.append(median_adjusted)
                 stds.append(std_adjusted)
 
             print(values)
@@ -236,23 +255,43 @@ def main():
             bottom += np.array(values)
 
         ax.set_xlabel('Season')
-        ax.set_ylabel('Mean Value')
+        if mean_or_median == 'mean':
+            ax.set_ylabel('Mean Value')
+        else:
+            ax.set_ylabel('Median Value')
+
         ax.set_title(title)
         ax.set_xticks(index)
         ax.set_xticklabels(seasons)
         ax.legend()
 
-    # Plot for 'NSoG'
-    plot_stacked_bars(ax1, 'NSoG', 'Panel (a): NSoG')
 
-    # Plot for 'SSoG'
-    plot_stacked_bars(ax2, 'SSoG', 'Panel (b): SSoG')
+    # Phyto - Plot for 'NSoG'
+    region = 'NSoG'
+    PP_PZ_keys = [key for key in results[region] if key.startswith('PP') or key.startswith('PZ')]
+    plot_stacked_bars(ax1, region, 'Panel (a): NSoG', PP_PZ_keys, mean_or_median)
+
+    # Phyto - Plot for 'SSoG'
+    region = 'SSoG'
+    PP_PZ_keys = [key for key in results[region] if key.startswith('PP') or key.startswith('PZ')]
+    plot_stacked_bars(ax2, region, 'Panel (b): SSoG', PP_PZ_keys, mean_or_median)
 
     plt.tight_layout()
+    plt.savefig('..//..//figs//seasonal_PP_B_plots_NS_S_' + ecospace_code + '_' + mean_or_median + '.png', bbox_inches='tight')
+    plt.show()
 
-    # Save the plot to a file
-    plt.savefig('..//..//figs//seasonal_B_plots_NS_S_' + ecospace_code + '.png', bbox_inches='tight')
+    # Zoop - Plot for NSoG
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+    region = 'NSoG'
+    Z_keys = [key for key in results[region] if key.startswith('ZC') or key.startswith('ZS')]
+    plot_stacked_bars(ax1, region, 'Panel (a): NSoG', Z_keys, mean_or_median)
 
+    region = 'SSoG'
+    Z_keys = [key for key in results[region] if key.startswith('ZC') or key.startswith('ZS')]
+    plot_stacked_bars(ax2, region, 'Panel (a): SSoG', Z_keys, mean_or_median)
+
+    plt.tight_layout()
+    plt.savefig('..//..//figs//seasonal_B_Z_plots_NS_S_' + ecospace_code + '_' + mean_or_median + '.png', bbox_inches='tight')
     plt.show()
 
 if __name__ == "__main__":

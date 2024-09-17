@@ -80,16 +80,20 @@ from datetime import datetime, timedelta
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v43 - All Groups w Temp - 3DAY 1yr10yr//asc//"
 # ecospace_code = "Scv45-PARPI_Temp_Wind" # should be identical to 39
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v45 - PAR_PI_Temp_Wind - 3DAY 1yr10yr//asc//"
+
 # ecospace_code = "Scv46-PARPI_AllTemp_Wind" # same as 45, 39 but now with temp responses for PP groups other than DIA
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v46 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+
 # ecospace_code = "Scv47-PARPI_AllTemp_Wind" # same as 46 but attempted to punish blooms with wind more to compensate for inclusion of temp resp for other PP causing dIA to bloom early in 46
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v47 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
 # ecospace_code = "Scv48-PARPI_AllTemp_Wind" # same as 47 but changed to Ecopath biomasses instead of 'habitat adjusted' for init
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v48 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
 # ecospace_code = "Scv49-PARPI_AllTemp_Wind" # same as 48 but changed back the wind stress response of DIA to original one used in 46 and prior
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v49 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+
 # ecospace_code = "Scv50-RSPI_AllTemp_Wind" # same as 49 but reverted to habitat adjusted biomasses and changing the PI to right shoulder
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v50 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+
 # ecospace_code = "Scv51-RSPI_AllTemp_Wind" # same as 50 but introducing data from 2000 - 2002 as 'spin up'
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v51 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
 # ecospace_code = "Scv52-RSPI_AllTemp_Wind" # same as 51 but with inital Ecopath B's instead of hab adjusted
@@ -119,14 +123,33 @@ from datetime import datetime, timedelta
 # path_ecospace_out = "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v56_3- PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
 # ecospace_code = "Scv56_4-RSPI_AllTemp_Wind" #
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11//Sc216 v56_4- PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
-ecospace_code = "Scv56_5-RSPI_AllTemp_Wind" #
-path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v16//Sc216 v56_5 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv56_5-RSPI_AllTemp_Wind" #
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v16//Sc216 v56_5 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv51_2-PAR_PI_AllPPTemp_Wind" #
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11 - DEBUG3//Sc216 v51_2 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv51_3-PAR_PI_AllPPTemp_Wind" #
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11 - DEBUG3//Sc216 v51_3 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv51_4-PAR_PI_AllPPTemp_Wind" #
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11 - DEBUG3//Sc216 v51_4 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+
+# ecospace_code = "Scv50_2-PAR_PI_AllPPTemp_Wind" # trying to recreate a good run = note this is starting at 2000 not 2003 as originally
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11 SC50_DEBUG//Sc216 v50_2 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv50_3-PAR_PI_AllPPTemp_Wind" # as above with upped nutrients from 90 to 95 in ecosim
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11 SC50_DEBUG//Sc216 v50_3 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+
+# ecospace_code = "Sc216 v70-PAR_PI_AllPPTemp_Wind" # same as 51_4 (good one), run in debug mode, but now w/ 3 threads
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v17 - DEBUG3//Sc216 v70 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# result of above same as 4_2
+# ecospace_code = "Sc216 v71-PAR_PI_AllPPTemp_Wind" # same as 51_4 (good one), run in debug mode, but now w/ 3 threads
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v18 - DEBUG3//Sc216 v71 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+ecospace_code = "FULLKEY_Scv51_5-PAR_PI_AllPPTemp_Wind" # same as 51_4 (good one), run in debug mode, but now w/ 3 threads
+path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2024_Carb_3day_v11 SC51_04 - DEBUG3//Sc216 v51_5 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
 
 
 
 
 # NOTE yr_strt should be 2003 for all runs except 51 onward!
-yr_strt = 2000
+yr_strt = 1978
 yr_end = 2018
 mo_strt = 1
 da_strt = 2
@@ -267,19 +290,24 @@ def asc_to_nc_3day(v_f, outfilename, nemo_ewe_csv,
 v_f = {"NK1-COH": path_ecospace_out + "EcospaceMapBiomass-NK1-COH-{}.asc",
        "NK2-CHI": path_ecospace_out + "EcospaceMapBiomass-NK2-CHI-{}.asc",
        "NK3-FOR": path_ecospace_out + "EcospaceMapBiomass-NK3-FOR-{}.asc",
+
        "ZF1-ICT": path_ecospace_out + "EcospaceMapBiomass-ZF1-ICT-{}.asc",
+
        "ZC1-EUP": path_ecospace_out + "EcospaceMapBiomass-ZC1-EUP-{}.asc",
        "ZC2-AMP": path_ecospace_out + "EcospaceMapBiomass-ZC2-AMP-{}.asc",
        "ZC3-DEC": path_ecospace_out + "EcospaceMapBiomass-ZC3-DEC-{}.asc",
        "ZC4-CLG": path_ecospace_out + "EcospaceMapBiomass-ZC4-CLG-{}.asc",
        "ZC5-CSM": path_ecospace_out + "EcospaceMapBiomass-ZC5-CSM-{}.asc",
+
        "ZS1-JEL": path_ecospace_out + "EcospaceMapBiomass-ZS1-JEL-{}.asc",
        "ZS2-CTH": path_ecospace_out + "EcospaceMapBiomass-ZS2-CTH-{}.asc",
        "ZS3-CHA": path_ecospace_out + "EcospaceMapBiomass-ZS3-CHA-{}.asc",
        "ZS4-LAR": path_ecospace_out + "EcospaceMapBiomass-ZS4-LAR-{}.asc",
+
        "PZ1-CIL": path_ecospace_out + "EcospaceMapBiomass-PZ1-CIL-{}.asc",
        "PZ2-DIN": path_ecospace_out + "EcospaceMapBiomass-PZ2-DIN-{}.asc",
        "PZ3-HNF": path_ecospace_out + "EcospaceMapBiomass-PZ3-HNF-{}.asc",
+
        "PP1-DIA": path_ecospace_out + "EcospaceMapBiomass-PP1-DIA-{}.asc",
        "PP2-NAN": path_ecospace_out + "EcospaceMapBiomass-PP2-NAN-{}.asc",
        "PP3-PIC": path_ecospace_out + "EcospaceMapBiomass-PP3-PIC-{}.asc", #time step format eg: 00620,

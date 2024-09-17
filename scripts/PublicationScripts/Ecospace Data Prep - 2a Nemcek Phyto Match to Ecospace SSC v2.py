@@ -52,8 +52,10 @@ file_SSC_mo = "SalishSeaCast_biology_2008.nc"
 # https://salishsea.eos.ubc.ca/erddap/griddap/ubcSSnBathymetryV21-08.nc?bathymetry[(0.0):1:(897.0)][(0.0):1:(397.0)],latitude[(0.0):1:(897.0)][(0.0):1:(397.0)],longitude[(0.0):1:(897.0)][(0.0):1:(397.0)]
 file_SSC_grd = "ubcSSnBathymetryV21-08_a29d_efc9_4047.nc"
 # file_Ecospace = "Scv7-PARMixingNut90Temp_2003-2018.nc"
-file_Ecospace = "Scv51-RSPI_AllTemp_Wind_2000-2018.nc"
-ecospace_code = 'SC51'
+# file_Ecospace = "Scv51-RSPI_AllTemp_Wind_2000-2018.nc"
+# ecospace_code = 'SC51'
+file_Ecospace = "Scv51_4_2-PAR_PI_AllPPTemp_Wind_2000-2018.nc"
+ecospace_code = 'SC51_4_2' # this one is 2000-2018 and finally recreates the good bloom timing results
 
 file_Nemcek = "Nemcek_Supp_Data.csv"
 file_Nemcek_matched = "Nemcek_matched_to_model_out_" + ecospace_code + ".csv"
@@ -134,7 +136,6 @@ if nemcek_df is not None:
 ##############################################################
 
 domain_fullp = os.path.join(domain_p, domain_f)
-
 sdomains = read_sdomains(domain_fullp)
 
 # get subdomain for each point

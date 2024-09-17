@@ -280,14 +280,14 @@ def find_nearest_point(lon,lat,glon,glat,mask,dx):
 def find_nearest_point_from1D(lon_obs,lat_obs,lon_mod,lat_mod,mask,dx):
 
     """Utility: Find closest model point to obs using type of nearest neighbour search
-                lon and lat - the coordinates of the obs
+                lon and lat - the coordinates of the obs or station
                 lon_mod and lat_mod - fields of coordinates from model grid
                 mask - the land mask, since if the closest point is on land it is not valid
                 dx - the radius in degrees around which to search
                 assumes lon_mod, lat_mod same shape
                 returns - index of closest point, distance in m to pt"""
 
-    # function modified by G Oldford but borrowed originally from pyap
+    # function modified by G Oldford, originally from pyap
     # changelog
     #  - made function for 1D instead of 2D arrays of model lats lons
     # For multiple points, call this function repeatedly (once per point).
@@ -413,6 +413,19 @@ def get_ecospace_data_3(file_path, start_year=None, end_year=None, monthly_avera
                 else:
                     time_mask = slice(None)
 
+                ZF1_ICT = dataset.variables['ZF1-ICT'][time_mask]
+
+                ZC1_EUP = dataset.variables['ZC1-EUP'][time_mask]
+                ZC2_AMP = dataset.variables['ZC2-AMP'][time_mask]
+                ZC3_DEC = dataset.variables['ZC3-DEC'][time_mask]
+                ZC4_CLG = dataset.variables['ZC4-CLG'][time_mask]
+                ZC5_CSM = dataset.variables['ZC5-CSM'][time_mask]
+
+                ZS1_JEL = dataset.variables['ZS1-JEL'][time_mask]
+                ZS2_CTH = dataset.variables['ZS2-CTH'][time_mask]
+                ZS3_CHA = dataset.variables['ZS3-CHA'][time_mask]
+                ZS4_LAR = dataset.variables['ZS4-LAR'][time_mask]
+
                 PZ1_CIL = dataset.variables['PZ1-CIL'][time_mask]
                 PZ2_DIN = dataset.variables['PZ2-DIN'][time_mask]
                 PZ3_HNF = dataset.variables['PZ3-HNF'][time_mask]
@@ -427,6 +440,20 @@ def get_ecospace_data_3(file_path, start_year=None, end_year=None, monthly_avera
                 col_indices = EWE_col
 
                 ds = xr.Dataset({
+
+                    'ZF1_ICT': (['time', 'EWE_row', 'EWE_col'], ZF1_ICT),
+
+                    'ZC1_EUP': (['time', 'EWE_row', 'EWE_col'], ZC1_EUP),
+                    'ZC2_AMP': (['time', 'EWE_row', 'EWE_col'], ZC2_AMP),
+                    'ZC3_DEC': (['time', 'EWE_row', 'EWE_col'], ZC3_DEC),
+                    'ZC4_CLG': (['time', 'EWE_row', 'EWE_col'], ZC4_CLG),
+                    'ZC5_CSM': (['time', 'EWE_row', 'EWE_col'], ZC5_CSM),
+
+                    'ZS1_JEL': (['time', 'EWE_row', 'EWE_col'], ZS1_JEL),
+                    'ZS2_CTH': (['time', 'EWE_row', 'EWE_col'], ZS2_CTH),
+                    'ZS3_CHA': (['time', 'EWE_row', 'EWE_col'], ZS3_CHA),
+                    'ZS4_LAR': (['time', 'EWE_row', 'EWE_col'], ZS4_LAR),
+
                     'PZ1_CIL': (['time', 'EWE_row', 'EWE_col'], PZ1_CIL),
                     'PZ2_DIN': (['time', 'EWE_row', 'EWE_col'], PZ2_DIN),
                     'PZ3_HNF': (['time', 'EWE_row', 'EWE_col'], PZ3_HNF),
@@ -759,9 +786,9 @@ def custom_formatter(x, pos):
 def custom_formatter2(x, pos):
     return f'{x:.1f}'
 
-def find_bloom_doy(df, df_field, thrshld_fctr=1.05, sub_thrshld_fctr=0.7,
-                   average_from="annual", mean_or_median="median"):
-
+def find_bloom_doy(df, df_field,
+                   thrshld_fctr = 1.05, sub_thrshld_fctr = 0.7,
+                   average_from = "annual", mean_or_median = "median"):
 
     # Create lists to hold the results
     bloom_dates = []
@@ -783,7 +810,7 @@ def find_bloom_doy(df, df_field, thrshld_fctr=1.05, sub_thrshld_fctr=0.7,
 
     # Group by year
     df['Year'] = df['Date'].dt.year
-    if average_from=="all":
+    if average_from == "all":
         median_value = df[df_field].median()
         mean_value = df[df_field].mean()
     # median_value = 1.65
