@@ -8,8 +8,8 @@
 #   3/ bloom timing dates from central SoG from Suchy and Gower etc
 #
 # Output:
-#   1/ figs of estimated bloom timing from Ecospace compared to observations
-#   2/
+#   1/ saved bloom timing df's so it does not have to be computed each time (csv's)
+#   2/ figs of estimated bloom timing from Ecospace compared to observations
 # note:
 import os
 import xarray as xr
@@ -317,54 +317,91 @@ ts_reg_means_allen = []
 ts_reg_medians_allen = []
 timestamps_allen = []
 
-v = list(v_f)[0] # hard coding to DIA
-print('ecospace model data at allen 1D model location')
-for year in range(yr_strt, yr_end + 1):
-    ############################################
-    # pull model results for location corresponding to allen's 1D model
+# compute 1D bloom date at Allen 1D location (or already done?)
+compute_ecospace_1d = False
+if compute_ecospace_1d:
+    v = list(v_f)[0] # hard coding to DIA
+    print('ecospace model data at allen 1D model location')
+    for year in range(yr_strt, yr_end + 1):
+        ############################################
+        # pull model results for location corresponding to allen's 1D model
 
-    print(year)
-    year_data = ds.sel(time=str(year))
-    masked_ds = ds.sel(row=allen1d_idx_and_depth[1],
-                       col=allen1d_idx_and_depth[0])
-    if log_transform:
-        masked_ds[v] = np.log(masked_ds[v]+0.01)
-    masked_var = masked_ds[v]
-    mean_value = np.nanmean(masked_var)
-    annual_means_allen.append(mean_value)
-    median_value = np.nanmedian(masked_var)
-    annual_medians_allen.append(median_value)
+        print(year)
+        year_data = ds.sel(time=str(year))
+        masked_ds = ds.sel(row=allen1d_idx_and_depth[1],
+                           col=allen1d_idx_and_depth[0])
+        if log_transform:
+            masked_ds[v] = np.log(masked_ds[v]+0.01)
+        masked_var = masked_ds[v]
+        mean_value = np.nanmean(masked_var)
+        annual_means_allen.append(mean_value)
+        median_value = np.nanmedian(masked_var)
+        annual_medians_allen.append(median_value)
 
-    mo_strt = 1
-    mo_end = 12
-    da_srt = 1
-    da_end = 30
+        mo_strt = 1
+        mo_end = 12
+        da_srt = 1
+        da_end = 30
 
-    # Select time period to plot figs (one per timestep)
-    start_date = pd.Timestamp(year=year, month=mo_strt, day=da_srt)
-    end_date = pd.Timestamp(year=year, month=mo_end, day=da_end)
+        # Select time period to plot figs (one per timestep)
+        start_date = pd.Timestamp(year=year, month=mo_strt, day=da_srt)
+        end_date = pd.Timestamp(year=year, month=mo_end, day=da_end)
 
-    # Get the timestep start, end from dates
-    time_coords = masked_ds.time.to_index()
-    # ts_strt = time_coords.get_loc(start_date, method='bfill') # deprecated
-    # ts_end = time_coords.get_loc(end_date, method='ffill') + 1
-    ts_strt = time_coords.get_indexer([start_date], method='bfill')[0]
-    ts_end = time_coords.get_indexer([end_date], method='ffill')[0] + 1
+        # Get the timestep start, end from dates
+        time_coords = masked_ds.time.to_index()
+        # ts_strt = time_coords.get_loc(start_date, method='bfill') # deprecated
+        # ts_end = time_coords.get_loc(end_date, method='ffill') + 1
+        ts_strt = time_coords.get_indexer([start_date], method='bfill')[0]
+        ts_end = time_coords.get_indexer([end_date], method='ffill')[0] + 1
 
-    for ts in range(ts_strt, ts_end):
-        # for ts in range(ts_strt - 1, ts_end - 1):
+        for ts in range(ts_strt, ts_end):
+            # for ts in range(ts_strt - 1, ts_end - 1):
 
-        v1 = masked_var  # to further develop, to loop over v's
-        d1 = v1[ts]
-        ts_mean = np.nanmean(d1)
-        ts_median = np.nanmedian(d1)
-        ts_reg_means_allen.append(ts_mean)
-        ts_reg_medians_allen.append(ts_median)
+            v1 = masked_var  # to further develop, to loop over v's
+            d1 = v1[ts]
+            ts_mean = np.nanmean(d1)
+            ts_median = np.nanmedian(d1)
+            ts_reg_means_allen.append(ts_mean)
+            ts_reg_medians_allen.append(ts_median)
 
-        timestamp = pd.Timestamp(d1.time.values)
-        timestamps_allen.append(timestamp)
+            timestamp = pd.Timestamp(d1.time.values)
+            timestamps_allen.append(timestamp)
 
-print(len(ts_reg_medians_allen))
+    print(len(ts_reg_medians_allen))
+
+
+    if mean_or_median == "median":
+        var_avg = ts_reg_medians_allen
+    else:
+        var_avg = ts_reg_means_allen
+
+    # create a simple df to pass to function
+    ecospace_df = pd.DataFrame({
+        'Year': pd.to_datetime(timestamps_allen).year,
+        'Date': pd.to_datetime(timestamps_allen),
+        v: var_avg
+    })
+
+    bloom_dates, bloom_days_of_year, bloom_earlylate = find_bloom_doy(ecospace_df, v,
+                                                                      thrshld_fctr=thrshld_fctr,
+                                                                      sub_thrshld_fctr=sub_thrshold_fctr,
+                                                                      average_from=average_from,
+                                                                      mean_or_median=mean_or_median
+                                                                      )
+    ecospace_bloom_timing_df = pd.DataFrame({
+        'Year': range(yr_strt, yr_end + 1),
+        'Bloom Date': bloom_dates,
+        'Day of Year': bloom_days_of_year,
+        "Bloom Early Late": bloom_earlylate
+    })
+
+    # Export
+    ecospace_bloom_timing_df.to_csv('..//..//data//evaluation//ecospace_bloom_timing_CSoG_1D.csv', index=False)
+
+else:
+    bloom_p = "..//..//data//evaluation//"
+    ecospace_bloom_timing_df = pd.read_csv(os.path.join(bloom_p, 'ecospace_bloom_timing_CSoG_1D.csv'))
+
 
 
 
@@ -378,30 +415,7 @@ print("DoY bloom comparison plot 1")
 xlim_min = 1979.5
 xlim_max = 2016.5
 
-if mean_or_median == "median":
-    var_avg = ts_reg_medians_allen
-else:
-    var_avg = ts_reg_means_allen
 
-# create a simple df to pass to function
-ecospace_df = pd.DataFrame({
-    'Year': pd.to_datetime(timestamps_allen).year,
-    'Date': pd.to_datetime(timestamps_allen),
-    v: var_avg
-})
-
-bloom_dates, bloom_days_of_year, bloom_earlylate = find_bloom_doy(ecospace_df, v,
-                                                                  thrshld_fctr=thrshld_fctr,
-                                                                  sub_thrshld_fctr=sub_thrshold_fctr,
-                                                                  average_from=average_from,
-                                                                  mean_or_median=mean_or_median
-                                                                  )
-ecospace_bloom_timing_df = pd.DataFrame({
-    'Year': range(yr_strt, yr_end + 1),
-    'Bloom Date': bloom_dates,
-    'Day of Year': bloom_days_of_year,
-    "Bloom Early Late": bloom_earlylate
-})
 
 # join the model and obs bloom info
 bloom_timing_df = ecospace_bloom_timing_df.merge(allen_bloom_timing_df, left_on='Year', right_on='Year_Allen', how='left')
@@ -416,8 +430,14 @@ fig_height = 6
 fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
 # Plotting the Ecospace model data
-ax.errorbar(df['Year'], df['Day of Year'], yerr=3, fmt='s', color='blue', label='Ecospace Model', capsize=3)
-ax.errorbar(df['Year'], df['Day of Year_Allen'], yerr=8, fmt='s', color='green', label='C09 1D Model', capsize=3)
+ax.errorbar(df['Year']-0.1, df['Day of Year'], yerr=1.5, fmt='s',
+            color='blue', label='Ecospace Model',
+            capsize=2, marker='o', elinewidth=1,
+            markersize=4)
+ax.errorbar(df['Year']+0.1, df['Day of Year_Allen'], yerr=4, fmt='s',
+            color='green', label='C09 1D Model',
+            capsize=2, marker='s', elinewidth=1,
+            markersize=4)
 
 # Adding horizontal dashed lines
 ax.axhline(y=68, color='black', linestyle='--')
@@ -445,10 +465,13 @@ plt.title(scenario + " " + trnsfrm)
 plt.savefig('..//..//figs//' + 'smBloomTiming_Ecospace_vs_Allen_' + str(yr_strt) + '_' + str(yr_end) + 'alttosuchymethod_' + scenario + '_' + trnsfrm + '_rev2.png')
 plt.show()
 
-exit()
 
 
-#############################################
+##############################################
+########### SUCHY REGIONAL ANALYSIS ##########
+# compute bloom date for Suchy et al 2022 SSoG region (or already done?)
+compute_ecospace_SSoG = False
+
 create_maps = False
 
 # Loop over the years and select data based on the 'time' coordinate
@@ -458,106 +481,140 @@ ts_reg_means = []
 ts_reg_medians = []
 timestamps = []
 
-v = list(v_f)[0] # hard coding to DIA
-for year in range(yr_strt, yr_end + 1):
-    ############################################
-    # pull model results for 'region' (mask corresponding to suchy)
-    print(year)
-    year_data = ds.sel(time=str(year))
-    masked_ds = year_data.where(mask) # apply 'regional' mask
-    if log_transform:
-        masked_ds[v] = np.log(masked_ds[v]+0.01)
-    masked_var = masked_ds[v]
-    mean_value = np.nanmean(masked_var)
-    annual_means.append(mean_value)
-    median_value = np.nanmedian(masked_var)
-    annual_medians.append(median_value)
-    # print(f"Year {year}: Mean PP1-DIA = {mean_value}")
-    # print(f"Year {year}: Median PP1-DIA = {median_value}")
+# TO DO: the map gen code is embedded below - should be in it's own section
+if compute_ecospace_SSoG:
+    v = list(v_f)[0] # hard coding to DIA
+    for year in range(yr_strt, yr_end + 1):
+        ############################################
+        # pull model results for 'region' (mask corresponding to suchy)
+        print(year)
+        year_data = ds.sel(time=str(year))
+        masked_ds = year_data.where(mask) # apply 'regional' mask
+        if log_transform:
+            masked_ds[v] = np.log(masked_ds[v]+0.01)
+        masked_var = masked_ds[v]
+        mean_value = np.nanmean(masked_var)
+        annual_means.append(mean_value)
+        median_value = np.nanmedian(masked_var)
+        annual_medians.append(median_value)
+        # print(f"Year {year}: Mean PP1-DIA = {mean_value}")
+        # print(f"Year {year}: Median PP1-DIA = {median_value}")
 
-    # select time period within each year (one per timestep)
-    # yr_plt_strt = 2005
-    # yr_plt_end = 2005
-    mo_strt = 1
-    mo_end = 12
-    da_srt = 1
-    da_end = 30
+        # select time period within each year (one per timestep)
+        # yr_plt_strt = 2005
+        # yr_plt_end = 2005
+        mo_strt = 1
+        mo_end = 12
+        da_srt = 1
+        da_end = 30
 
-    # Select time period to plot figs (one per timestep)
-    start_date = pd.Timestamp(year=year, month=mo_strt, day=da_srt)
-    end_date = pd.Timestamp(year=year, month=mo_end, day=da_end)
+        # Select time period to plot figs (one per timestep)
+        start_date = pd.Timestamp(year=year, month=mo_strt, day=da_srt)
+        end_date = pd.Timestamp(year=year, month=mo_end, day=da_end)
 
-    # Get the timestep start, end from dates
-    time_coords = masked_ds.time.to_index()
-    # ts_strt = time_coords.get_loc(start_date, method='bfill') # deprecated
-    # ts_end = time_coords.get_loc(end_date, method='ffill') + 1
-    ts_strt = time_coords.get_indexer([start_date], method='bfill')[0]
-    ts_end = time_coords.get_indexer([end_date], method='ffill')[0] + 1
+        # Get the timestep start, end from dates
+        time_coords = masked_ds.time.to_index()
+        # ts_strt = time_coords.get_loc(start_date, method='bfill') # deprecated
+        # ts_end = time_coords.get_loc(end_date, method='ffill') + 1
+        ts_strt = time_coords.get_indexer([start_date], method='bfill')[0]
+        ts_end = time_coords.get_indexer([end_date], method='ffill')[0] + 1
 
-    map_num = 0
-    for ts in range(ts_strt, ts_end):
-    # for ts in range(ts_strt - 1, ts_end - 1):
+        map_num = 0
+        for ts in range(ts_strt, ts_end):
+        # for ts in range(ts_strt - 1, ts_end - 1):
 
-        v1 = masked_var # to further develop, to loop over v's
-        d1 = v1[ts]
-        ts_mean = np.nanmean(d1)
-        ts_median = np.nanmedian(d1)
-        ts_reg_means.append(ts_mean)
-        ts_reg_medians.append(ts_median)
+            v1 = masked_var # to further develop, to loop over v's
+            d1 = v1[ts]
+            ts_mean = np.nanmean(d1)
+            ts_median = np.nanmedian(d1)
+            ts_reg_means.append(ts_mean)
+            ts_reg_medians.append(ts_median)
 
-        timestamp = pd.Timestamp(d1.time.values)
-        timestamps.append(timestamp)
-        year1 = timestamp.year
-        month1 = timestamp.month
-        day1 = timestamp.day
+            timestamp = pd.Timestamp(d1.time.values)
+            timestamps.append(timestamp)
+            year1 = timestamp.year
+            month1 = timestamp.month
+            day1 = timestamp.day
 
-        if create_maps and map_num == 0: # remove map_num if you want map per time step
-            ################### FIGS PER TIME STEP #######################
-            # get the ecospace output indices for start and end from desired date range to plot
-            # test map of ECOSPACE domain by row /col
-            # note the bottom left should be fixed (nans)
-            fig, axs = plt.subplots(figsize=(5, 8))
-            # custom colormap to emphasise lower values
-            colors = [(1, 1, 1), (0.8, 0.8, 0.8), (0.6, 0.6, 0.6), (0.4, 0.4, 0.4), (0, 0, 1), (0, 1, 0), (1, 1, 0),
-                      (1, 0, 0)]
-            # sc1
-            # nodes = [0.0, 0.1, 0.2, 0.35, 0.6, 0.8, 0.9, 1.0] # Adjust these values to emphasize certain ranges
-            # sc2
-            nodes = [0.0, 0.15, 0.25, 0.3, 0.5, 0.65, 0.75, 1.0]
-            custom_cmap = LinearSegmentedColormap.from_list("custom_cmap", list(zip(nodes, colors)))
+            if create_maps and map_num == 0: # remove map_num if you want map per time step
+                ################### FIGS PER TIME STEP #######################
+                # get the ecospace output indices for start and end from desired date range to plot
+                # test map of ECOSPACE domain by row /col
+                # note the bottom left should be fixed (nans)
+                fig, axs = plt.subplots(figsize=(5, 8))
+                # custom colormap to emphasise lower values
+                colors = [(1, 1, 1), (0.8, 0.8, 0.8), (0.6, 0.6, 0.6), (0.4, 0.4, 0.4), (0, 0, 1), (0, 1, 0), (1, 1, 0),
+                          (1, 0, 0)]
+                # sc1
+                # nodes = [0.0, 0.1, 0.2, 0.35, 0.6, 0.8, 0.9, 1.0] # Adjust these values to emphasize certain ranges
+                # sc2
+                nodes = [0.0, 0.15, 0.25, 0.3, 0.5, 0.65, 0.75, 1.0]
+                custom_cmap = LinearSegmentedColormap.from_list("custom_cmap", list(zip(nodes, colors)))
 
-            # specific month coloring experiments
-            nodes = [0.0, 0.15, 0.25, 0.3, 0.69, 0.77, 0.86, 1.0]
-            custom_cmap = LinearSegmentedColormap.from_list("custom_cmap", list(zip(nodes, colors)))
+                # specific month coloring experiments
+                nodes = [0.0, 0.15, 0.25, 0.3, 0.69, 0.77, 0.86, 1.0]
+                custom_cmap = LinearSegmentedColormap.from_list("custom_cmap", list(zip(nodes, colors)))
 
-            # PPT colors, custom
-            colors = [(1, 1, 1), (0.8, 0.8, 0.8), (0.6, 0.6, 0.6), (0.4, 0.4, 0.4), (0, 0, 1), (0, 1, 0), (1, 1, 0)]
-            nodes = [0.0, 0.15, 0.25, 0.3, 0.45, 0.85, 1.0]
-            custom_cmap = LinearSegmentedColormap.from_list("custom_cmap", list(zip(nodes, colors)))
+                # PPT colors, custom
+                colors = [(1, 1, 1), (0.8, 0.8, 0.8), (0.6, 0.6, 0.6), (0.4, 0.4, 0.4), (0, 0, 1), (0, 1, 0), (1, 1, 0)]
+                nodes = [0.0, 0.15, 0.25, 0.3, 0.45, 0.85, 1.0]
+                custom_cmap = LinearSegmentedColormap.from_list("custom_cmap", list(zip(nodes, colors)))
 
-            # sc 1
-            vmin = 0
-            vmax = 3
+                # sc 1
+                vmin = 0
+                vmax = 3
 
-            w = plt.pcolormesh(d1.data, cmap=custom_cmap, vmin=vmin, vmax=vmax)
-            title = ecospace_code + "-" + str(year) + "-" + str(month1) + "-" + str(day1) + "-" + str(ts)
-            title = str(year) + "-" + str(month1) + "-" + str(day1) + "-" + str(ts)
-            axs.set_title('{v} - {d}'.format(v=v, d=title))
-            plt.colorbar(w, ax=axs)
-            axs.invert_yaxis()
-            # plt.show()
+                w = plt.pcolormesh(d1.data, cmap=custom_cmap, vmin=vmin, vmax=vmax)
+                title = ecospace_code + "-" + str(year) + "-" + str(month1) + "-" + str(day1) + "-" + str(ts)
+                title = str(year) + "-" + str(month1) + "-" + str(day1) + "-" + str(ts)
+                axs.set_title('{v} - {d}'.format(v=v, d=title))
+                plt.colorbar(w, ax=axs)
+                axs.invert_yaxis()
+                # plt.show()
 
-            # Save the figure in different formats
-            month01 = buildSortableString(month1, 2)
-            day01 = buildSortableString(day1, 2)
-            # out_fig_name = "..//figs//{}_{}-{}{}{}-{}.{}"
-            out_fig_name = "..//..//figs//TEMP_{}_{}-{}{}{}-{}.{}"
-            # fig.savefig(out_fig_name.format(ecospace_code, v, ts, "PDF"), format='pdf')
-            out_fig_name = out_fig_name.format(ecospace_code, v, year, month01, day01, ts, "PNG")
-            fig.savefig(out_fig_name, format='png')
-            # fig.savefig(out_fig_name.format(ecospace_code, v, ts, "EPS"), format='eps')
-            print("Saved fig " + out_fig_name)
-            map_num += 1
+                # Save the figure in different formats
+                month01 = buildSortableString(month1, 2)
+                day01 = buildSortableString(day1, 2)
+                # out_fig_name = "..//figs//{}_{}-{}{}{}-{}.{}"
+                out_fig_name = "..//..//figs//TEMP_{}_{}-{}{}{}-{}.{}"
+                # fig.savefig(out_fig_name.format(ecospace_code, v, ts, "PDF"), format='pdf')
+                out_fig_name = out_fig_name.format(ecospace_code, v, year, month01, day01, ts, "PNG")
+                fig.savefig(out_fig_name, format='png')
+                # fig.savefig(out_fig_name.format(ecospace_code, v, ts, "EPS"), format='eps')
+                print("Saved fig " + out_fig_name)
+                map_num += 1
+    if mean_or_median == "median":
+        var_avg = ts_reg_medians
+    else:
+        var_avg = ts_reg_means
+
+    # create a simple df to pass to function
+    ecospace_df = pd.DataFrame({
+        'Year': pd.to_datetime(timestamps).year,
+        'Date': pd.to_datetime(timestamps),
+        v: var_avg
+    })
+
+    bloom_dates, bloom_days_of_year, bloom_earlylate = find_bloom_doy(ecospace_df, v,
+                                                                      thrshld_fctr=thrshld_fctr,
+                                                                      sub_thrshld_fctr=sub_thrshold_fctr,
+                                                                      average_from=average_from,
+                                                                      mean_or_median=mean_or_median
+                                                                      )
+    ecospace_bloom_timing_df = pd.DataFrame({
+        'Year': range(yr_strt, yr_end + 1),
+        'Bloom Date': bloom_dates,
+        'Day of Year': bloom_days_of_year,
+        "Bloom Early Late": bloom_earlylate
+    })
+
+    # save to file
+    ecospace_bloom_timing_df.to_csv('..//..//data//evaluation//ecospace_bloom_timing_SSoG.csv', index=False)
+
+else:
+
+    bloom_p = "..//..//data//evaluation//"
+    ecospace_bloom_timing_df = pd.read_csv(os.path.join(bloom_p, 'ecospace_bloom_timing_SSoG.csv'))
 
 
 
@@ -575,30 +632,7 @@ xlim_max = 2016.5
 if display_allen: # rescale x
     xlim_min = 1979.5
 
-if mean_or_median == "median":
-    var_avg = ts_reg_medians
-else:
-    var_avg = ts_reg_means
 
-# create a simple df to pass to function
-ecospace_df = pd.DataFrame({
-    'Year': pd.to_datetime(timestamps).year,
-    'Date': pd.to_datetime(timestamps),
-    v: var_avg
-})
-
-bloom_dates, bloom_days_of_year, bloom_earlylate = find_bloom_doy(ecospace_df, v,
-                                                                  thrshld_fctr=thrshld_fctr,
-                                                                  sub_thrshld_fctr=sub_thrshold_fctr,
-                                                                  average_from=average_from,
-                                                                  mean_or_median=mean_or_median
-                                                                  )
-ecospace_bloom_timing_df = pd.DataFrame({
-    'Year': range(yr_strt, yr_end + 1),
-    'Bloom Date': bloom_dates,
-    'Day of Year': bloom_days_of_year,
-    "Bloom Early Late": bloom_earlylate
-})
 
 # join the model and obs bloom info
 bloom_timing = ecospace_bloom_timing_df
@@ -614,7 +648,7 @@ df = bloom_timing_df
 if display_allen:
     # fig_width = 17
     # fig_height = 7
-    fig_width = 10 # 2024-09
+    fig_width = 13 # 2024-09
     fig_height = 4
 else:
     fig_width = 10
@@ -622,15 +656,29 @@ else:
 fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
 # Plotting the Ecospace model data
-ax.errorbar(df['Year'], df['Day of Year_x'], yerr=3, fmt='s', color='blue', label='Ecospace Model', capsize=5)
+# note that x can be offset by adding or subtracting from year
+ax.errorbar(df['Year'], df['Day of Year_x'], yerr=1.5, fmt='s',
+            color='black', label='Ecospace Model', #capsize=5,
+            capsize=0, marker='o', elinewidth=1,
+            markersize=4
+            )
 # Plotting the Suchy data
-ax.errorbar(df['Year'], df['Day of Year_y'], yerr=8, fmt='s', color='red', label='Satellite Data', capsize=5)
+ax.errorbar(df['Year']+0.2, df['Day of Year_y'], yerr=4, fmt='s',
+            color='blue', label='Satellite Data',
+            capsize=0, marker='s', elinewidth=1,
+            markersize=4)
 
 if display_gower:
-    ax.errorbar(df['Year'], df['Day of Year_Gower'], yerr=7, fmt='s', color='orange', label='Gower Data', capsize=5)
+    ax.errorbar(df['Year'], df['Day of Year_Gower'], yerr=3.5, fmt='s',
+                color='orange', label='Gower Data',
+                capsize=0, marker='^', elinewidth=1,
+                markersize=5)
 
 if display_allen:
-    ax.errorbar(df['Year'], df['Day of Year_Allen'], yerr=8, fmt='s', color='green', label='C09 1D Model', capsize=5)
+    ax.errorbar(df['Year']-0.2, df['Day of Year_Allen'], yerr=4, fmt='s',
+                color='green', label='C09 1D Model',
+                capsize=0, marker='^', elinewidth=1,
+                markersize=5)
 
 # Adding horizontal dashed lines
 ax.axhline(y=68, color='black', linestyle='--')
@@ -647,6 +695,31 @@ ax.set_ylim([min_y_tick, y_max])
 ax.set_xlabel('Year')
 ax.set_ylabel('Day of Year')
 # ax.set_title('Diatom Bloom Timing Comparison')
+
+# highlight years with disagreement?
+highlight_years = True
+if highlight_years:
+    df_agreement = df[['Year', 'Day of Year_x', 'Day of Year_y', 'Day of Year_Allen']]
+    df_agreement.columns = ['Year', 'Ecospace', 'Suchy', 'Allen']
+    # do allen and ecospace agree?
+    df_agreement['agree_tf'] = (
+        (df_agreement['Ecospace'] + 1.5 >= df_agreement['Allen'] - 4) &
+        (df_agreement['Ecospace'] - 1.5 <= df_agreement['Allen'] + 4)
+        )
+    # for satellite data years, see if ecospace and sat agree (overrides above)
+    years_to_check = [2003, 2004, 2005, 2006, 2007, 2008,
+                      2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016]
+    df_agreement.loc[df_agreement['Year'].isin(years_to_check), 'agree_tf'] = (
+            (df_agreement['Ecospace'] + 1.5 >= df_agreement['Suchy'] - 4) &
+            (df_agreement['Ecospace'] - 1.5 <= df_agreement['Suchy'] + 4)
+    )
+
+    # Iterate over the years where agree_tf is False
+    for _, row in df_agreement[df_agreement['agree_tf'] == False].iterrows():
+        year = row['Year']
+        # Shade between year - 0.2 and year + 0.2
+        ax.fill_betweenx(ax.get_ylim(), year - 0.2, year + 0.2, color='red', alpha=0.1)
+
 ax.legend()
 
 if log_transform:
