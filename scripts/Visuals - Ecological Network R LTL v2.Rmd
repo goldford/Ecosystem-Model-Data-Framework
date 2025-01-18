@@ -1,0 +1,226 @@
+---
+title: "Visuals - Ecological Network (R) v2"
+output: html_notebook
+---
+
+
+
+```{r}
+library('visNetwork')
+library('dplyr')
+library('tidyverse')
+library('Matrix')
+library('reshape2')
+library('igraph')
+
+Q_table = "..//data//ecopath//edges_Qmatrix_LTL.csv"
+stats_table = "..//data//ecopath//nodes_statstab_LTL.csv"
+
+Q_table = "..//data//ecopath//edges_Qmatrix_UTL.csv"
+stats_table = "..//data//ecopath//nodes_statstab_UTL.csv"
+
+```
+
+
+```{r}
+mm <- as.matrix(read.table(Q_table, header=T,sep=",", row.names=1))
+edges_long <- melt(mm)
+edges1 <- rename(edges_long, "from" = "Var1", "to" = "Var2", "weight" = "value")
+edges1$to <- gsub('\\.', '-', edges1$to) # matrix converts - to . so convert back
+
+# FILTERS
+edges1 <- edges1 %>% filter(weight > 0) # filter zeros out
+
+#det_close_name = "Detritus_Closure" # LTL
+det_close_name = "DET_Close" # UTL
+edges1 <- edges1 %>% filter(to != det_close_name) 
+edges1 <- edges1 %>% filter(from != det_close_name)
+nodes1 <- read.table(stats_table, header=T,sep=",", row.names=1)
+nodes1 <- nodes1 %>% filter(Name != det_close_name) # filter zeros out
+
+
+# ARRANGEMENT
+# duplicate TL to use as y location
+nodes1$y = nodes1$TL
+
+# set plot x location for nodes 
+# (if using layout_nicely can't have two nodes w/ same coords!)
+#nodes1$x = nodes1$type_x3
+nodes1$x = nodes1$type_x2
+
+net <- graph_from_data_frame(d=edges1, vertices=nodes1, directed=T) 
+
+
+# ////////////////////////////////////////////////////////
+# plots
+options(repr.plot.width=10, repr.plot.height=20)
+
+# set min size and distortion on box size, just so small groups visible
+min_size = 1
+size_mult = 2
+V(net)$size = sqrt(V(net)$B) * size_mult + min_size
+E(net)$width <- sqrt(E(net)$weight) * 0.2
+l <- layout_nicely(net)
+# layout_with_fr, layout_with_drl, layout_nicely
+
+# https://bookdown.org/hneth/ds4psy/D-3-apx-colors-basics.html
+colrs <- c("turquoise", 
+           "skyblue",
+           "goldenrod1", 
+           "maroon3", 
+           "lightskyblue1",
+           "salmon", 
+           "yellowgreen", 
+           "tomato", 
+           "navajowhite", 
+           "lightpink3",
+           "aquamarine2", 
+           "darkturquoise", 
+           "cadetblue",
+           "goldenrod2", 
+           "plum2", 
+           "lightskyblue1",
+           "palegreen2", 
+           "tan2", 
+           "gray90"
+           )
+V(net)$color <- colrs[V(net)$type_num]
+
+# color based on incoming edges
+edge.start <- ends(net, es=E(net), names=F)[,2]
+edge.col <- V(net)$color[edge.start]
+# ecol <- rep("gray80", ecount(net))
+# inc.edges <- incident(net,  V(net)[type=="ZS"], mode="in")
+# ecol[inc.edges] <- "plum2"
+#inc.edges <- incident(net,  V(net)[type=="NK"], mode="all")
+#ecol[inc.edges] <- "darkturquoise"
+
+# the problem with adding axes and labels is with asp (aspect ratio)
+# I can't control axis max / min if asp = 1 and if asp = 0 then 
+# weird problems arise with edge drawing
+plot(net, 
+     edge.arrow.size=.5, 
+     axes=T,
+     #xlim=(c(0,20)), ylim=c(0,20),
+     asp=1, rescale=T, 
+     vertex.label=V(net)$lbl_shrt,
+     vertex.label.font=1,
+     vertex.label.cex=0.7,
+     vertex.shape="square",
+     edge.color=edge.col,
+     layout=l)
+
+legend(x=-1.2, y=1.1, c("Nekton","Zoop. Ichthyo.","Zoop. Hard","Zoop. Soft", "Protozooplankton","Phytoplankton","Bacteria", "Detritus"), pch=21,
+       col="#777777", pt.bg=colrs, pt.cex=1.4, cex=1, bty="n", ncol=1)
+
+#plot(net, edge.arrow.size=.4, axes=T, asp=0, rescale=F)
+#l <- layout_in_circle(net)
+#plot(net, edge.arrow.size=.4, edge.curved=.3, layout=l)
+
+# cover the x axis
+#rect(-0.2, -3, 11, -1, col = "white", border = "black")
+```
+
+
+```{r}
+
+# res seems to do opposite of expected
+png("../figs/network_plot.png", width = 2000, height = 2000, res = 100) # Adjust dimensions/resolution as needed
+plot(
+  net,
+  edge.arrow.size = 0.5,
+  vertex.label = V(net)$lbl_shrt,
+  vertex.label.font = 10,
+  vertex.label.cex = 2,
+  vertex.shape = "square",
+  edge.color = edge.col,
+  layout = l
+)
+dev.off()
+
+```
+```{r}
+#det_close_name = "Detritus_Closure" # LTL
+hake_1 = "Hake1_0_11" # UTL
+hake_2 = "Hake2_juve_12_35"
+hake_3 = "Hake3_mat_36_59"
+hake_4 = "Hake4_old_60up"
+hsl = "Harbour_Seals"
+herring_1 = "Herring1_age0"
+herring_2 = "Herring2_juve"
+herring_3 = "Herring3_mat"
+chin_ws_2 = "Chinook2_WS_emar"
+chin_ws_3 = "Chinook3_WS_mar"
+chin_ws_4 = "Chinook4_WS_spwn"
+coho_w_2 = "Coho2_W_emar"
+coho_w_3 = "Coho3_W_mar"
+coho_w_4 = "Coho4_W_spwn"
+
+
+edges1 <- edges1 %>% filter(
+  to = hake_1 |
+  to = hake_2 |
+  to = hake_3 |
+  to = hake_4 |
+  to = hsl |
+  to = herring_1 |
+  to = herring_2 |
+  to = herring_3 |
+  to = chin_ws_2 |
+  to = chin_ws_3 |
+  to = chin_ws_4 |
+  to = coho_w_2 |
+  to = coho_w_3 |
+  to = coho_w_4
+    ) 
+edges1 <- edges1 %>% filter(
+  from = hake_1 |
+  from = hake_2 |
+  from = hake_3 |
+  from = hake_4 |
+  from = hsl |
+  from = herring_1 |
+  from = herring_2 |
+  from = herring_3 |
+  from = chin_ws_2 |
+  from = chin_ws_3 |
+  from = chin_ws_4 |
+  from = coho_w_2 |
+  from = coho_w_3 |
+  from = coho_w_4
+    ) 
+nodes1 <- read.table(stats_table, header=T,sep=",", row.names=1)
+nodes1 <- nodes1 %>% filter(
+  Name = hake_1 |
+  Name = hake_2 |
+  Name = hake_3 |
+  Name = hake_4 |
+  Name = hsl |
+  Name = herring_1 |
+  Name = herring_2 |
+  Name = herring_3 |
+  Name = chin_ws_2 |
+  Name = chin_ws_3 |
+  Name = chin_ws_4 |
+  Name = coho_w_2 |
+  Name = coho_w_3 |
+  Name = coho_w_4
+)
+
+
+```
+
+
+```{r}
+is_igraph(net)
+V(net)$y
+```
+
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.

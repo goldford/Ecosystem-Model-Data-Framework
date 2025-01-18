@@ -1,0 +1,101 @@
+---
+title: "Visuals - Ecological Network (R) v2"
+output: html_notebook
+---
+
+
+
+```{r}
+library('visNetwork')
+library('dplyr')
+library('tidyverse')
+library('Matrix')
+library('reshape2')
+library('igraph')
+
+Q_table = "..//data//ecopath//edges_Qmatrix_LTL.csv"
+stats_table = "..//data//ecopath//nodes_statstab_LTL.csv"
+
+```
+
+
+```{r}
+mm <- as.matrix(read.table(Q_table, header=T,sep=",", row.names=1))
+edges_long <- melt(mm)
+edges1 <- rename(edges_long, "from" = "Var1", "to" = "Var2", "weight" = "value")
+edges1$to <- gsub('\\.', '-', edges1$to) # matrix converts - to . so convert back
+edges1 <- edges1 %>% filter(weight > 0) # filter zeros out
+edges1 <- edges1 %>% filter(to != "Detritus_Closure") 
+edges1 <- edges1 %>% filter(from != "Detritus_Closure")
+
+
+nodes1 <- read.table(stats_table, header=T,sep=",", row.names=1)
+nodes1 <- nodes1 %>% filter(Name != "Detritus_Closure") # filter zeros out
+
+# duplicate TL to use as y location
+nodes1$y = nodes1$TL
+# duplicate 'type' to use as x location
+nodes1$x = nodes1$type_x3
+
+net <- graph_from_data_frame(d=edges1, vertices=nodes1, directed=T) 
+
+
+# ////////////////////////////////////////////////////////
+# plots
+options(repr.plot.width=9, repr.plot.height=14)
+
+
+V(net)$size = sqrt(V(net)$B) * 2.6 + 10
+E(net)$width <- sqrt(E(net)$weight) * 0.2
+l <- layout_nicely(net)
+
+# https://bookdown.org/hneth/ds4psy/D-3-apx-colors-basics.html
+colrs <- c("darkturquoise", "cadetblue", "goldenrod2", "plum2", "lightskyblue1",
+           "palegreen2", "tan2", "gray90")
+V(net)$color <- colrs[V(net)$type_num]
+
+# color based on incoming edges
+edge.start <- ends(net, es=E(net), names=F)[,2]
+edge.col <- V(net)$color[edge.start]
+# ecol <- rep("gray80", ecount(net))
+# inc.edges <- incident(net,  V(net)[type=="ZS"], mode="in")
+# ecol[inc.edges] <- "plum2"
+#inc.edges <- incident(net,  V(net)[type=="NK"], mode="all")
+#ecol[inc.edges] <- "darkturquoise"
+
+# the problem with adding axes and labels is with asp (aspect ratio)
+# I can't control axis max / min if asp = 1 and if asp = 0 then 
+# weird problems arise with edge drawing
+plot(net, 
+     edge.arrow.size=.5, 
+     axes=T,
+     #xlim=(c(0,10)), ylim=c(0,6),
+     asp=1, rescale=T, 
+     vertex.label=V(net)$lbl_shrt,
+     vertex.label.font=1,
+     vertex.label.cex=0.7,
+     vertex.shape="square",
+     edge.color=edge.col,
+     layout=l)
+
+legend(x=-1.2, y=1.1, c("Nekton","Zoop. Ichthyo.","Zoop. Hard","Zoop. Soft", "Protozooplankton","Phytoplankton","Bacteria", "Detritus"), pch=21,
+       col="#777777", pt.bg=colrs, pt.cex=1.4, cex=1, bty="n", ncol=1)
+
+#plot(net, edge.arrow.size=.4, axes=T, asp=0, rescale=F)
+#l <- layout_in_circle(net)
+#plot(net, edge.arrow.size=.4, edge.curved=.3, layout=l)
+
+# cover the x axis
+#rect(-0.2, -3, 11, -1, col = "white", border = "black")
+
+
+```
+
+
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.

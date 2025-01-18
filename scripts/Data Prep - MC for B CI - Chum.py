@@ -1,4 +1,4 @@
-# pink salmon CI script
+# chum salmon estimation of B etc script
 # by: G Oldford
 # Nov 2024
 # simple monte carlo to estimate CI of B
@@ -27,59 +27,61 @@ matplotlib.use('TkAgg') # https://matplotlib.org/stable/users/explain/figure/bac
 modelled_area = 11274
 
 # adult fish params
-n_adults_mean = 5100000 # based on total run size (adds catch) 1954 - 1967 avg * 1.1 for PS
-n_adults_min = math.exp(math.log(n_adults_mean) * 0.95) # arbitrary guess - 11 mil
-n_adults_max = math.exp(math.log(n_adults_mean) * 1.05)  # arbitrary guess - 2.4 mil
+n_adults_mean = 2500000 # based on total run size
+n_adults_min = math.exp(math.log(n_adults_mean) * 0.9) # arbitrary guess - 13 mil
+n_adults_max = math.exp(math.log(n_adults_mean) * 1.1)  #
+
+
 # Recalculate the log-space standard deviation
 n_adults_min_log = np.log(n_adults_min)
 n_adults_max_log = np.log(n_adults_max)
 n_adults_std_log = (n_adults_max_log - n_adults_min_log) / (2 * 1.96)
-w_adults_mean = 2.1 # kg - Groot, Margolis for NE Pac, no lengths avail
-w_adults_min = 1.2
-w_adults_max = 3.3
+w_adults_mean = 3.7
+w_adults_min = 3
+w_adults_max = 5
 w_adults_std_log = (np.log(n_adults_max) - np.log(n_adults_min)) / (2 * 1.96)
 
-M_tot_smolt_to_adult_mean = -3.8 # not well known but based on: Bradford, 2005; Beamish et al 2006; Quinn, G&M, etc.
-M_tot_smolt_to_adult_min = -2.3
-M_tot_smolt_to_adult_max = -5.3
+M_tot_smolt_to_adult_mean = -3.5 # not well known but based on: Bradford, 2005; Beamish et al 2006; Quinn, G&M, etc.
+M_tot_smolt_to_adult_min = -2.8
+M_tot_smolt_to_adult_max = -4.4
 M_tot_smolt_to_adult_std = (M_tot_smolt_to_adult_max - M_tot_smolt_to_adult_min) / (2 * 1.96)
 
 # juve fish params
-a_lw_juve = 1.62E-06  # healey, g mm-1
-b_lw_juve = 3.4
-a_lw_adult = 0.0034 # pauly, g cm-1
-b_lw_adult = 3.3
-l_smlt_entry_mean = 32 # mm; length at time of estuary entry
-# l_smlt_entry_min = 28 # I made the min max in log space such that it is approximately 28 mm min, 35 max
-# l_smlt_entry_max = 35
+a_lw_juve = 1.96E-06  # healey, g mm-1
+b_lw_juve = 3.38
+a_lw_adult = 0.0143 # pauly, g cm-1
+b_lw_adult = 3.0
+l_smlt_entry_mean = 40 # mm; length at time of estuary entry
+# l_smlt_entry_min = 28 # # did this indirectly, below
+# l_smlt_entry_max = 60
 l_smlt_entry_mean_log = math.log(l_smlt_entry_mean)
-l_smlt_entry_min_log = l_smlt_entry_mean_log* 0.97
-l_smlt_entry_max_log = l_smlt_entry_mean_log* 1.03
+l_smlt_entry_min_log = l_smlt_entry_mean_log* 0.9
+l_smlt_entry_max_log = l_smlt_entry_mean_log / 0.9
 l_smlt_entry_min = math.exp(l_smlt_entry_min_log)
 l_smlt_entry_max = math.exp(l_smlt_entry_max_log)
 l_smlt_entry_std_log = (l_smlt_entry_max_log - l_smlt_entry_min_log) / (2 * 1.96) # assume normal dist (growth in length linear - not true, simplifying compromise)
-
-
-l_juve_offshoremig_mean = 85 # mm; length at time of offshore mig
+#
+#
+l_juve_offshoremig_mean = 110 # mm; length at time of offshore mig
 l_juve_offshoremig_mean_log = math.log(l_juve_offshoremig_mean)
-l_juve_offshoremig_min_log = l_juve_offshoremig_mean_log* 0.96 # tuned such that max min in mm close to 77, 104 as observed
-l_juve_offshoremig_max_log = l_juve_offshoremig_mean_log* 1.04
+l_juve_offshoremig_min_log = l_juve_offshoremig_mean_log * 0.9 # tuned such that max min in mm close to 77, 104 as observed
+l_juve_offshoremig_max_log = l_juve_offshoremig_mean_log / 0.9
 l_juve_offshoremig_std_log = (l_juve_offshoremig_max_log - l_juve_offshoremig_min_log) / (2 * 1.96) # assumed lognormal
 l_juve_offshoremig_min = math.exp(l_juve_offshoremig_min_log)
 l_juve_offshoremig_max = math.exp(l_juve_offshoremig_max_log)
-# w_smlt_entry_mean = a_lw_juve * l_smlt_entry_mean^b_lw_juve
-# w_smlt_entry_min = a_lw_juve * l_smlt_entry_min^b_lw_juve
-# w_smlt_entry_max = a_lw_juve * l_smlt_entry_max^b_lw_juve
-# w_juve_offshoremig_mean = a_lw_juve * l_juve_offshoremig_mean ** b_lw_juve
-# w_juve_offshoremig_min = a_lw_juve * l_juve_offshoremig_min ** b_lw_juve
-# w_juve_offshoremig_max = a_lw_juve * l_juve_offshoremig_max ** b_lw_juve
-# w_juve_offshoremig_std = (w_juve_offshoremig_max - w_juve_offshoremig_min) / (2 * 1.96)
+# w_smlt_entry_mean = a_lw_juve * l_smlt_entry_mean ** b_lw_juve
+# w_smlt_entry_min = a_lw_juve * l_smlt_entry_min ** b_lw_juve
+# w_smlt_entry_max = a_lw_juve * l_smlt_entry_max ** b_lw_juve
+w_juve_offshoremig_mean = a_lw_juve * l_juve_offshoremig_mean ** b_lw_juve
+w_juve_offshoremig_min = a_lw_juve * l_juve_offshoremig_min ** b_lw_juve
+w_juve_offshoremig_max = a_lw_juve * l_juve_offshoremig_max ** b_lw_juve
+w_juve_offshoremig_std = (w_juve_offshoremig_max - w_juve_offshoremig_min) / (2 * 1.96)
 
-m_daily_smolt_to_offshore_mean = 0.015 # daily mort % - not well known (Groot, Margolis, 1991)
+m_daily_smolt_to_offshore_mean = 0.0168 # daily mort % - not well known (Groot, Margolis, 1991)
 t_entry_to_offshore = 90 # days; time from estuary entry to offshore migration
 M_tot_smolt_to_offshore_mean = math.log(1-m_daily_smolt_to_offshore_mean) * t_entry_to_offshore
-M_tot_smolt_to_offshore_min = M_tot_smolt_to_offshore_mean * 0.5
-M_tot_smolt_to_offshore_max = M_tot_smolt_to_offshore_mean * 1.5
+M_tot_smolt_to_offshore_min = M_tot_smolt_to_offshore_mean * 0.3
+M_tot_smolt_to_offshore_max = M_tot_smolt_to_offshore_mean / 0.3
 # ensure normally distributed in exponential space
 m_daily_smolt_to_offshore_min = 1 - math.exp(M_tot_smolt_to_offshore_min / 90) # just to check
 m_daily_smolt_to_offshore_max = 1 - math.exp(M_tot_smolt_to_offshore_max / 90) # just to check
@@ -143,12 +145,23 @@ for _ in range(n_simulations):
     B_means.append(B_juve_mean)
 
 # Calculate mean and confidence intervals
+# assumes we explored data and determined log-normal distribution
+N_mean_estimate = np.exp(np.mean(np.log(np.array(N_juve_all))))
+N_mean_ci_lower = np.exp(np.percentile(np.log(np.array(N_juve_all)), 2.5))
+N_mean_ci_upper = np.exp(np.percentile(np.log(np.array(N_juve_all)), 97.5))
+
+print(f"Estimated number of juveniles: {N_mean_estimate:.2f}")
+print(f"95% Confidence Interval: [{N_mean_ci_lower:.2f}, {N_mean_ci_upper:.2f}]")
+print("")
+
+# Calculate mean and confidence intervals
 B_mean_estimate = np.mean(B_means) * 1/1000 * 1/1000 # convert to mt
 B_mean_ci_lower = np.percentile(B_means, 2.5) * 1/1000 * 1/1000
 B_mean_ci_upper = np.percentile(B_means, 97.5) * 1/1000 * 1/1000
 
 print(f"Estimated B_mean juveniles: {B_mean_estimate:.2f} mt")
 print(f"95% Confidence Interval: [{B_mean_ci_lower:.2f} mt, {B_mean_ci_upper:.2f}] mt")
+print("")
 
 B_dens_estimate = B_mean_estimate / modelled_area
 B_dens_ci_lower = B_mean_ci_lower / modelled_area
@@ -156,6 +169,7 @@ B_dens_ci_upper = B_mean_ci_upper / modelled_area
 
 print(f"Estimated juve B density for model: {B_dens_estimate:.4f} mt km-2")
 print(f"95% Confidence Interval: [{B_dens_ci_lower:.4f} mt km-2, {B_dens_ci_upper:.4f}] mt km-2")
+print("")
 
 # adjusting for seasonal
 B_dens_estimate_seas = B_dens_estimate * 0.25
@@ -163,15 +177,16 @@ B_dens_ci_lower_seas = B_dens_ci_lower * 0.25
 B_dens_ci_upper_seas = B_dens_ci_upper * 0.25
 print(f"Estimated juve B density for model, seasonal adjusted: {B_dens_estimate_seas:.5f} mt km-2")
 print(f"95% Confidence Interval: [{B_dens_ci_lower_seas:.5f} mt km-2, {B_dens_ci_upper_seas:.5f}] mt km-2")
-
+print("")
 
 #####################
 ##### ADULT FISH ####
-n_adults_est = np.mean(n_adults_all)
-n_adults_ci_lower = np.percentile(n_adults_all, 2.5)
-n_adults_ci_upper = np.percentile(n_adults_all, 97.5)
+n_adults_est = np.exp(np.mean(np.log(n_adults_all)))
+n_adults_ci_lower = np.exp(np.percentile(np.log(n_adults_all), 2.5))
+n_adults_ci_upper = np.exp(np.percentile(np.log(n_adults_all), 97.5))
 print(f"Estimated number of adult fish: {n_adults_est:.5f} ")
 print(f"95% Confidence Interval: [{n_adults_ci_lower:.5f}, {n_adults_ci_upper:.5f}]")
+print("")
 
 w_adults_est = np.mean(w_adults_all)
 w_adults_ci_lower = np.percentile(w_adults_all, 2.5)
@@ -179,21 +194,22 @@ w_adults_ci_upper = np.percentile(w_adults_all, 97.5)
 print(f"Estimated weight of adult fish: {w_adults_est:.5f} kg")
 print(f"95% Confidence Interval: [{w_adults_ci_lower:.5f} kg, {w_adults_ci_upper:.5f}] kg")
 
-B_adults_est = np.mean(B_adults_all)
-B_adults_ci_lower = np.percentile(B_adults_all, 2.5)
-B_adults_ci_upper = np.percentile(B_adults_all, 97.5)
+B_adults_all = np.array(B_adults_all)
+B_adults_est = np.exp(np.mean(np.log(B_adults_all)))
+B_adults_ci_lower = np.exp(np.percentile(np.log(B_adults_all), 2.5))
+B_adults_ci_upper = np.exp(np.percentile(np.log(B_adults_all), 97.5))
 print(f"Estimated total B of adult fish: {B_adults_est:.5f} kg")
 print(f"95% Confidence Interval: [{B_adults_ci_lower:.5f} kg, {B_adults_ci_upper:.5f}] kg")
-
+print("")
 
 
 # B adults total mt
-# plt.figure(figsize=(10, 6))
-# plt.hist(B_adults_all, bins=50, color='skyblue', edgecolor='black')
-# plt.title("Histogram of adult B (kg) from Monte Carlo Simulations")
-# plt.xlabel("kg")
-# plt.ylabel("Frequency")
-# plt.show()
+plt.figure(figsize=(10, 6))
+plt.hist(B_adults_all, bins=50, color='skyblue', edgecolor='black')
+plt.title("Histogram of adult B (kg) from Monte Carlo Simulations")
+plt.xlabel("kg")
+plt.ylabel("Frequency")
+plt.show()
 
 # adult B den
 Bden_adults_all = np.array(B_adults_all) * 1/1000 * 2/12 * 1/modelled_area
@@ -215,7 +231,7 @@ plt.show()
 Bden_adults_est = B_adults_est * 1/1000 * 2/12 * 1/modelled_area#  convert to mt and seasonality
 print(f"Estimated adult biomass density, seasonal adjusted: {Bden_adults_est:.5f} mt km^-2")
 print(f"95% Confidence Interval: [{math.exp(lower_CI_log):.5f} mt km^-2, {math.exp(upper_CI_log):.5f}] mt km^-2")
-
+print("")
 
 
 ###### JUVENILES ######
@@ -236,50 +252,102 @@ print(f"95% Confidence Interval: [{math.exp(lower_CI_log):.5f} mt km^-2, {math.e
 # plt.show()
 #
 # # w at entry
-# plt.figure(figsize=(10, 6))
-# plt.hist(w_smlts_all, bins=50, color='skyblue', edgecolor='black')
-# plt.title("Histogram of smolt weights at estuary entry from Monte Carlo Simulations")
-# plt.xlabel("weight (g)")
-# plt.ylabel("Frequency")
-# plt.show()
+plt.figure(figsize=(10, 6))
+plt.hist(w_smlts_all, bins=50, color='skyblue', edgecolor='black')
+plt.title("Histogram of smolt weights at estuary entry from Monte Carlo Simulations")
+plt.xlabel("weight (g)")
+plt.ylabel("Frequency")
+plt.show()
+
+w_smlts_all = np.array(w_smlts_all) # assume log-normal
+log_w_smlts_all = np.log(w_smlts_all)
+log_mean = np.mean(log_w_smlts_all)
+log_std = np.std(log_w_smlts_all)
+lower_limit_log = log_mean - 2 * log_std
+upper_limit_log = log_mean + 2 * log_std
+lower_limit = np.exp(lower_limit_log)
+upper_limit = np.exp(upper_limit_log)
+# Filter
+# w_smlts_means_truncated = [value for value in B_mean_estimate if lower_limit <= value <= upper_limit]
+
+# since distribution is log-normal. Take the log-normal mean and CI's
+lower_CI_log = log_mean - 1.96 * log_std
+upper_CI_log = log_mean + 1.96 * log_std
+print(f"Estimated w of smolts at o-e: {math.exp(log_mean):.2f} g")
+print(f"95% Confidence Interval: [{math.exp(lower_CI_log):.2f} g, {math.exp(upper_CI_log):.2f}] g")
+print("")
+
+
+
+# w at exit
+w_juve_offshore_all = np.array(w_juve_offshore_all) # assume log-normal
+log_w_juve_offshore_all = np.log(w_juve_offshore_all)
+log_mean = np.mean(log_w_juve_offshore_all)
+log_std = np.std(log_w_juve_offshore_all)
+lower_limit_log = log_mean - 2 * log_std
+upper_limit_log = log_mean + 2 * log_std
+lower_limit = np.exp(lower_limit_log)
+upper_limit = np.exp(upper_limit_log)
+# Filter
+# w_smlts_means_truncated = [value for value in B_mean_estimate if lower_limit <= value <= upper_limit]
+
+# since distribution is log-normal. Take the log-normal mean and CI's
+lower_CI_log = log_mean - 1.96 * log_std
+upper_CI_log = log_mean + 1.96 * log_std
+print(f"Estimated w of smolts at offshore migration: {math.exp(log_mean):.2f} g")
+print(f"95% Confidence Interval: [{math.exp(lower_CI_log):.2f} g, {math.exp(upper_CI_log):.2f}] g")
+print("")
+
+
+plt.figure(figsize=(10, 6))
+plt.hist(w_juve_offshore_all, bins=50, color='skyblue', edgecolor='black')
+plt.title("Histogram of smolt weights at open ocean migration from Monte Carlo Simulations")
+plt.xlabel("weight (g)")
+plt.ylabel("Frequency")
+plt.show()
+
 #
-# # w at exit
-# plt.figure(figsize=(10, 6))
-# plt.hist(w_juve_offshore_all, bins=50, color='skyblue', edgecolor='black')
-# plt.title("Histogram of smolt weights at open ocean migration from Monte Carlo Simulations")
-# plt.xlabel("weight (g)")
-# plt.ylabel("Frequency")
-# plt.show()
-#
-# # n juves
-# plt.figure(figsize=(10, 6))
-# plt.hist(N_juve_all, bins=50, color='skyblue', edgecolor='black')
-# plt.title("Histogram of number of fish entering estuary entry from Monte Carlo Simulations")
-# plt.xlabel("n")
-# plt.ylabel("Frequency")
-# plt.show()
-#
-# # G
-# plt.figure(figsize=(10, 6))
-# plt.hist(G_all, bins=50, color='skyblue', edgecolor='black')
-# plt.title("Histogram of instantaneous growth, G, over early marine period from Monte Carlo Simulations")
-# plt.xlabel("/3 mo.")
-# plt.ylabel("Frequency")
-# G_mean = np.mean(G_all)
-# plt.axvline(G_mean, color='red')
-# G_std = np.std(G_all)
-# G_upper_CI = G_mean + 1.96 * G_std
-# G_lower_CI = G_mean - 1.96 * G_std
-# plt.axvline(G_lower_CI, color='red', linestyle='--')
-# plt.axvline(G_upper_CI, color='red', linestyle='--')
-# plt.show()
+# n juves
+plt.figure(figsize=(10, 6))
+plt.hist(N_juve_all, bins=50, color='skyblue', edgecolor='black')
+plt.title("Histogram of number of fish entering estuary entry from Monte Carlo Simulations")
+plt.xlabel("n")
+plt.ylabel("Frequency")
+plt.show()
+
+# G
+plt.figure(figsize=(10, 6))
+plt.hist(G_all, bins=50, color='skyblue', edgecolor='black')
+plt.title("Histogram of instantaneous growth, G, over early marine period from Monte Carlo Simulations")
+plt.xlabel("/3 mo.")
+plt.ylabel("Frequency")
+G_mean = np.mean(G_all)
+plt.axvline(G_mean, color='red')
+G_std = np.std(G_all)
+G_upper_CI = G_mean + 1.96 * G_std
+G_lower_CI = G_mean - 1.96 * G_std
+plt.axvline(G_lower_CI, color='red', linestyle='--')
+plt.axvline(G_upper_CI, color='red', linestyle='--')
+plt.show()
 
 plt.figure(figsize=(10, 6))
 plt.hist(G_delta_M_all, bins=50, color='skyblue', edgecolor='black')
 plt.title("Histogram of instantaneous growth, G, minus instantaneous M over early marine period from Monte Carlo Simulations")
 plt.xlabel("/3 mo.")
 plt.ylabel("Frequency")
-plt.show()
+
+g_day = (math.exp(G_mean / 90) - 1) * 100
+g_day_upper_CI = (math.exp(G_upper_CI / 90) - 1) * 100
+g_day_lower_CI = (math.exp(G_lower_CI / 90) - 1) * 100
+
+print(f"Estimated g daily % of JUVENILES: {g_day:.2f}")
+print(f"95% Confidence Interval: [{math.exp(g_day_upper_CI/3):.2f}, {math.exp(g_day_lower_CI/3):.2f}]")
+print("")
+
+print(f"Estimated G yr-1 of JUVENILES: {G_mean/3*12:.2f}")
+print(f"95% Confidence Interval: [{G_lower_CI/3*12:.2f}, {G_upper_CI/3*12:.2f}]")
+print("")
+
 
 # final B
 B_mean_estimate = np.array(B_means) * 1/1000 * 1/1000 # convert to mt
@@ -310,8 +378,9 @@ plt.show()
 
 
 
-print(f"Estimated B_mean: {math.exp(log_mean):.2f} mt")
+print(f"Estimated B_mean of JUVENILES: {math.exp(log_mean):.2f} mt")
 print(f"95% Confidence Interval: [{math.exp(lower_CI_log):.2f} mt, {math.exp(upper_CI_log):.2f}] mt")
+print("")
 
 B_dens_estimate = math.exp(log_mean) / modelled_area
 B_dens_ci_lower = math.exp(lower_CI_log) / modelled_area
@@ -320,5 +389,6 @@ B_dens_estimate_seas = B_dens_estimate * 0.25
 B_dens_ci_lower_seas = B_dens_ci_lower * 0.25
 B_dens_ci_upper_seas = B_dens_ci_upper * 0.25
 
-print(f"Estimated B density for model: {B_dens_estimate_seas:.5f} mt km-2")
+print(f"Estimated B density for model (Juveniles): {B_dens_estimate_seas:.5f} mt km-2")
 print(f"95% Confidence Interval: [{B_dens_ci_lower_seas:.5f} mt km-2, {B_dens_ci_upper_seas:.5f}] mt km-2")
+print("")

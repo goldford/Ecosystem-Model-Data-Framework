@@ -1,9 +1,11 @@
-# purpose: visuals for publication of hatchery releases over time.
 # by: Greig Oldford
-# created: Nov 2024
-# purpose: previous ipynb didn't work anymore (issue with install of altair)
-#           - this script produces visuals.
-
+# created: Nov 2024 (last modified Jan 2025)
+# purpose: - visuals for publication of hatchery releases over time.
+#
+# data in: actual_releases_coords.csv from EPAD includes all species and repaired or QA's coords
+# notes:
+#   - previous ipynb didn't work anymore (issue with install of altair)
+#   - this script produces visuals.
 
 import pandas as pd
 import matplotlib

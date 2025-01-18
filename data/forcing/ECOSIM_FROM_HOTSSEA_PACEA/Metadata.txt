@@ -1,0 +1,7 @@
+Create in R Studio on DFO PC
+December 2024
+No access to graham server over holidays, so 
+used Pacea pre-processed monthly data
+These data are monthly anomalies of salinity and temperature
+They need renormalisation for use in Ecosim, such that a 0 = 1, so there are two versions
+In the future, the absolute values should also be exported and functional responses used
