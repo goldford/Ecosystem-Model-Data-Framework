@@ -235,21 +235,21 @@ print(f"95% Confidence Interval: [{math.exp(lower_CI_log):.5f} mt km^-2, {math.e
 # plt.ylabel("Frequency")
 # plt.show()
 #
-# # w at entry
-# plt.figure(figsize=(10, 6))
-# plt.hist(w_smlts_all, bins=50, color='skyblue', edgecolor='black')
-# plt.title("Histogram of smolt weights at estuary entry from Monte Carlo Simulations")
-# plt.xlabel("weight (g)")
-# plt.ylabel("Frequency")
-# plt.show()
-#
-# # w at exit
-# plt.figure(figsize=(10, 6))
-# plt.hist(w_juve_offshore_all, bins=50, color='skyblue', edgecolor='black')
-# plt.title("Histogram of smolt weights at open ocean migration from Monte Carlo Simulations")
-# plt.xlabel("weight (g)")
-# plt.ylabel("Frequency")
-# plt.show()
+# w at entry
+plt.figure(figsize=(10, 6))
+plt.hist(w_smlts_all, bins=50, color='skyblue', edgecolor='black')
+plt.title("Histogram of smolt weights at estuary entry from Monte Carlo Simulations")
+plt.xlabel("weight (g)")
+plt.ylabel("Frequency")
+plt.show()
+
+# w at exit
+plt.figure(figsize=(10, 6))
+plt.hist(w_juve_offshore_all, bins=50, color='skyblue', edgecolor='black')
+plt.title("Histogram of smolt weights at open ocean migration from Monte Carlo Simulations")
+plt.xlabel("weight (g)")
+plt.ylabel("Frequency")
+plt.show()
 #
 # # n juves
 # plt.figure(figsize=(10, 6))
