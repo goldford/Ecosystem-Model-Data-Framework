@@ -251,28 +251,40 @@ plt.xlabel("weight (g)")
 plt.ylabel("Frequency")
 plt.show()
 #
-# # n juves
-# plt.figure(figsize=(10, 6))
-# plt.hist(N_juve_all, bins=50, color='skyblue', edgecolor='black')
-# plt.title("Histogram of number of fish entering estuary entry from Monte Carlo Simulations")
-# plt.xlabel("n")
-# plt.ylabel("Frequency")
-# plt.show()
-#
-# # G
-# plt.figure(figsize=(10, 6))
-# plt.hist(G_all, bins=50, color='skyblue', edgecolor='black')
-# plt.title("Histogram of instantaneous growth, G, over early marine period from Monte Carlo Simulations")
-# plt.xlabel("/3 mo.")
-# plt.ylabel("Frequency")
-# G_mean = np.mean(G_all)
-# plt.axvline(G_mean, color='red')
-# G_std = np.std(G_all)
-# G_upper_CI = G_mean + 1.96 * G_std
-# G_lower_CI = G_mean - 1.96 * G_std
-# plt.axvline(G_lower_CI, color='red', linestyle='--')
-# plt.axvline(G_upper_CI, color='red', linestyle='--')
-# plt.show()
+# n juves
+plt.figure(figsize=(10, 6))
+plt.hist(N_juve_all, bins=50, color='skyblue', edgecolor='black')
+plt.title("Histogram of number of fish entering estuary entry from Monte Carlo Simulations")
+plt.xlabel("n")
+plt.ylabel("Frequency")
+plt.show()
+
+n_juve_est = np.mean(N_juve_all)
+n_juve_est_med = np.median(N_juve_all)
+n_juve_ci_lower = np.percentile(N_juve_all, 2.5)
+n_juve_ci_upper = np.percentile(N_juve_all, 97.5)
+print(f"Estimated number of juve fish (mean): {n_juve_est:.5f} ")
+print(f"Estimated number of juve fish (median): {n_juve_est_med:.5f} ")
+print(f"95% Confidence Interval: [{n_juve_ci_lower:.5f}, {n_juve_ci_upper:.5f}]")
+
+# print(f"Estimated N juves: {math.exp(log_mean):.2f} mt")
+# print(f"95% Confidence Interval: [{math.exp(lower_CI_log):.2f} mt, {math.exp(upper_CI_log):.2f}] mt")
+
+
+# G
+plt.figure(figsize=(10, 6))
+plt.hist(G_all, bins=50, color='skyblue', edgecolor='black')
+plt.title("Histogram of instantaneous growth, G, over early marine period from Monte Carlo Simulations")
+plt.xlabel("/3 mo.")
+plt.ylabel("Frequency")
+G_mean = np.mean(G_all)
+plt.axvline(G_mean, color='red')
+G_std = np.std(G_all)
+G_upper_CI = G_mean + 1.96 * G_std
+G_lower_CI = G_mean - 1.96 * G_std
+plt.axvline(G_lower_CI, color='red', linestyle='--')
+plt.axvline(G_upper_CI, color='red', linestyle='--')
+plt.show()
 
 plt.figure(figsize=(10, 6))
 plt.hist(G_delta_M_all, bins=50, color='skyblue', edgecolor='black')

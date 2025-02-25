@@ -130,7 +130,6 @@ outpath = "C:\\Users\\Greig\\Sync\\6. SSMSP Model\\Model Greig\\Data\\1. Salmon\
 releases_df.to_csv(outpath + 'temp_2025.csv')
 
 
-
 #########################################
 #### 4. Assign model map row / col  #####
 #########################################
@@ -154,7 +153,6 @@ releases_df['problemswithCUNAME'] = releases_df['REL_CU_NAME'].isnull()
 nullvalues = len(releases_df.loc[(releases_df['problemswithCUNAME']==True)])
 notnullvalues = len(releases_df.loc[(releases_df['problemswithCUNAME']==False)])
 print(nullvalues / (notnullvalues + nullvalues))
-
 
 
 ################################################################################

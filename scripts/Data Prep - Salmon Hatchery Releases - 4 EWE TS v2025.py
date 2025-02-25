@@ -1,7 +1,6 @@
 ### Export Custom Time Series file for Ecosim / Ecospace
-#  G Oldford (2021; last mod: Jan, 2025)
+#  G Oldford (2021; last mod: Feb, 2025)
 # Purpose: Export a hatchery forcing or time series file to .csv's or ASCII's for EWE
-#
 #    - export the monthly timestep forcing file that Ecosim expects
 #    - export the monthly timestep spatial forcing file that Ecospace expects
 #
@@ -14,17 +13,20 @@
 #
 # Notes:
 # - EPAD data from Carl Walters and RMIS locations data from SOGDC
-# - Apr 12, 2021 - the average weight or the weight field is off! not sure why, more so with coho so I just went to EPAD data and got avg non-zero weight for 1980 - 1990 from Puntledge
+# - Apr 12, 2021 - the average weight or the weight field is off! not sure why,
+#                 more so with coho so I just went to EPAD data and got avg n
+#                 non-zero weight for 1980 - 1990 from Puntledge
 # - Apr 12, 2021 - the annual out should be average of monthly b_mt released! Not sum over yr
 # - Jan 15, 2025 - issue encountered: need spacing of monthly not annual TS for Ecosim forcing
-#                - to-do: go back and redo so we can get pink, chum, sockeye etc.
-#                - to-do: fix the paths for first steps so they're backed up on github
+# - Feb 24, 2025 - fixed issues, exporting numbers of hatchery fish as well as B's
 
 import pandas as pd
 import numpy as np
 import datetime
 from dateutil.parser import parse
 from decimal import *
+
+pd.set_option('display.max_columns', None)
 
 # params
 study_area = 11274 # used to calculate biomass density (mt / km^2) - updated 2025
@@ -106,7 +108,6 @@ dummy_df['EWE_GROUP_CODE'] = "DUMMY"
 dummy_df['YEAR'] = (dummy_df['EWE_TIMESTEP'] // 12)+start_year
 
 dummy_df = dummy_df[['EWE_GROUP_CODE','EWE_TIMESTEP','YEAR']]
-# print(dummy_df)
 
 #releases_df = releases_df.append(dummy_df, ignore_index = True) # deprecated - 2025
 releases_df = pd.concat([releases_df, dummy_df], ignore_index=True)
@@ -114,18 +115,19 @@ print(releases_df)
 
 
 ################ For Ecosim ########################
-releasesEcosim = releases_df[['EWE_TIMESTEP','BIOMASS_MT2','EWE_GROUP_CODE','YEAR']]
+releasesEcosim = releases_df[['EWE_TIMESTEP', 'BIOMASS_MT2', 'TOTRELEASE_NO', 'EWE_GROUP_CODE', 'YEAR']]
 releasesEcosim = releasesEcosim.fillna(0)
 
 # sum by EWE_GROUP_CODE and timestep
 releasesEcosim = releasesEcosim.rename(columns={'EWE_TIMESTEP': 'TIMESTEP','EWE_GROUP_CODE': 'TITLE'})
 
 # for timestep = monthly
-releasesEcosim_gp_mo = releasesEcosim.groupby(['TIMESTEP','TITLE','YEAR']).sum().reset_index()
+releasesEcosim_gp_mo = releasesEcosim.groupby(['TIMESTEP', 'TITLE', 'YEAR']).sum().reset_index()
+
 
 # pivot wide
 releasesEcosim_wide_mo = releasesEcosim_gp_mo.pivot_table(
-        values=['BIOMASS_MT2'],
+        values=['BIOMASS_MT2', 'TOTRELEASE_NO'],
         index=['TIMESTEP', 'YEAR'],
         columns='TITLE',
         aggfunc=np.sum).reset_index()
@@ -137,6 +139,12 @@ releasesEcosim_wide_mo['CHUM_H_MT'] = releasesEcosim_wide_mo[('BIOMASS_MT2', 'Ch
 releasesEcosim_wide_mo['SOCKEYE_H_MT'] = releasesEcosim_wide_mo[('BIOMASS_MT2', 'Sockeye')].astype(float)
 releasesEcosim_wide_mo['PINK_H_MT'] = releasesEcosim_wide_mo[('BIOMASS_MT2', 'Pink')].astype(float)
 
+releasesEcosim_wide_mo['CHIN_H_N'] = releasesEcosim_wide_mo[('TOTRELEASE_NO', 'Chinook')].astype(float)
+releasesEcosim_wide_mo['COHO_H_N'] = releasesEcosim_wide_mo[('TOTRELEASE_NO', 'Coho')].astype(float)
+releasesEcosim_wide_mo['CHUM_H_N'] = releasesEcosim_wide_mo[('TOTRELEASE_NO', 'Chum')].astype(float)
+releasesEcosim_wide_mo['SOCKEYE_H_N'] = releasesEcosim_wide_mo[('TOTRELEASE_NO', 'Sockeye')].astype(float)
+releasesEcosim_wide_mo['PINK_H_N'] = releasesEcosim_wide_mo[('TOTRELEASE_NO', 'Pink')].astype(float)
+
 releasesEcosim_wide_mo['TIMESTEP'] = releasesEcosim_wide_mo[('TIMESTEP', '')].astype(float)
 releasesEcosim_wide_mo['YEAR'] = releasesEcosim_wide_mo[('YEAR', '')].astype(float)
 releasesEcosim_wide_mo = releasesEcosim_wide_mo[['YEAR',
@@ -145,9 +153,16 @@ releasesEcosim_wide_mo = releasesEcosim_wide_mo[['YEAR',
                                                  'COHO_H_MT',
                                                  'CHUM_H_MT',
                                                  'SOCKEYE_H_MT',
-                                                 'PINK_H_MT'
+                                                 'PINK_H_MT',
+                                                 'CHIN_H_N',
+                                                 'COHO_H_N',
+                                                 'CHUM_H_N',
+                                                 'SOCKEYE_H_N',
+                                                 'PINK_H_N'
                                                  ]]
 releasesEcosim_wide_mo.columns = [f"{x}_{y}" for x, y in releasesEcosim_wide_mo.columns.to_flat_index()]
+
+
 
 # releasesEcosim_wide = releasesEcosim_wide.drop(columns=[('BIOMASS_MT2',   'DUMMY')])
 
@@ -159,22 +174,39 @@ print(releasesEcosim_wide_mo)
 #print(releasesEcosim_wide_mo.columns)
 
 # use average monthly for annual time series
-releasesEcosim_wide_yr = releasesEcosim_wide_mo.groupby(['YEAR_']).mean().reset_index()
-releasesEcosim_wide_yr = releasesEcosim_wide_yr[['YEAR_',
-                                                 'CHIN_H_MT_',
-                                                 'COHO_H_MT_',
-                                                 'CHUM_H_MT_',
-                                                 'SOCKEYE_H_MT_',
-                                                 'PINK_H_MT_'
-                                                 ]]
+# releasesEcosim_wide_yr = releasesEcosim_wide_mo.groupby(['YEAR_']).mean().reset_index()
+# releasesEcosim_wide_yr = releasesEcosim_wide_yr[['YEAR_',
+#                                                  'CHIN_H_MT_',
+#                                                  'COHO_H_MT_',
+#                                                  'CHUM_H_MT_',
+#                                                  'SOCKEYE_H_MT_',
+#                                                  'PINK_H_MT_',
+#                                                  'CHIN_H_N_',
+#                                                  'COHO_H_N_',
+#                                                  'CHUM_H_N_',
+#                                                  'SOCKEYE_H_N_',
+#                                                  'PINK_H_N_'
+#                                                  ]]
 
-#if aggregate_time == "year":
-# releasesEcosim_wide = releasesEcosim_wide.drop(columns="('TIMESTEP', '')", axis=1)
-#     releasesEcosim_wide['Chinook'] = releasesEcosim_wide["('BIOMASS_MT2', 'Chinook')"].astype(float)
-#     releasesEcosim_wide['Coho'] = releasesEcosim_wide["('BIOMASS_MT2', 'Coho')"].astype(float)
-#     releasesEcosim_wide = releasesEcosim_wide.groupby("('YEAR', '')").mean().reset_index()
+releasesEcosim_wide_yr = releasesEcosim_wide_mo.groupby(['YEAR_']).agg({
+    'CHIN_H_MT_': 'mean',
+    'COHO_H_MT_': 'mean',
+    'CHUM_H_MT_': 'mean',
+    'SOCKEYE_H_MT_': 'mean',
+    'PINK_H_MT_': 'mean',
+    'CHIN_H_N_': 'sum',
+    'COHO_H_N_': 'sum',
+    'CHUM_H_N_': 'sum',
+    'SOCKEYE_H_N_': 'sum',
+    'PINK_H_N_': 'sum'
+}).reset_index()
 
-
+# #if aggregate_time == "year":
+# # releasesEcosim_wide = releasesEcosim_wide.drop(columns="('TIMESTEP', '')", axis=1)
+# #     releasesEcosim_wide['Chinook'] = releasesEcosim_wide["('BIOMASS_MT2', 'Chinook')"].astype(float)
+# #     releasesEcosim_wide['Coho'] = releasesEcosim_wide["('BIOMASS_MT2', 'Coho')"].astype(float)
+# #     releasesEcosim_wide = releasesEcosim_wide.groupby("('YEAR', '')").mean().reset_index()
+#
 # write to temp file
 releasesEcosim_wide_yr.to_csv('../scratch/temp_yr.csv', index=True)
 releasesEcosim_wide_mo.to_csv('../scratch/temp_mo.csv', index=True)
@@ -187,15 +219,26 @@ repeated_yr_avg = repeated_yr_avg[['YEAR_',
                                    'COHO_H_MT__y',
                                    'CHUM_H_MT__y',
                                    'SOCKEYE_H_MT__y',
-                                   'PINK_H_MT__y'
+                                   'PINK_H_MT__y',
+                                   'CHIN_H_N__y',
+                                   'COHO_H_N__y',
+                                   'CHUM_H_N__y',
+                                   'SOCKEYE_H_N__y',
+                                   'PINK_H_N__y'
                                    ]]
+
 repeated_yr_avg = repeated_yr_avg.rename(columns={'TIMESTEP_': 'TIMESTEP',
                                                   'YEAR_': 'YEAR',
                                                   'CHIN_H_MT__y': 'CHIN_H_MT_KM2',
                                                   'COHO_H_MT__y': 'COHO_H_MT_KM2',
                                                   'CHUM_H_MT__y': 'CHUM_H_MT_KM2',
                                                   'PINK_H_MT__y': 'PINK_H_MT_KM2',
-                                                  'SOCKEYE_H_MT__y': 'SOCKEYE_H_MT_KM2'
+                                                  'SOCKEYE_H_MT__y': 'SOCKEYE_H_MT_KM2',
+                                                  'CHIN_H_N__y': 'CHIN_H_N',
+                                                  'COHO_H_N__y': 'COHO_H_N',
+                                                  'CHUM_H_N__y': 'CHUM_H_N',
+                                                  'PINK_H_N__y': 'PINK_H_N',
+                                                  'SOCKEYE_H_N__y': 'SOCKEYE_H_N'
                                                   })
 repeated_yr_avg.to_csv('../scratch/temp_yr_rep.csv', index=True)
 

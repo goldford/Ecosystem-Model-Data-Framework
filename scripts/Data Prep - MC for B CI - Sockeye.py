@@ -315,6 +315,18 @@ plt.xlabel("n")
 plt.ylabel("Frequency")
 plt.show()
 
+n_juve_est = np.mean(N_juve_all)
+n_juve_est_med = np.median(N_juve_all)
+n_juve_ci_lower = np.percentile(N_juve_all, 2.5)
+n_juve_ci_upper = np.percentile(N_juve_all, 97.5)
+print(f"Estimated number of juve fish (mean): {n_juve_est:.5f} ")
+print(f"Estimated number of juve fish (median): {n_juve_est_med:.5f} ")
+print(f"95% Confidence Interval: [{n_juve_ci_lower:.5f}, {n_juve_ci_upper:.5f}]")
+
+# print(f"Estimated N juves: {math.exp(log_mean):.2f} mt")
+# print(f"95% Confidence Interval: [{math.exp(lower_CI_log):.2f} mt, {math.exp(upper_CI_log):.2f}] mt")
+
+
 # M
 plt.figure(figsize=(10, 6))
 plt.hist(G_all, bins=50, color='skyblue', edgecolor='black')
