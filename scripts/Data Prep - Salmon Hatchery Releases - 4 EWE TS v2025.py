@@ -8,8 +8,8 @@
 #   - HatcheryRel_TS_ForNextStep.csv - EPAD data from Carl (DFO / SEP)- from 'step 3'
 #
 # Data Out:
-#  - CSV TBD <br>
-#  - ASCII TBD <br>
+#  - HatcheryRel_Ecosim_TS_Mo_2025.csv # monthly forcing time series (B, N hatchery)
+#  - HatcheryRel_Ecosim_TS_yr_2025.csv # annual forcing time series (B, N hatchery)
 #
 # Notes:
 # - EPAD data from Carl Walters and RMIS locations data from SOGDC
@@ -173,21 +173,6 @@ releasesEcosim_wide_mo = releasesEcosim_wide_mo.fillna(0)
 print(releasesEcosim_wide_mo)
 #print(releasesEcosim_wide_mo.columns)
 
-# use average monthly for annual time series
-# releasesEcosim_wide_yr = releasesEcosim_wide_mo.groupby(['YEAR_']).mean().reset_index()
-# releasesEcosim_wide_yr = releasesEcosim_wide_yr[['YEAR_',
-#                                                  'CHIN_H_MT_',
-#                                                  'COHO_H_MT_',
-#                                                  'CHUM_H_MT_',
-#                                                  'SOCKEYE_H_MT_',
-#                                                  'PINK_H_MT_',
-#                                                  'CHIN_H_N_',
-#                                                  'COHO_H_N_',
-#                                                  'CHUM_H_N_',
-#                                                  'SOCKEYE_H_N_',
-#                                                  'PINK_H_N_'
-#                                                  ]]
-
 releasesEcosim_wide_yr = releasesEcosim_wide_mo.groupby(['YEAR_']).agg({
     'CHIN_H_MT_': 'mean',
     'COHO_H_MT_': 'mean',
@@ -243,7 +228,7 @@ repeated_yr_avg = repeated_yr_avg.rename(columns={'TIMESTEP_': 'TIMESTEP',
 repeated_yr_avg.to_csv('../scratch/temp_yr_rep.csv', index=True)
 
 # ===================================
-# open temp file and insert header
+# INSERT HEADER
 # ===================================
 
 # Title	Combined_GST_FR_Escape_RelB_NuSEDS	Chin_Hatch_RelB_CW	Chin_1stYrM_1_CW	Chin_1stYrM_2_CW	Chin_C_Rel_CW
@@ -269,6 +254,8 @@ repeated_yr_avg.to_csv('../scratch/temp_yr_rep.csv', index=True)
 
 import copy
 
+#####################################################
+# insert header to version with annual time increment
 f = open('../scratch/temp_yr.csv', "r")
 contents = f.readlines()
 f.close()
@@ -316,12 +303,15 @@ contents.insert(3, ','.join(str(line) for line in line3))
 contents.insert(4, ','.join(str(line) for line in line4))
 
 i = 0
-with open('../scratch/HatcheryRel_Ecosim_TS_1.csv', 'w') as a_writer:
+with open('../data/forcing/HatcheryRel_Ecosim_TS_yr_2025.csv', 'w') as a_writer:
     for line in contents:
         if i > 0:
             a_writer.writelines(line)
         i += 1
+a_writer.close()
 
+#####################################################
+# insert header to version with monthly time increment
 f = open('../scratch/temp_yr_rep.csv', "r")
 contents = f.readlines()
 f.close()
@@ -369,57 +359,59 @@ contents.insert(3, ','.join(str(line) for line in line3))
 contents.insert(4, ','.join(str(line) for line in line4))
 
 i = 0
-with open('../scratch/HatcheryRel_Ecosim_TS.csv', 'w') as a_writer:
+with open('../data/forcing/HatcheryRel_Ecosim_TS_mo_2025.csv', 'w') as a_writer:
     for line in contents:
         if i > 0:
             a_writer.writelines(line)
         i += 1
+a_writer.close()
 
-line1 = contents[0].split(',')
-line1[0] = 'Title'
-
-line2 = copy.deepcopy(line1)
-line2[0] = 'Weight'
-i = 0
-for line in line2:
-    if i > 0:
-        if i == (len(line2) - 1):
-            line2[i] = '1\n'
-        else:
-            line2[i] = 1
-    i += 1
-
-line3 = copy.deepcopy(line1)
-line3[0] = 'Type'
-i = 0
-for line in line3:
-    if i > 0:
-        if i == (len(line3) - 1):
-            line3[i] = '-1\n'
-        else:
-            line3[i] = -1
-    i += 1
-
-line4 = copy.deepcopy(line1)
-line4[0] = 'Timestep'
-i = 0
-for line in line4:
-    if i > 0:
-        if i == (len(line4) - 1):
-            line4[i] = 'Interval\n'
-        else:
-            line4[i] = 'Interval'
-    i += 1
-
-s = ""
-contents.insert(1, ','.join(str(line) for line in line1))
-contents.insert(2, ','.join(str(line) for line in line2))
-contents.insert(3, ','.join(str(line) for line in line3))
-contents.insert(4, ','.join(str(line) for line in line4))
-
-i = 0
-with open('../data/forcing/HatcheryRel_Ecosim_TS_2025.csv', 'w') as a_writer:
-    for line in contents:
-        if i > 0:
-            a_writer.writelines(line)
-        i += 1
+#
+# line1 = contents[0].split(',')
+# line1[0] = 'Title'
+#
+# line2 = copy.deepcopy(line1)
+# line2[0] = 'Weight'
+# i = 0
+# for line in line2:
+#     if i > 0:
+#         if i == (len(line2) - 1):
+#             line2[i] = '1\n'
+#         else:
+#             line2[i] = 1
+#     i += 1
+#
+# line3 = copy.deepcopy(line1)
+# line3[0] = 'Type'
+# i = 0
+# for line in line3:
+#     if i > 0:
+#         if i == (len(line3) - 1):
+#             line3[i] = '-1\n'
+#         else:
+#             line3[i] = -1
+#     i += 1
+#
+# line4 = copy.deepcopy(line1)
+# line4[0] = 'Timestep'
+# i = 0
+# for line in line4:
+#     if i > 0:
+#         if i == (len(line4) - 1):
+#             line4[i] = 'Interval\n'
+#         else:
+#             line4[i] = 'Interval'
+#     i += 1
+#
+# s = ""
+# contents.insert(1, ','.join(str(line) for line in line1))
+# contents.insert(2, ','.join(str(line) for line in line2))
+# contents.insert(3, ','.join(str(line) for line in line3))
+# contents.insert(4, ','.join(str(line) for line in line4))
+#
+# i = 0
+# with open('../data/forcing/HatcheryRel_Ecosim_TS_Mo_2025.csv', 'w') as a_writer:
+#     for line in contents:
+#         if i > 0:
+#             a_writer.writelines(line)
+#         i += 1
