@@ -21,6 +21,36 @@ stats_table = "..//data//ecopath//nodes_statstab_UTL.csv"
 
 ```
 
+```{r}
+
+# mm <- as.matrix(read.table(Q_table, header=T,sep=",", row.names=1))
+# edges_long <- melt(mm)
+# edges1 <- rename(edges_long, "from" = "Var1", "to" = "Var2", "weight" = "value")
+# edges1$to <- gsub('\\.', '-', edges1$to) # matrix converts - to . so convert back
+# 
+# # FILTERS
+# edges1 <- edges1 %>% filter(weight > 0) # filter zeros out
+# 
+# #det_close_name = "Detritus_Closure" # LTL
+# det_close_name = "DET_Close" # UTL
+# edges1 <- edges1 %>% filter(to != det_close_name) 
+# edges1 <- edges1 %>% filter(from != det_close_name)
+# nodes1 <- read.table(stats_table, header=T,sep=",", row.names=1)
+# nodes1 <- nodes1 %>% filter(Name != det_close_name) # filter zeros out
+# 
+# 
+# cannibals <- edges1 %>% filter(from == to)
+
+```
+```{r}
+print(str(l))  # Check the structure
+class(l)  # Check the data type
+#plot(net, layout = layout_nicely)
+any(is.na(l))  # Check for NAs
+any(!is.numeric(l))  # Check if all values are numeric
+```
+
+
 
 ```{r}
 mm <- as.matrix(read.table(Q_table, header=T,sep=",", row.names=1))
@@ -60,7 +90,8 @@ min_size = 1
 size_mult = 2
 V(net)$size = sqrt(V(net)$B) * size_mult + min_size
 E(net)$width <- sqrt(E(net)$weight) * 0.2
-l <- layout_nicely(net)
+# l <- layout_nicely(net)
+l <- layout_on_grid(net)
 # layout_with_fr, layout_with_drl, layout_nicely
 
 # https://bookdown.org/hneth/ds4psy/D-3-apx-colors-basics.html
@@ -124,8 +155,11 @@ legend(x=-1.2, y=1.1, c("Nekton","Zoop. Ichthyo.","Zoop. Hard","Zoop. Soft", "Pr
 
 ```{r}
 
+# try reversing
+l[,2] <- -l[,2]  # Flip y-axis
+
 # res seems to do opposite of expected
-png("../figs/network_plot.png", width = 2000, height = 2000, res = 100) # Adjust dimensions/resolution as needed
+png("../figs/network_plot_20250302.png", width = 2000, height = 2000, res = 100) # Adjust dimensions/resolution as needed
 plot(
   net,
   edge.arrow.size = 0.5,
@@ -139,6 +173,9 @@ plot(
 dev.off()
 
 ```
+
+
+
 ```{r}
 #det_close_name = "Detritus_Closure" # LTL
 hake_1 = "Hake1_0_11" # UTL
@@ -214,6 +251,7 @@ nodes1 <- nodes1 %>% filter(
 ```{r}
 is_igraph(net)
 V(net)$y
+
 ```
 
 
