@@ -9,7 +9,6 @@
 #         to a sync folder (see shortcuts)
 #
 
-
 import numpy as np
 import xarray as xr
 import pandas as pd
@@ -131,24 +130,38 @@ from datetime import datetime, timedelta
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11 - DEBUG3//Sc216 v51_3 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
 # ecospace_code = "Scv51_4-PAR_PI_AllPPTemp_Wind" #
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11 - DEBUG3//Sc216 v51_4 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
-
 # ecospace_code = "Scv50_2-PAR_PI_AllPPTemp_Wind" # trying to recreate a good run = note this is starting at 2000 not 2003 as originally
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11 SC50_DEBUG//Sc216 v50_2 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
 # ecospace_code = "Scv50_3-PAR_PI_AllPPTemp_Wind" # as above with upped nutrients from 90 to 95 in ecosim
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v11 SC50_DEBUG//Sc216 v50_3 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
-
 # ecospace_code = "Sc216 v70-PAR_PI_AllPPTemp_Wind" # same as 51_4 (good one), run in debug mode, but now w/ 3 threads
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v17 - DEBUG3//Sc216 v70 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
 # result of above same as 4_2
 # ecospace_code = "Sc216 v71-PAR_PI_AllPPTemp_Wind" # same as 51_4 (good one), run in debug mode, but now w/ 3 threads
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_diag_LTL_v6-7-0-18060_2024_Carb_36day3day_v18 - DEBUG3//Sc216 v71 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
-ecospace_code = "FULLKEY_Scv51_5-PAR_PI_AllPPTemp_Wind" # same as 51_4 (good one), run in debug mode, but now w/ 3 threads
-path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2024_Carb_3day_v11 SC51_04 - DEBUG3//Sc216 v51_5 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+
+# ecospace_code = "FULLKEY_Scv51_5-PAR_PI_AllPPTemp_Wind" # same as 51_4 (good one), run in debug mode, but now w/ 3 threads
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2024_Carb_3day_v11 SC51_04 - DEBUG3//Sc216 v51_5 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv80_1-All_Groups_20250501"
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_v12_ewe6_7_19295_SC51_04 - DEBUG5//Sc216 v80_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv82_1-All_Groups_20250506" # removed depth response of eup and dec to see if anything changes vs 80_1
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v82_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv83_1-All_Groups_20250506" # now w/ zoop enviro responses
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v83_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv84_1-All_Groups_20250506" # w/ env resp and nutrients up to 96
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v84_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv85_1-All_Groups_20250506" # same as 84 but with DIA temp response adjustment
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v85_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv86_1-All_Groups_20250506" # same as 85 but with DIA PAR response adjustment (_1 adjst 1, _2 adjst 2, _3 adjst again
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v86_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv87_1-All_Groups_20250506" # same as 86 but with a trapezoidal temperature response from diatoms
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v87_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+ecospace_code = "Scv88_1-All_Groups_20250506" # same as 85 but NO WIND
+path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v88_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
 
 
 
-
-# NOTE yr_strt should be 2003 for all runs except 51 onward!
+#
 yr_strt = 1978
 yr_end = 2018
 mo_strt = 1
@@ -311,6 +324,8 @@ v_f = {"NK1-COH": path_ecospace_out + "EcospaceMapBiomass-NK1-COH-{}.asc",
        "PP1-DIA": path_ecospace_out + "EcospaceMapBiomass-PP1-DIA-{}.asc",
        "PP2-NAN": path_ecospace_out + "EcospaceMapBiomass-PP2-NAN-{}.asc",
        "PP3-PIC": path_ecospace_out + "EcospaceMapBiomass-PP3-PIC-{}.asc", #time step format eg: 00620,
+
+       "BA1-BAC": path_ecospace_out + "EcospaceMapBiomass-BA1-BAC-{}.asc",
       }
 
 rows = 151
@@ -330,3 +345,4 @@ original_ds, are_identical = asc_to_nc_3day(v_f, out_filename, nemo_ewe_csv,
                                             yr_strt, yr_end, mo_strt, da_strt,
                                             mo_end, da_end)
 print("Crosscheck ASC in = NC data out:", are_identical)
+print("done.")

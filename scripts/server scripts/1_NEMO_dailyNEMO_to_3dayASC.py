@@ -9,8 +9,6 @@ from calendar import monthrange
 import math
 from GO_helpers import is_leap_year, buildSortableString, saveASCFile, getDataFrame 
 
-# module load StdEnv/2020
-# module load scipy-stack/2020a
 
 #import matplotlib.pyplot as plt
 
@@ -22,7 +20,7 @@ from GO_helpers import is_leap_year, buildSortableString, saveASCFile, getDataFr
 #          output: depth integrated and single levels for key vars output as ASC (daily) for daily NEMO model
 
 #Data in:
-# 1/ NEMO outputs in 2D or 3D (var mldkz5 / turbocline depth) as 3daily means in annual NC files, DIRECT from NEMO outputs "xxx_1d_grid_T_2D_1980.nc"
+# 1/ NEMO outputs in 2D or 3D (var mldkz5 / turbocline depth) as daily means in annual NC files, DIRECT from NEMO outputs "xxx_1d_grid_T_2D_1980.nc"
 # 2/ Salinity - can be either vertical averages over chosen levels or from a specific depth level, DIRECT from NEMO outputs "xxx_1d_grid_T_selectedlevs_1980.nc"
 # 3/ Light as daily means from climate re-analysis (e.g. ERA5) with near-surface downward radiative flux (var msdwswrf Wm-2) interpolated to NEMO grid as annual NC files# 
 # file name e.g. "ERA5_NEMOgrid_light_daily_1980.nc".
@@ -40,16 +38,18 @@ from GO_helpers import is_leap_year, buildSortableString, saveASCFile, getDataFr
 #                 Meaning one model 'year' is actually 36 days. 
 #                 Does not divide into 365 easily.
 #                 Modified code to lump the remaining 5-6 days in December into average of final time step so the output is compatible with EwE spatial-temp framework
+# - GO 2024-08-31 Ran after the Graham problems, used module load StdEnv/2020, module load scipy-stack/2023b, module load netcdf
+# - GO 2024-09-27 Depth avg'ing still not right!
 #xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # //////////////////////////////////// FUNCTIONS //////////////////////////////////////
 # now in GO_helpers.py -2023-04-05
 
 
-# originally CDO was used, it is much faster but I don't have time to fiddle
+# originally CDO was used, it is much faster but I don't have time to implement here
 # ################# Basic Params #################
-startyear = 2003 
-endyear = 2018
+startyear = 1980
+endyear = 1989
 startMonth = 1
 endMonth = 12
 NEMO_run = "216" #NEMO run code
@@ -457,6 +457,7 @@ for var in dctVariables:
                 if depthlev_avg == True:
                     # var names are 'day' but really are 3day
                     VarMonth1 = vars_dat[:,depthlev1:depthlev2,:,:]
+		    # not correct - should be accounting for variable bin widths here
                     VarMonth = np.ma.average(VarMonth1, axis = 1) # avg over depths - will reduce to (12,299,132)
                     # replace the dim to match if just one level used
                     #SalinityMonth = np.expand_dims(SalinityMonth2, axis=1)    

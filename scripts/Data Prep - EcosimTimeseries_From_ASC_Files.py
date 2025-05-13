@@ -42,7 +42,7 @@ dfDepthMask = dfDepth < minDepth
 iTs = 0      
 for ascFile in lstFiles:
     if ascFile.endswith(".asc"): 
-        fullpath = os.path.join(InputPath,ascFile)       
+        fullpath = os.path.join(InputPath, ascFile)
         df = getDataFrame(fullpath,"-9999.00000000")
         df = df.mask(dfDepthMask)
         mean =  df.stack().mean()
@@ -51,7 +51,7 @@ for ascFile in lstFiles:
         iTs+=1
         #print(n)
                
-outfile = os.path.join(outputPath,outfilename.format(varname))
+outfile = os.path.join(outputPath, outfilename.format(varname))
 # dfOut.to_csv(path_or_buf=outfile,sep=',',index=False)   
 dfOut.to_csv(path_or_buf=outfile,sep=',')   
 print(outfile)

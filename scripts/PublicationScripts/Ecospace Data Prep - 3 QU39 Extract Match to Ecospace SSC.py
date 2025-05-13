@@ -34,8 +34,10 @@ path_ecospace_map = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framew
 
 # file_Ecospace_out = "Scv7-PARMixingNut90Temp_2003-2018.nc" # better fits?
 # file_Ecospace_out = "Scv39-PARenv_PI_Temp_Wind_2003-2018.nc" # better fits?
-file_ecospace_out = "Scv51_4_2-PAR_PI_AllPPTemp_Wind_2000-2018.nc" # same as key run, just shorter
-ecospace_code = "SC51_4_2"
+# file_ecospace_out = "Scv51_4_2-PAR_PI_AllPPTemp_Wind_2000-2018.nc" # same as key run, just shorter
+# ecospace_code = "SC51_4_2"
+file_ecospace_out = "Scv80_1-All_Groups_20250501_1978-2018.nc" # 2025
+ecospace_code = "SC80_1"
 
 file_ecospace_map = "Ecospace_grid_20210208_rowscols.csv"
 file_SSC_bathy = "ubcSSnBathymetryV21-08_a29d_efc9_4047.nc"
@@ -266,5 +268,5 @@ else:
     # necessary?
     QU39_df['DateTime'] = pd.to_datetime(QU39_df['DateTime'], format='%Y-%m-%d %H:%M:%SZ')
 
-
+print("finished")
 

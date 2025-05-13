@@ -1,14 +1,13 @@
-#xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+#xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # created by G Oldford, 
 # last edited 2024-05-23 -GO
-# total revision by GO 2022-08-24
+# revision by GO 2022-08-24
 #
 # Purpose: convert pre-processed NC files (mean monthly NEMO results in monthly NetCDFs) to ASC for ECOSPACE
 # Input: monthly NC files
 # Output: monthly ASC files
 #
-#xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
+#xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 import netCDF4 as nc
 import numpy as np
 import pandas as pd
@@ -26,8 +25,7 @@ def buildSortableString(number, nZeros):
 def saveASCFile(filename, data, sigdigfmt):
     #Greig's bounds clipping from "Basemap Converter (Py3).ipynb"
     #I don't know why this works but it does... -JB
-    # magic. -GO
-    
+
     trimmedData = []
     i =  bottomleft_row_ewe 
     while i < upperleft_row_ewe:

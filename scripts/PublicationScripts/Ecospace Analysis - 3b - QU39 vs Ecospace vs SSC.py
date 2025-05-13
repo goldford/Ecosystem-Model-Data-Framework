@@ -18,8 +18,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # paths
-model_run = 'SC39' # older run
-model_run = 'SC51_4_2' # this is short run but same as full key run
+# model_run = 'SC39' # older run
+# model_run = 'SC51_4_2' # this is short run but same as full key run
+model_run = 'SC80_1' # full run should be same as above but 2025 newer v of ewe
+
 include_SSC = True
 pathfile_QU39_SSC_Ecospace = r'C:\Users\Greig\Sync\6. SSMSP Model\Model Greig\Data\28. Phytoplankton\Phyto Concent del Bel Belluz 2024 2016 - 2019\MODIFIED\QU39_joined_matchtoEcospace_SSC_' + model_run + '.csv'
 out_p = "..//..//figs//"
@@ -162,7 +164,7 @@ if include_SSC:
 
     # Colors for each model_code
     # colors = {'PP1-DIA': 'blue', 'ssc-DIA': 'orange', 'QU39': 'pink'}
-    colors = {'log_PP1-DIA': 'blue', 'log_ssc-DIA': 'orange', 'logQU39': 'pink'}
+    colors = {'log_PP1-DIA': 'blue', 'log_ssc-DIA': 'pink', 'logQU39': 'orange'}
 
     months = np.arange(1, 13)
     positions_ecospace = months - 0.25 # adjust slightly right

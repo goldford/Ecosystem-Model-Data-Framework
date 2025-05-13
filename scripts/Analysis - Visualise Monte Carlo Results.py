@@ -1,112 +1,146 @@
 # Created Mar 3, 2025 by G Oldford
 # Purpose: Review and visualise results from Ecosim Monte Carlo
+
+# Data In:
+#  1/ monte carlo outputs from ecosim
+#  2/ reference time series
+#       eg,
+#       smolt-to-age 2 M from CWT
+#       SoG M from Nelson et al 2024
+#
+# Output:
+#  1/ plots
+
 # C:\Users\Greig\Documents\EwE output\GeorgiaStrait2023_v97_v6_7_0_18858_64b\mc_EcosimScen97\
 # mc_output_trial0006\mortality_monthly.csv
-
 import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
-# need a purge script since MC generates so much shite
-# purge everything without 'annual' in name
-# purge everything with 'discards' in name
-
-
-# mortality time series (for ref, fitting)
-# Chinook - ocean and stream type, Freshwater et al., 2022
-mort_path = "C:\\Users\\Greig\\Sync\\6. SSMSP Model\\Model Greig\\Data\\1. Salmon\\Chinook Survival Freshwater 2022\\MODIFIED\\"
-
-# OCEAN TYPE
-mort_f = "salish_M_ocntp_sog_1971-2017.csv"
-m_p = os.path.join(mort_path, mort_f)
-print(m_p)
-if os.path.exists(m_p):
-    print("found")
-    df_mort_ref_chin_wo_sogfr = pd.read_csv(m_p)
-    # since it's brood year, add one year to M
-    df_mort_ref_chin_wo_sogfr['year'] = df_mort_ref_chin_wo_sogfr['brood_year'] + 1
-    # mean_M_oc
-    M_ref_col = 'mean_M_oc_sog'
-
-# # STREAM TYPE
-# mort_f = "salish_M_strmtp_sog_1971-2017.csv"
-# m_p = os.path.join(mort_path, mort_f)
-# print(m_p)
-# if os.path.exists(m_p):
-#     print("found")
-#     df_mort_ref_chin_ws_sogfr = pd.read_csv(m_p)
-#     # since it's brood year, add one year to M
-#     df_mort_ref_chin_ws_sogfr['year'] = df_mort_ref_chin_ws_sogfr['brood_year'] + 1
-#     # mean_M_oc
-#     M_ref_col = 'mean_M_st_sog'
-
-# Define root folder
-root_folder = "C:\\Users\\Greig\\Documents\\EwE output\\GeorgiaStrait2023_v99_v6_7_0_18858_64b\\mc_EcosimScen99\\"
-# C:\Users\Greig\Documents\EwE output\GeorgiaStrait2023_v99_v6_7_0_18858_64b\mc_EcosimScen97
-
-
-# Define columns of interest and their labels
-column_groups = {
-    "Smolt to Age 2 M - Chinook WO": ["27", "28", "29"],  # Summing these columns
+# Define scenario directories
+scenarios = {
+    "SC104 - NO PP Anom": "SC104",
+    "SC105 - WITH PP Anom": "SC105"
 }
-# # Define columns of interest and their labels
-# column_groups = {
-#     "Smolt to Age 2 M - Chinook WS": ["34"],  # Summing these columns
-# }
+
+# Define paths
+root_dir_mc = "C://Users//Greig//Documents//EwE output//"
+root_dir_cwt_chin = "C://Users//Greig//Sync//6. SSMSP Model//Model Greig//Data//1. Salmon//Chinook Survival Freshwater 2022//MODIFIED//"
+root_dir_cwt_coho = "C://Users//Greig//Sync//6. SSMSP Model//Model Greig//Data//1. Salmon//All Species Survival Exploitation//"
+root_dir_nelson = "C://Users//Greig//Sync//6. SSMSP Model//Model Greig//Data//1. Salmon//Coho_Mort_Seal_Nelson_2024\ORIGINAL//"
+
+mc_root_base = {
+    "SC104": os.path.join(root_dir_mc, "GeorgiaStrait2023_v103_v6_7_0_18858_64b//mc_EcosimScen104"),
+    "SC105": os.path.join(root_dir_mc, "GeorgiaStrait2023_v103_v6_7_0_18858_64b//mc_EcosimScen105")
+}
+
+# Define column groups for each species/subtype
+column_groups = {
+    "Chinook H": ["21", "22", "23"],
+    "Chinook WO": ["27", "28", "29"],
+    "Chinook WS": ["34"],
+    "Coho H": ["39"],
+    "Coho W": ["43"]
+}
 
 
-# Find all Monte Carlo output folders
-mc_folders = [f for f in os.listdir(root_folder) if f.startswith("mc_output_trial")]
+# Load reference datasets
+def load_reference_data():
 
-# Initialize a dictionary to store aggregated data
-aggregated_data = {}
+    refs = {}
 
-for label, columns in column_groups.items():
-    aggregated_data[label] = {}  # Store data for each group
+    # Chinook WO
+    f = "salish_M_ocntp_sog_1971-2017.csv"
+    df = pd.read_csv(os.path.join(root_dir_cwt_chin, f))
+    df['year'] = df['brood_year'] + 1
+    refs["Chinook WO"] = df[['year', 'mean_M_oc_sog']].rename(columns={'mean_M_oc_sog': 'obs'})
+    refs["Chinook H"] = df[['year', 'mean_M_oc_sog']].rename(columns={'mean_M_oc_sog': 'obs'})
 
-    for folder in mc_folders:
-        file_path = os.path.join(root_folder, folder, "mortality_annual.csv")
 
-        if os.path.exists(file_path):
-            # Read the file
-            df = pd.read_csv(file_path)
+    # Chinook WS
+    f = "salish_M_strmtp_sog_1971-2017.csv"
+    df = pd.read_csv(os.path.join(root_dir_cwt_chin, f))
+    df['year'] = df['brood_year'] + 1
+    refs["Chinook WS"] = df[['year', 'mean_M_st_sog']].rename(columns={'mean_M_st_sog': 'obs'})
+    refs["Chinook H"] = df[['year', 'mean_M_st_sog']].rename(columns={'mean_M_st_sog': 'obs'})
 
-            # Ensure 'year/group' exists
-            if "year\group" in df.columns:
-                df["year\group"] = df["year\group"].astype(int)  # Convert to integer years
 
-                # Sum the selected columns
-                df[label] = df[columns].sum(axis=1)
+    # Coho
+    f = "coho_M_EWE_TS Jan 2025.csv"
+    df = pd.read_csv(os.path.join(root_dir_cwt_coho, f))
+    df['year'] = df['year'] + 1
+    refs["Coho W"] = df[['year', 'AVERAGE']].rename(columns={'AVERAGE': 'obs'})
+    refs["Coho H"] = df[['year', 'AVERAGE']].rename(columns={'AVERAGE': 'obs'})
 
-                # Store results in the dictionary
-                for year, value in zip(df["year\group"], df[label]):
-                    if year not in aggregated_data[label]:
-                        aggregated_data[label][year] = []
-                    aggregated_data[label][year].append(value)
+    return refs
 
-# Create a fan plot
-for label, yearly_data in aggregated_data.items():
-    years = sorted(yearly_data.keys())
-    data_matrix = np.array([yearly_data[year] for year in years])
 
-    # Compute percentiles
-    percentiles = np.percentile(data_matrix, [5, 25, 50, 75, 95], axis=1)
+# Load model outputs for all scenarios
+def load_mc_data():
+    all_data = {scen: {} for scen in scenarios.values()}
+    for scen_label, scen_key in scenarios.items():
+        mc_root = mc_root_base[scen_key]
+        folders = [f for f in os.listdir(mc_root) if f.startswith("mc_output_trial")]
+        for group, cols in column_groups.items():
+            yearly_data = {}
+            for folder in folders:
+                path = os.path.join(mc_root, folder, "mortality_annual.csv")
+                if os.path.exists(path):
+                    df = pd.read_csv(path)
+                    if "year\\group" in df.columns:
+                        df["year\\group"] = df["year\\group"].astype(int)
+                        df[group] = df[cols].sum(axis=1)
+                        for year, val in zip(df["year\\group"], df[group]):
+                            yearly_data.setdefault(year, []).append(val)
+            all_data[scen_key][group] = yearly_data
+    return all_data
 
-    # Plot
-    plt.figure(figsize=(10, 5))
-    plt.fill_between(years, percentiles[0], percentiles[4], color="lightblue", alpha=0.3, label="5th-95th Percentile")
-    plt.fill_between(years, percentiles[1], percentiles[3], color="blue", alpha=0.5, label="25th-75th Percentile")
-    plt.plot(years, percentiles[2], color="black", linestyle="--", label="Median")
 
-    # Overlay reference data as points
-    plt.scatter(df_mort_ref_chin_wo_sogfr['year'],
-                df_mort_ref_chin_wo_sogfr[M_ref_col],
-                color="red", label="M ref", zorder=3)
+# Plot comparison
+def plot_comparison(all_data, refs):
+    for group in column_groups.keys():
+        plt.figure(figsize=(12, 6))
 
-    plt.xlabel("Year")
-    plt.ylabel("Summed Mortality")
-    plt.title(f"Fan Plot for {label}")
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+        # Plot reference
+        ref_df = refs[group]
+        plt.scatter(ref_df['year'], ref_df['obs'], color='black', label='Observed (CWT)', zorder=3)
+
+        # Calculate and store fit statistics
+        stats = []
+
+        # Plot each scenario
+        for label, scen_key in scenarios.items():
+            years = sorted(all_data[scen_key][group].keys())
+            matrix = np.array([all_data[scen_key][group][y] for y in years])
+            percentiles = np.percentile(matrix, [5, 25, 50, 75, 95], axis=1)
+            median = percentiles[2]
+
+            plt.fill_between(years, percentiles[0], percentiles[4], alpha=0.2, label=f"{label} 5-95%")
+            plt.plot(years, median, label=f"{label} median")
+
+            # Calculate fit stats for overlapping years
+            ref_merge = ref_df[ref_df['year'].isin(years)]
+            model_vals = [np.nanmedian(all_data[scen_key][group][y]) for y in ref_merge['year']]
+            # rmse = np.sqrt(mean_squared_error(ref_merge['obs'], model_vals))
+            # mae = mean_absolute_error(ref_merge['obs'], model_vals)
+            # stats.append(f"{label}: RMSE={rmse:.2f}, MAE={mae:.2f}")
+
+        plt.title(f"Mortality Comparison - {group}")
+        plt.xlabel("Year")
+        plt.ylabel("Instantaneous Mortality Rate (M)")
+        plt.legend()
+        plt.grid(True)
+        for i, stat in enumerate(stats):
+            plt.text(0.01, 0.95 - 0.05*i, stat, transform=plt.gca().transAxes, fontsize=9, verticalalignment='top')
+
+        plt.xlim(1970, 2018)
+        plt.tight_layout()
+        plt.show()
+
+
+# Run all steps
+reference_data = load_reference_data()
+monte_carlo_data = load_mc_data()
+plot_comparison(monte_carlo_data, reference_data)

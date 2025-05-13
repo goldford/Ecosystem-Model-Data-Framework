@@ -1,0 +1,11 @@
+2024-08-31 
+
+Can't get netcdf to import. 
+
+Try this: 
+module load StdEnv/2020
+module load scipy-stack/2023b
+module load netcdf
+
+then: 
+sbatch 6_PAR3... etc

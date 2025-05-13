@@ -10,7 +10,10 @@ module load nco/4.9.5 ;
 # command prompt example: 'ksh 1_NEMO_to_monthlymean_asannualNC_NEMO.ksh'
 # WARNING: script doesn't purge temp files
 
-# Takes hourly data in daily files and converts to mean monthly data in annual files
+# note - monmin monmax monstd monvar should also work
+# https://code.mpimet.mpg.de/projects/cdo/embedded/index.html
+
+# daily files - converts to mean monthly data in annual files
 modelrun="216"
 yearsindirs="F"
 mos={"01","02","03","04","03","04","05","06","07","08","09","10","11","12"} 

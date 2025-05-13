@@ -5,6 +5,40 @@ import pandas as pd
 import os
 from calendar import monthrange
 import math
+import yaml
+
+def load_yaml(yamlfile):
+    """ Helper to load a YAML
+    """
+    def date_to_datetime(loader, node):
+        """ The default YAML loader interprets YYYY-MM-DD as a datetime.date object
+            Here we override this with a datetime.datetime object with implicit h,m,s=0,0,0 """
+        d = yaml.constructor.SafeConstructor.construct_yaml_timestamp(loader,node)
+        if type(d) is dt.date:
+            d = dt.datetime.combine(d, dt.time(0, 0, 0))
+        return d
+    yaml.constructor.SafeConstructor.yaml_constructors[u'tag:yaml.org,2002:timestamp'] = date_to_datetime
+    with open(yamlfile, 'r') as ya:
+        try:
+            yamldata = yaml.safe_load(ya)
+        except Exception as e:
+            print("Error importing YAML file {} {})".format(yamlfile,e))
+            raise
+    return yamldata
+def read_sdomains(domain_file):
+    try:
+        data = load_yaml(domain_file)
+    except FileNotFoundError:
+        print("WARNING:\n domain_file {} not found".format(domain_file))
+
+    coords = {}
+    for c in data['polygon_coords'].keys():
+        coords[c] = np.asarray(data['polygon_coords'][c])
+        # make sure the polygon is closed
+        if not np.all(coords[c][-1] == coords[c][0]):
+            coords[c] = np.vstack([coords[c], coords[c][0, :]])
+
+    return coords
 
 
 def is_leap_year(year):

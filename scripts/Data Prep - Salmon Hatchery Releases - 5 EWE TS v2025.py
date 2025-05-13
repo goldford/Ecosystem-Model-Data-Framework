@@ -30,17 +30,12 @@ pd.set_option('display.max_columns', None)
 #    eg, [SPECIES]_H_MT_KM2 becomes [SPECIES]_H_MT_KM2_adj
 # 3. skip header (4 lines)
 # 4. For the _first_ year (ie, row) only, set baseline 'fake' hatchery N,B
-#    for columns suffixed _N, values for first year should be, eg, [SPECIES]_H_N = N_1950_W_[species] * 0.2
+#    for columns suffixed _N, values for first year should be, eg, [SPECIES]_H_N = N_1950_W_[species] * some multiplier (eg 0.2)
 #    for columns suffixed _MT_KM2, values for first year should be, eg, x = [SPECIES]_H_N * B_1950_W_[species] / N_1950_W_[species]
 # 5. For all years, except first one
 
 # # juve B's and N's for MS based on _FRESH_ stanza for ratio below
 # # source: see tech report
-# B_1950_W_coho   = 0.055
-# B_1950_W_chin_o = 0.0000627
-# B_1950_W_pink   = 0.0034
-# B_1950_W_sock   = 0.066
-# B_1950_W_chum   = 0.0032
 #
 # N_1950_W_coho   = 15500000
 # N_1950_W_chin_o = 35000000
@@ -48,15 +43,19 @@ pd.set_option('display.max_columns', None)
 # N_1950_W_sock   = 66000000
 # N_1950_W_chum   = 82000000
 
-# Define biomass (B) and abundance (N) values for 1950
+# 1950 H B multiple, as compared to H W - freshwater stanza
+H_W_factor = 0.2
+
+# Define biomass (B) and abundance (N) values for 1950 - fresh for multistanza!
 B_1950_W = {
-    "COHO": 0.055,
-    "CHIN": 0.0000627,
+    "COHO": 0.049,
+    "CHIN": 0.0000663,
     "PINK": 0.0034,
     "SOCKEYE": 0.066,
     "CHUM": 0.0032
 }
 
+# est of N of fish at marine entry
 N_1950_W = {
     "COHO": 15500000,
     "CHIN": 35000000,
@@ -90,7 +89,7 @@ first_year_idx = df[df["YEAR_"] == yr_strt].index[0]
 
 for species in species_list:
     # Adjust _N column
-    df.at[first_year_idx, f"{species}_H_N_adj"] = N_1950_W[species] * 0.2
+    df.at[first_year_idx, f"{species}_H_N_adj"] = N_1950_W[species] * H_W_factor
 
     # Adjust _MT_KM2 column
     x = df.at[first_year_idx, f"{species}_H_N_adj"] * B_1950_W[species] / N_1950_W[species]

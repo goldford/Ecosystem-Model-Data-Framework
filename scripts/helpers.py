@@ -7,7 +7,10 @@ from scipy import interpolate
 import matplotlib.pyplot as plt
 from matplotlib import patches
 import xarray as xr
-from mpl_toolkits.basemap import Basemap
+
+# basemap is currently not compatible with Python 3.10+ as far as I can tell
+from mpl_toolkits.basemap import Basemap # to fix install, may need to revert to python 3.10
+
 import pandas as pd
 
 def is_leap_year(year):
@@ -787,29 +790,40 @@ def custom_formatter2(x, pos):
     return f'{x:.1f}'
 
 def find_bloom_doy(df, df_field,
-                   thrshld_fctr = 1.05, sub_thrshld_fctr = 0.7,
-                   average_from = "annual", mean_or_median = "median"):
+                   thrshld_fctr = 1.05,
+                   sub_thrshld_fctr = 0.7,
+                   average_from = "annual",
+                   mean_or_median = "median",
+                   exclude_juntojan = True,
+                   bloom_early = 68, #suchy's
+                   bloom_late = 108 # suchy's
+                   ):
+# Created 2024 by G Oldford
+# Purpose compute bloom date
+#
+# Based on:based primarily on Suchy et al methods
+#
+# Params:
+#   thrshld_fctr - the threshold above average used to determine bloom
+#   sub_thrshld_fctr - if values fall back beyond this proportion of average, then no bloom
+#   average_from - is the average from that year or all years?
+#   mean_or_median - is the average based on median or mean values?
+#   exclude_juntojan - from model outputs, exclude from calculating mean / median values (no satellite data these months)
+#
+# Updates:
+#  2025-05-05 - added option to exclude_decjan
 
     # Create lists to hold the results
     bloom_dates = []
     bloom_days_of_year = []
     bloom_earlylate = []
 
-    # match spreadsheet method:
-    # method: median est set fixed to 1.05x 1.65 based on med of all yrs
-    # they don't quite match (2008 and 2011 are the issues)
-    # if median value is set to 1.65 and is based on median across all years and threshold is high
-    # secondary criteria is average of one of two following weeks must be 0.95 threshold.
-    # then all years except 3 match: 2006, 2008, 2011. 2006 is probably never going to work,
-    # 2008 is on cusp, 2011 is issue because either early or late but should be avg
-    # if you use a median or threshold val of aroun 1.65 and a higher sub-threshold than suchy then it works
-    # results overall indicate the model is generally slightly early
-    #
-    # match suchy method (median from within year, threshold 70% median
-    # results: model tool early consistently
+    if exclude_juntojan:
+        df = df[~df['Date'].dt.month.isin([1,5,6,7,8,9,10,11,12])]
 
     # Group by year
-    df['Year'] = df['Date'].dt.year
+    df['Year'] = df['Date'].dt.year # redundant?
+
     if average_from == "all":
         median_value = df[df_field].median()
         mean_value = df[df_field].mean()
@@ -851,19 +865,20 @@ def find_bloom_doy(df, df_field,
                         > sub_threshold
                 ):
                     # print("bloom passes second crit")
+
                     bloom_dates.append(group.iloc[i]['Date'])
                     bloom_doy = group.iloc[i]['Date'].timetuple().tm_yday
                     bloom_days_of_year.append(bloom_doy)
                     bloom_found = True
                     print(group.iloc[i + 1][df_field])
-                    if bloom_doy <= 68:
+                    if bloom_doy + 1.5 <= bloom_early:
                         bloom_earlylate.append("early")
-                    elif bloom_doy <= 107:
-                        bloom_earlylate.append("avg")
-                    elif bloom_doy >= 108:
+                    elif bloom_doy - 1.5 >= bloom_late:
                         bloom_earlylate.append("late")
+                    elif (bloom_doy + 1.5 <= bloom_late - 1) & (bloom_doy - 1.5 >= bloom_early - 1):
+                        bloom_earlylate.append("avg")
                     else:
-                        print("problem finding bloom timing category")
+                        bloom_earlylate.append("cusp")
                     break
 
         # If no bloom is found for the year, append None

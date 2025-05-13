@@ -8,6 +8,8 @@ import math
 from GO_helpers import is_leap_year, buildSortableString, saveASCFile, getDataFrame 
 
 #import matplotlib.pyplot as plt
+# module load StdEnv/2020
+# module load scipy-stack/2020a
 
 #xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # created by GO, last edited by GO 2024-05-23
@@ -52,8 +54,8 @@ from GO_helpers import is_leap_year, buildSortableString, saveASCFile, getDataFr
 
 
 # ////////////////////////////////// Basic Params ///////////////////////////////////////
-startYear = 2015
-endyear = 2016
+startYear = 1980
+endyear = 2018
 startMonth = 1
 endMonth = 12
 NEMO_run = "216" #NEMO run code
@@ -107,7 +109,7 @@ depthSubDir = "DATA/"
 # pre processed by G
 mixingSubDir = "DATA/SS1500-RUN{}/NEMO_annual_NC".format(NEMO_run)
 salinitySubDir = "DATA/SS1500-RUN{}/NEMO_annual_NC".format(NEMO_run)
-outputsSubDir ="DATA/SS1500-RUN{}/ECOSPACE_in_{}".format(NEMO_run, PAR_code)
+outputsSubDir ="DATA/SS1500-RUN{}/ECOSPACE_in_climayr_{}-{}_{}".format(NEMO_run, startYear, endyear, PAR_code)
 
 # (for daily)
 #mixingSubDir = "SalishSea1500-RUN{}/CDF".format(NEMO_run)
@@ -129,6 +131,7 @@ salinityFileName ='SalishSea1500-RUN{}_MonthlyMean_grid_T_y{}.nc'
 #lightFileName = "RDRS21_NEMOgrid_light_daily_{}.nc"
 #salinityFileName ='SalishSea1500-RUN{}_1d_grid_T_y{}m{}.nc' 
 
+
 # ///////////////////// VARS ////////////////////////
 varNameLight = "solar_rad"
 varNameSalinity = 'vosaline'
@@ -139,7 +142,7 @@ lstVars = ['mldkz5'];
 #Used for both Directory name and in the file name
 dctVarnameToEwEName = {varNamesMixing:'PAR-VarZ-VarK'}
 
-saveTemplate = "{}_{}_{}.asc" # new ewename, year, dayofyear
+saveTemplate = "{}_{}-{}.asc" # new ewename, startYear, endYear
 
 
 #Number of depth strata to use
@@ -149,6 +152,7 @@ saveTemplate = "{}_{}_{}.asc" # new ewename, year, dayofyear
 #nDepthIndexes = 23 #= 31.101034   39.11886
 #nDepthIndexes = 26 #= 86.96747   109.73707 
 
+
 # ///////////////// MAP CLIP ///////////////////////
 #array offsets for clipping EwE grid out of NEMO grid
 #Calculated by Greig in "Basemap Converter (Py3).ipynb"
@@ -157,19 +161,26 @@ upperleft_col_ewe = 39
 bottomleft_row_ewe = 102
 bottomleft_col_ewe = 39
 
+
 # ///////////////// PLUME MASK /////////////////////
 #Create the plume mask
 PlumeRegionFilename = os.path.join(greigDir, plumeSubDir, "Fraser_Plume_Region.asc")
 dfPlumeRegion = getDataFrame(PlumeRegionFilename,"-9999.00000000")
 dfPlumeMask = dfPlumeRegion == 1 #Plume is region one
 
+
 # ///////////////// LAND MASK /////////////////////
 ecospacegrid_f = os.path.join(greigDir, depthSubDir, "ecospacedepthgrid.asc")
 df_dep = getDataFrame(ecospacegrid_f,"-9999.00000000")
 dfLandMask = df_dep == 0 #mask is where elev =0
 
+
 # ///////////////// MAIN LOOP /////////////////////
 for var in lstVars:
+    light_allyrs = []
+    mixing_allyrs = []
+    salt_allyrs = []
+    
     for iyear in range(startYear, endyear+1):
         print(iyear)
         #YearSubDirTemplate = str(iyear) # unused -GO
@@ -178,155 +189,97 @@ for var in lstVars:
         lightfullpath = os.path.join(greigDir,lightSubDir,lightFileName.format(iyear))
         dsLight = nc.Dataset(lightfullpath)
         varsLight = dsLight.variables[varNameLight]
+        LightYear1 = varsLight[:,:,:]
+        LightYear = np.ma.average(LightYear1, axis = 0)
+        LightYear = np.expand_dims(LightYear, axis=0)
         
-        #SALINITY data
+        #SALINITY data (3D)
         salinityfullpath = os.path.join(greigDir,salinitySubDir,salinityFileName.format(NEMO_run,iyear)) # old (preprocessed)
         dsSalinity = nc.Dataset(salinityfullpath)
         varsSalinity = dsSalinity.variables[varNameSalinity]
-        
+        if avg_salt == True:
+            SaltYear1 = varsSalinity[:,0:salinity_depthlev,:,:]
+            SaltYear2 = np.ma.average(SaltYear1, axis = 1) # avg over depths - will reduce to (2,299,132)
+            SaltYear = np.ma.average(SaltYear2, axis = 0) # avg over time - reduce to (299,132)
+            SaltYear = np.expand_dims(SaltYear, axis=0)
+        else:
+            SaltYear1 = varsSalinity[:,salinity_depthlev,:,:]
+            SaltYear = np.ma.average(SaltYear1, axis = 0)
+        SaltYear = np.expand_dims(SaltYear, axis=0)
+        ar_inf = np.where(np.isinf(SaltYear)) # unused?        
+                
         #MIXING data 
         mixingFullPath = os.path.join(greigDir, mixingSubDir, mixingFileName.format(NEMO_run, iyear))
         dsMixing = nc.Dataset(mixingFullPath)
-        varsMixing = dsMixing.variables['mldkz5']       
+        varsMixing = dsMixing.variables['mldkz5']   
+        MixingYear1 = varsMixing[:,:,:]
+        MixingYear = np.ma.average(MixingYear1, axis = 0) 
+        MixingYear = np.expand_dims(MixingYear, axis=0)        
+
+        if iyear == startYear:
+            light_allyrs = LightYear
+            mixing_allyrs = MixingYear
+            salt_allyrs = SaltYear
+        else:
+            light_allyrs = np.concatenate((light_allyrs, LightYear), axis=0)
+            mixing_allyrs = np.concatenate((mixing_allyrs, MixingYear), axis=0)
+            salt_allyrs = np.concatenate((salt_allyrs, SaltYear), axis=0)  
+
+
+    light_allyrs = np.ma.average(light_allyrs, axis = 0)
+    salt_allyrs = np.ma.average(salt_allyrs, axis = 0)
+    mixing_allyrs = np.ma.average(mixing_allyrs, axis = 0)
+ 
+   
+    # unused code? 
+    #x = lambda a : a + 10
+    #SalinityMon2 = x(SalinityMon)
+    #print(SalinityMon2[1])
+
+    # apply lin regress k w/ salin
+    Ksal = a + b * salt_allyrs
+    Ksal[Ksal < 0.05] = 0.05
+
+    #mixingZ = FixedMixingDepth
+
+    #Ksal = KLinear(salinity) #Klinear RUN 102a
+    #uPAR = L0*(1-math.exp(-Ksal*MixingDepth))/(Ksal*MixingDepth) #vertical avg PAR to mixing lyr depth
+    step1 = np.multiply(-Ksal,mixing_allyrs)
+    step2 = 1-np.exp(step1)
+    step3 = np.multiply(Ksal,mixing_allyrs)
+    step4 = np.divide(step2,step3)
+
+    L0 = light_allyrs * pPAR * (1-alb)
+    uPAR = np.multiply(L0,step4) #vertical avg PAR to mixing lyr depth
+    uPAR[salt_allyrs == 0.0] = 0.0
+    Ksal[salt_allyrs == 0.0] = 0.0
+    uPAR = np.round(uPAR, 2)
+    Ksal = np.round(Ksal, 3)    
        
-        #GO2021-12-23 to-do: fix how shape is declared
-        #monthlyMeanPAR = np.empty([varsSalinity.shape[2],varsSalinity.shape[3]])        
-        #monthlyMeanK = np.empty([varsSalinity.shape[3],varsSalinity.shape[2]]) 
-        #print(monthlyMeanK.shape)
-        #print(monthlyMeanPAR.shape)
-        
-        
-        
-        
-        
-        
-        
-        varsSalinity_12mo = []
-        varsMixing_12mo = []
+    # #export PAR
+    sigdigfmt = '%0.1f'
+    EwEName = dctVarnameToEwEName[varNamesMixing]
+    EwEName = EwEName.format(salinity_depthlev) #GO ??
+    savepath = os.path.join(greigDir,outputsSubDir,EwEName ) 
+    if (os.path.isdir(savepath) != True):
+        os.mkdir(savepath)
+    savefn = saveTemplate.format(EwEName, startYear, endyear)
+    savefullpath = os.path.join(savepath, savefn)
+    print("Saving file " + savefullpath)
+    saveASCFile(savefullpath, uPAR, bottomleft_row_ewe, upperleft_row_ewe, upperleft_col_ewe, sigdigfmt, ASCheader, dfPlumeMask, dfLandMask)
 
-        # for 3 day blocks, need to read all data into memory (better way?)
-        # for imon in range(startMonth,13):
-            # print(imon)
-            # #SALINITY data
-            # salinityfullpath = os.path.join(michaelDir, salinitySubDir, salinityFileName.format(NEMO_run, iyear, buildSortableString(imon,2))) 
-            # dsSalinity = nc.Dataset(salinityfullpath)
-            # varsSalinity = dsSalinity.variables[varNameSalinity]
-            # if imon == startMonth:
-                # varsSalinity_12mo = varsSalinity
-            # else:
-                # varsSalinity_12mo = np.concatenate((varsSalinity_12mo, varsSalinity), axis=0)
-            
-            # #MIXING data 
-            # mixingFullPath = os.path.join(michaelDir, mixingSubDir, mixingFileName.format(NEMO_run, iyear, buildSortableString(imon,2)))
-            # dsMixing = nc.Dataset(mixingFullPath)
-            # varsMixing = dsMixing.variables['mldkz5']
-            # if imon == startMonth:
-                # varsMixing_12mo = varsMixing
-            # else:
-                # varsMixing_12mo = np.concatenate((varsMixing_12mo, varsMixing), axis=0)
-            
-            
-            # if (imon == endMonth) and (iyear == endyear):
-                # break
-
-            # # why?
-            # if imon == 12:
-                # break
-            
-            
-        # set up 3 day blocks    
-        # print(varsSalinity_12mo.shape)
-        # num_days = varsSalinity_12mo.shape[0]
-        # print(num_days)
-    
-        # num_days = num_days // 3 # 3 day 'years'
-    
-        # leapTF = is_leap_year(iyear)
-        # if not leapTF:
-            # num_days += 1 # this helps catch day 364 and 365
-    
-        # j = 0 # for skipping forward
-        # for iday in range(1,num_days+1):
-
-            # day_strt = (iday-1)+(j*2)
-            # day_end = day_strt+2
-            # middle_day = day_strt+2
+    #export K
+    sigdigfmt = '%0.2f'
+    EwEName = "RUN" + NEMO_run + "_Kfromsal"
+    #EwEName = "RUN102b-Kfromsal_singlelev10m"
+    #EwEName = "RUN102a-Kfromsal_vertmeantop10m" #GO alternative
+    #EwEName = EwEName.format(salinity_depthlev) #GO ??
+    savepath = os.path.join(greigDir,outputsSubDir,EwEName ) 
+    if (os.path.isdir(savepath) != True):
+        os.mkdir(savepath)
+    savefn = saveTemplate.format(EwEName,startYear, endyear)
+    savefullpath = os.path.join(savepath, savefn)
+    print("Saving file " + savefullpath)
+    saveASCFile(savefullpath, Ksal,bottomleft_row_ewe, upperleft_row_ewe, upperleft_col_ewe,sigdigfmt,ASCheader, dfPlumeMask, dfLandMask)
         
-            # # catch if last block of days (364,365) is only 2 long
-            # if not leapTF:
-                # if iday == num_days+1:
-                    # day_end = day_strt+1
-                    # middle_day = day_strt+1
-            
-            
-            # #Data for month
-            # LightDay1 = varsLight[day_strt:day_end,:,:]
-            # LightDay = np.ma.average(LightDay1, axis = 0)
-            
-            # if avg_salt == True:
-              # SalinityDay1 = varsSalinity_12mo[day_strt:day_end,0:salinity_depthlev,:,:]
-              # #print(SalinityDay1.shape) # #print(SalinityDay1.shape) # will be (2,10,299,132)
-              # SalinityDay2 = np.ma.average(SalinityDay1, axis = 1) # avg over depths - will reduce to (2,299,132)
-              # SalinityDay = np.ma.average(SalinityDay2, axis = 0) # avg over time - reduce to (299,132)
-            # else:
-              # SalinityDay1 = varsSalinity_12mo[day_strt:day_end,salinity_depthlev,:,:]
-              # SalinityDay = np.ma.average(SalinityDay1, axis = 0)
-            # ar_inf = np.where(np.isinf(SalinityDay)) # unused?
-            
-            # MixingDay1 = varsMixing_12mo[day_strt:day_end,:,:]
-            # MixingDay = np.ma.average(MixingDay1, axis = 0)
-            
-            
-            # # unused code? 
-            # #x = lambda a : a + 10
-            # #SalinityMon2 = x(SalinityMon)
-            # #print(SalinityMon2[1])
-        
-            # # apply lin regress k w/ salin
-            # Ksal = a + b * SalinityDay
-            # Ksal[Ksal < 0.05] = 0.05
-       
-            # #mixingZ = FixedMixingDepth
-        
-            # #Ksal = KLinear(salinity) #Klinear RUN 102a
-            # #uPAR = L0*(1-math.exp(-Ksal*MixingDepth))/(Ksal*MixingDepth) #vertical avg PAR to mixing lyr depth
-            # step1 = np.multiply(-Ksal,MixingDay)
-            # step2 = 1-np.exp(step1)
-            # step3 = np.multiply(Ksal,MixingDay)
-            # step4 = np.divide(step2,step3)
-
-            # L0 = LightDay * pPAR * (1-alb)
-            # uPAR = np.multiply(L0,step4) #vertical avg PAR to mixing lyr depth
-            # uPAR[SalinityDay == 0.0] = 0.0
-            # Ksal[SalinityDay == 0.0] = 0.0
-            # uPAR = np.round(uPAR, 2)
-            # Ksal = np.round(Ksal, 3)
-            
-            
-            # #export PAR
-            # sigdigfmt = '%0.1f'
-            # EwEName = dctVarnameToEwEName[var]
-            # EwEName = EwEName.format(salinity_depthlev) #GO ??
-            # savepath = os.path.join(greigDir,outputsSubDir,EwEName ) 
-            # if (os.path.isdir(savepath) != True):
-                # os.mkdir(savepath)
-            # savefn = saveTemplate.format(EwEName,iyear,buildSortableString(middle_day,2))
-            # savefullpath = os.path.join(savepath, savefn)
-            # print("Saving file " + savefullpath)
-            # saveASCFile(savefullpath, uPAR, bottomleft_row_ewe, upperleft_row_ewe, upperleft_col_ewe,sigdigfmt,ASCheader, dfPlumeMask, dfLandMask)
-        
-            # #export K
-            # sigdigfmt = '%0.2f'
-            # EwEName = "RUN" + NEMO_run + "_Kfromsal"
-            # #EwEName = "RUN102b-Kfromsal_singlelev10m"
-            # #EwEName = "RUN102a-Kfromsal_vertmeantop10m" #GO alternative
-            # #EwEName = EwEName.format(salinity_depthlev) #GO ??
-            # savepath = os.path.join(greigDir,outputsSubDir,EwEName ) 
-            # if (os.path.isdir(savepath) != True):
-                # os.mkdir(savepath)
-            # savefn = saveTemplate.format(EwEName,iyear,buildSortableString(middle_day,2))
-            # savefullpath = os.path.join(savepath, savefn)
-            # print("Saving file " + savefullpath)
-            # saveASCFile(savefullpath, Ksal,bottomleft_row_ewe, upperleft_row_ewe, upperleft_col_ewe,sigdigfmt,ASCheader, dfPlumeMask, dfLandMask)
-        
-            # j += 1
+   

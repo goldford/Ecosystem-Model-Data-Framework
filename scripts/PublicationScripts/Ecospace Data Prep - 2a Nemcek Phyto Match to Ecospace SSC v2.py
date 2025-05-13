@@ -54,8 +54,10 @@ file_SSC_grd = "ubcSSnBathymetryV21-08_a29d_efc9_4047.nc"
 # file_Ecospace = "Scv7-PARMixingNut90Temp_2003-2018.nc"
 # file_Ecospace = "Scv51-RSPI_AllTemp_Wind_2000-2018.nc"
 # ecospace_code = 'SC51'
-file_Ecospace = "Scv51_4_2-PAR_PI_AllPPTemp_Wind_2000-2018.nc"
-ecospace_code = 'SC51_4_2' # this one is 2000-2018 and finally recreates the good bloom timing results
+# file_Ecospace = "Scv51_4_2-PAR_PI_AllPPTemp_Wind_2000-2018.nc"
+# ecospace_code = 'SC51_4_2' # this one is 2000-2018 and finally recreates the good bloom timing results (2025)
+file_Ecospace = "Scv80_1-All_Groups_20250501_1978-2018.nc"
+ecospace_code = 'SC80_1'
 
 file_Nemcek = "Nemcek_Supp_Data.csv"
 file_Nemcek_matched = "Nemcek_matched_to_model_out_" + ecospace_code + ".csv"
@@ -337,7 +339,11 @@ with nc.Dataset(ecospace_file_path, 'r') as dataset:
         #open file
         path_ssc_da = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/28. Phytoplankton/SalishSeaCast_BioFields_2008-2018/ORIGINAL"
         ssc_hrly_f = os.path.join(path_ssc_da, filename)
-        ssc_meta, ssc_times, ssc_ciliates, ssc_flagellates, ssc_diatoms = get_sscast_data(ssc_hrly_f)
+
+        if os.path.exists(ssc_hrly_f):
+            ssc_meta, ssc_times, ssc_ciliates, ssc_flagellates, ssc_diatoms = get_sscast_data(ssc_hrly_f)
+        else:
+            print("Error: no SSC data found for " + filename)
 
         # rounding
         ssc_ciliates = np.where(ssc_ciliates == None, np.nan, ssc_ciliates)

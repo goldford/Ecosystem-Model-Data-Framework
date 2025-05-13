@@ -54,8 +54,8 @@ from GO_helpers import is_leap_year, buildSortableString, saveASCFile, getDataFr
 
 
 # ////////////////////////////////// Basic Params ///////////////////////////////////////
-startyear = 2003
-endyear = 2018
+startyear = 1980
+endyear = 1989
 startMonth = 1
 endMonth = 12
 NEMO_run = "216" #NEMO run code

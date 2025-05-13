@@ -8,13 +8,19 @@
 # - Nemcek, N., Hennekes, M., Sastri, A., & Perry, R. I. (2023). Seasonal and spatial dynamics of the phytoplankton
 #      community in the Salish Sea, 2015–2019. Progress in Oceanography, 217, 103108.
 #      https://doi.org/10.1016/j.pocean.2023.103108
+# Notes:
+#  2025-05-05 - made some edits to fix deprecated code splitting and merging around 218-222
+
+
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import numpy as np
 
 # Load data
-ecospace_code = "SC51_4_2"
+# ecospace_code = "SC51_4_2" # 2024-25
+ecospace_code = "SC80_1"
+
 nemcek_matched_p = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation"
 nemcek_matched_f = "Nemcek_matched_to_model_out_" + ecospace_code + ".csv"
 nemcek_fp = os.path.join(nemcek_matched_p, nemcek_matched_f)
@@ -129,7 +135,8 @@ fig.savefig('..//..//figs//' + 'DIATOM_B_AVG_SEASONAL_' + str(2015) + "-" + str(
 ########## Visual of means by group ############
 
 # mean by season, sdomain, model/obs, across all seasons
-df_filtered['Nemcek-NAN'] = df_filtered[['Prasinophytes', 'Cryptophytes', 'Haptophytes', 'Dictyochophytes', 'Raphidophytes']].sum(axis=1)
+df_filtered['Nemcek-NAN'] = df_filtered[['Prasinophytes', 'Cryptophytes', 'Haptophytes',
+                                         'Dictyochophytes', 'Raphidophytes']].sum(axis=1)
 
 # List of fields to calculate the average
 fields_to_average = [
@@ -145,10 +152,13 @@ print(len(df_filtered))
 numeric_columns = df_filtered.select_dtypes(include='number').columns
 non_numeric_columns = df_filtered.select_dtypes(exclude='number').columns
 # Step 2: Group by 'closest_ecospace_time' and compute the mean for numeric fields
-df_numeric = df_filtered.groupby(['closest_ecospace_time','ecospace_closest_lon','ecospace_closest_lat'])[numeric_columns].mean()
+df_numeric = df_filtered.groupby(['closest_ecospace_time',
+                                  'ecospace_closest_lon','ecospace_closest_lat'])[numeric_columns].mean()
 print(len(df_numeric))
 # Step 3: For non-numeric columns, take the most common string (mode)
-df_non_numeric = df_filtered.groupby(['closest_ecospace_time','ecospace_closest_lon','ecospace_closest_lat'])[non_numeric_columns].agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
+df_non_numeric = df_filtered.groupby(['closest_ecospace_time',
+                                      'ecospace_closest_lon',
+                                      'ecospace_closest_lat'])[non_numeric_columns].agg(lambda x: x.mode().iloc[0] if not x.mode().empty else None)
 print(len(df_non_numeric))
 # Step 4: Merge the numeric and non-numeric results, removing 'closest_ecospace_time' from non-numeric before merging
 # df_non_numeric = df_non_numeric.drop(columns=['closest_ecospace_time'])
@@ -205,7 +215,11 @@ annual_stats = df_filtered.groupby('sdomain')[fields_to_average].agg(['mean', 's
 
 # Merge annual stats with seasonal means
 seasonal_merged = averages_by_season_sdomain.melt(id_vars=['Season', 'sdomain'], var_name='Field', value_name='Seasonal Mean')
-annual_merged = annual_stats.melt(id_vars=['sdomain'], var_name=['Field', 'Statistic'], value_name='Value')
+# Flatten the MultiIndex column headers
+annual_stats.columns = ['sdomain'] + [f"{var}_{stat}" for var, stat in annual_stats.columns[1:]]
+# annual_merged = annual_stats.melt(id_vars=['sdomain'], var_name=['Field', 'Statistic'], value_name='Value')
+annual_merged = annual_stats.melt(id_vars=['sdomain'], var_name='Field_Statistic', value_name='Value')
+annual_merged[['Field', 'Statistic']] = annual_merged['Field_Statistic'].str.rsplit('_', n=1, expand=True)
 annual_merged = annual_merged.pivot_table(index=['sdomain', 'Field'], columns='Statistic', values='Value').reset_index()
 merged_data = pd.merge(seasonal_merged, annual_merged, on=['sdomain', 'Field'])
 
