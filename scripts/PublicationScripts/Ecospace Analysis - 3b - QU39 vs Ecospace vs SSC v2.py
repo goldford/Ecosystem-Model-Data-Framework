@@ -127,27 +127,37 @@ def calculate_anomalies(df, valuefield, groupon):
 
     return df
 
-def aggregate_monthly_means(df, value_fields, groupby_time='closest_ecospace_time'):
+def aggregate_means(df, value_fields, groupby_time='closest_ecospace_time', level='monthly'):
     """
-    Aggregate the log-transformed fields by year and month.
+    Aggregate fields by either month or week.
 
     Parameters:
         df : pd.DataFrame
         value_fields : list of str
-            Columns to aggregate (e.g., ['logQU39', 'log_PP2-NAN', 'log_ssc-FLA'])
+            Columns to aggregate.
         groupby_time : str
-            Time field to group by (typically 'closest_ecospace_time')
+            Datetime field to group by.
+        level : str
+            One of {'monthly', 'weekly'}.
 
     Returns:
-        pd.DataFrame with columns: year, month, mean_<fieldname> for each field
+        pd.DataFrame
     """
     df = df.copy()
     df[groupby_time] = pd.to_datetime(df[groupby_time])
     df['year'] = df[groupby_time].dt.year
-    df['month'] = df[groupby_time].dt.month
 
-    grouped = df.groupby(['year', 'month'])[value_fields].mean().reset_index()
-    grouped.columns = ['year', 'month'] + [f'mean_{col}' for col in value_fields]
+    if level == 'monthly':
+        df['period'] = df[groupby_time].dt.month
+        group_keys = ['year', 'period']
+    elif level == 'weekly':
+        df['period'] = df[groupby_time].dt.isocalendar().week
+        group_keys = ['year', 'period']
+    else:
+        raise ValueError("Unsupported aggregation level. Use 'monthly' or 'weekly'.")
+
+    grouped = df.groupby(group_keys)[value_fields].mean().reset_index()
+    grouped.columns = group_keys + [f'mean_{col}' for col in value_fields]
     return grouped
 
 def compute_model_stats(obs, model):
@@ -194,7 +204,21 @@ def compute_model_stats(obs, model):
     }
 
 
-def run_model_statistics(df, model_obs_pairs):
+def run_model_statistics(df, model_obs_pairs, use_anomalies=True, aggregation_level='monthly'):
+    """
+    Compute model-vs-observation statistics.
+
+    Parameters:
+        df : pd.DataFrame
+        model_obs_pairs : list of dicts
+        use_anomalies : bool
+            If True, uses normalized anomaly fields.
+        aggregation_level : str
+            One of {'monthly', 'weekly', 'none'}.
+
+    Returns:
+        pd.DataFrame
+    """
     results = []
 
     for pair in model_obs_pairs:
@@ -204,25 +228,43 @@ def run_model_statistics(df, model_obs_pairs):
         ecospace_field = pair['ecospace']
         ssc_field = pair['ssc']
 
-        # Filter for this group
+        if use_anomalies:
+            obs_field += '_anomaly_fr_mean_std_norm'
+            ecospace_field += '_anomaly_fr_mean_std_norm'
+            if ssc_field:
+                ssc_field += '_anomaly_fr_mean_std_norm'
+
         df_sub = df[df['class'].isin(taxon if isinstance(taxon, list) else [taxon])]
         df_sub = df_sub[pd.to_datetime(df_sub['closest_ecospace_time']).dt.year >= 1980]
 
-        # Aggregate to year-month
-        monthly = aggregate_monthly_means(df_sub, [obs_field, ecospace_field] + ([ssc_field] if ssc_field else []))
+        if aggregation_level in ['monthly', 'weekly']:
+            value_fields = [obs_field, ecospace_field] + ([ssc_field] if ssc_field else [])
+            grouped = aggregate_means(df_sub, value_fields, level=aggregation_level)
 
-        # Calculate stats
-        ecospace_stats = compute_model_stats(monthly[f'mean_{obs_field}'].values, monthly[f'mean_{ecospace_field}'].values)
+            obs_vals = grouped[f'mean_{obs_field}'].values
+            eco_vals = grouped[f'mean_{ecospace_field}'].values
+            ssc_vals = grouped[f'mean_{ssc_field}'].values if ssc_field else None
+
+        elif aggregation_level == 'none':
+            obs_vals = df_sub[obs_field].values
+            eco_vals = df_sub[ecospace_field].values
+            ssc_vals = df_sub[ssc_field].values if ssc_field else None
+
+        else:
+            raise ValueError("aggregation_level must be 'monthly', 'weekly', or 'none'.")
+
+        ecospace_stats = compute_model_stats(obs_vals, eco_vals)
         ecospace_stats.update({'Group': group, 'Model': 'Ecospace'})
-
         results.append(ecospace_stats)
 
         if ssc_field:
-            ssc_stats = compute_model_stats(monthly[f'mean_{obs_field}'].values, monthly[f'mean_{ssc_field}'].values)
+            ssc_stats = compute_model_stats(obs_vals, ssc_vals)
             ssc_stats.update({'Group': group, 'Model': 'SSC'})
             results.append(ssc_stats)
 
     return pd.DataFrame(results)
+
+
 
 
 def plot_monthly_boxplot(
@@ -388,14 +430,14 @@ def main():
 
     # Derive values
     df['QU39'] = df['measurementValue']
-    df['logQU39'] = np.log(df['measurementValue'].clip(lower=1))  # +1 for safety
-    df['log_PP1-DIA'] = np.log(df['PP1-DIA'].clip(lower=1))
-    df['log_PP2-NAN'] = np.log(df['PP2-NAN'].clip(lower=1))
-    df['log_PP3-PIC'] = np.log(df['PP3-PIC'].clip(lower=1))
-    df['log_PZ2-DIN'] = np.log(df['PZ2-DIN'].clip(lower=1))
-    df['log_ssc-DIA'] = np.log(df['ssc-DIA'].clip(lower=1))
-    df['log_ssc-FLA'] = np.log(df['ssc-FLA'].clip(lower=1))
-    df['log_ssc-CIL'] = np.log(df['ssc-CIL'].clip(lower=1))
+    df['logQU39'] = np.log(df['measurementValue'].clip(lower=0.01))  # +1 for safety
+    df['log_PP1-DIA'] = np.log(df['PP1-DIA'].clip(lower=0.01))
+    df['log_PP2-NAN'] = np.log(df['PP2-NAN'].clip(lower=0.01))
+    df['log_PP3-PIC'] = np.log(df['PP3-PIC'].clip(lower=0.01))
+    df['log_PZ2-DIN'] = np.log(df['PZ2-DIN'].clip(lower=0.01))
+    df['log_ssc-DIA'] = np.log(df['ssc-DIA'].clip(lower=0.01))
+    df['log_ssc-FLA'] = np.log(df['ssc-FLA'].clip(lower=0.01))
+    df['log_ssc-CIL'] = np.log(df['ssc-CIL'].clip(lower=0.01))
 
     # Compute anomalies
     df = calculate_anomalies(df, 'logQU39', 'class')
@@ -492,11 +534,14 @@ def main():
             'ssc': None
         }
     ]
-    stats_df = run_model_statistics(df, model_obs_pairs)
 
+    stats_df = run_model_statistics(df, model_obs_pairs, use_anomalies=True, aggregation_level='monthly')
 
     print('stats generated!')
     print(stats_df)
+    stats_outfile = os.path.join(out_p, f"{model_run}_ModelStats_ObsVsModel.csv")
+    stats_df.to_csv(stats_outfile, index=False)
+    print(f"[Saved] Model statistics written to: {stats_outfile}")
     print('DONE')
 
 
