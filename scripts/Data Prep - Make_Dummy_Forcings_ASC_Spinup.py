@@ -3,7 +3,8 @@ import shutil
 
 # paths
 #source_folder = "C://Users//Greig//Documents//github//Ecosystem-Model-Data-Framework//data//forcing//ECOSPACE_in_3day_vars_1980-2018//vartemp1_C_0-10mAvg"  #
-source_folder = "C://Users//Greig//Documents//github//Ecosystem-Model-Data-Framework//data//forcing//ECOSPACE_in_3day_vars_1980-2018//varsalt1_PSU_0-10mAvg"  #
+# source_folder = "C://Users//Greig//Documents//github//Ecosystem-Model-Data-Framework//data//forcing//ECOSPACE_in_3day_vars_1980-2018//varsalt1_PSU_0-10mAvg"  #
+source_folder = "C://Users//Greig//Documents//GitHub//Ecosystem-Model-Data-Framework//data//forcing//NEMO_prepped_as_ASC_monthly//TempVertMean4m"
 #source_folder = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_model//LTL_MODELS//RDRS forcings//Wind_RDRS//Ecospace//stress"
 
 destination_folder = source_folder

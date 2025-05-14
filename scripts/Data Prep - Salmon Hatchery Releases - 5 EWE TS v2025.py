@@ -46,7 +46,7 @@ pd.set_option('display.max_columns', None)
 # 1950 H B multiple, as compared to H W - freshwater stanza
 H_W_factor = 0.2
 
-# Define biomass (B) and abundance (N) values for 1950 - fresh for multistanza!
+# Define biomass (B) and abundance (N) values for 1950 - fresh for multistanza groups!
 B_1950_W = {
     "COHO": 0.049,
     "CHIN": 0.0000663,
@@ -67,6 +67,10 @@ N_1950_W = {
 yr_strt = 1950
 yr_end = 2020
 
+
+###########################
+##### annual avg ver ######
+###########################
 df = pd.read_csv("../data/forcing/HatcheryRel_Ecosim_TS_yr_2025.csv", skiprows=[1,2,3])
 print(df.columns)
 # Index(['Title', 'YEAR', 'TIMESTEP', 'CHIN_H_MT_KM2', 'COHO_H_MT_KM2',
@@ -128,7 +132,73 @@ df.to_csv('../scratch/temp_yr_adj.csv', index=True)
 df.to_csv('../data/forcing/HatcheryRel_Ecosim_TS_yr_2025_adj.csv', index=True)
 
 
+###########################
+##### monthly version #####
+###########################
+df = pd.read_csv("../data/forcing/HatcheryRel_Ecosim_TS_mo_2025.csv", skiprows=[1,2,3])
+print(df.columns)
 
+# Ensure the dataframe has a year column
+if "YEAR" not in df.columns:
+    raise ValueError("CSV file must contain a 'YEAR' column.")
+
+# Create new adjusted columns
+species_list = ["COHO", "CHIN", "PINK", "SOCKEYE", "CHUM"]
+
+for species in species_list:
+    df[f"{species}_H_N_adj"] = np.nan
+    df[f"{species}_H_MT_KM2_adj"] = np.nan
+
+# Adjust monthly time series using annual threshold logic
+for species in species_list:
+    N_col = f"{species}_H_N"
+    N_adj_col = f"{species}_H_N_adj"
+    B_adj_col = f"{species}_H_MT_KM2_adj"
+    B_N_ratio = B_1950_W[species] / N_1950_W[species]
+    floor_total = N_1950_W[species] * H_W_factor
+    floor_monthly = floor_total / 12
+
+    if N_col not in df.columns:
+        continue
+
+    for year in df['YEAR'].unique():
+        idx_year = df['YEAR'] == year
+        annual_total = df.loc[idx_year, N_col].sum()
+
+        if annual_total < floor_total:
+            # Use equal distribution of the floor value across months
+            df.loc[idx_year, N_adj_col] = floor_monthly
+            df.loc[idx_year, B_adj_col] = floor_monthly * B_N_ratio
+        else:
+            # Use real hatchery data (some months may be zero)
+            df.loc[idx_year, N_adj_col] = df.loc[idx_year, N_col]
+            df.loc[idx_year, B_adj_col] = df.loc[idx_year, N_col] * B_N_ratio
+
+# --- Add biomass columns normalized to 1950 (per species) ---
+for species in species_list:
+    biomass_col = f"{species}_H_MT_KM2_adj"
+    norm_col = f"{species}_H_MT_KM2_rel1950"
+
+    # Get 1950 values, ignoring 0s
+    is_1950 = df['YEAR'] == 1950
+    biomass_1950_vals = df.loc[is_1950 & (df[biomass_col] > 0), biomass_col]
+
+    if not biomass_1950_vals.empty:
+        ref = biomass_1950_vals.mean()
+    else:
+        ref = np.nan  # If no 1950 data, fill with NaN
+
+    # Normalize: 0 stays 0, else divide by ref
+    df[norm_col] = df[biomass_col].apply(
+        lambda x: 0 if x == 0 else (x / ref if ref and ref > 0 else np.nan)
+    )
+
+# Output
+print(df[[col for col in df.columns if 'adj' in col]].head())
+df.to_csv('../scratch/temp_mo_adj.csv', index=False)
+df.to_csv('../data/forcing/HatcheryRel_Ecosim_TS_mo_2025_adj.csv', index=False)
+
+print('DONE')
 
 
 

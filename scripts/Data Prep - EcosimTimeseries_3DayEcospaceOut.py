@@ -31,7 +31,6 @@ ecospace_nc = os.path.join(in_p, in_f)
 ds = xr.open_dataset(ecospace_nc)
 
 
-
 ########## MASKS ##########
 # load mask for land, plume etc.
 dep = ds['depth'].values

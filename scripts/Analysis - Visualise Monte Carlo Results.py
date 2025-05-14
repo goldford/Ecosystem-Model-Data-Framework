@@ -21,8 +21,8 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 # Define scenario directories
 scenarios = {
-    "SC104 - NO PP Anom": "SC104",
-    "SC105 - WITH PP Anom": "SC105"
+    "SC109 - NO PP Anom": "SC109",
+    "SC108 - WITH PP Anom": "SC108"
 }
 
 # Define paths
@@ -32,8 +32,8 @@ root_dir_cwt_coho = "C://Users//Greig//Sync//6. SSMSP Model//Model Greig//Data//
 root_dir_nelson = "C://Users//Greig//Sync//6. SSMSP Model//Model Greig//Data//1. Salmon//Coho_Mort_Seal_Nelson_2024\ORIGINAL//"
 
 mc_root_base = {
-    "SC104": os.path.join(root_dir_mc, "GeorgiaStrait2023_v103_v6_7_0_18858_64b//mc_EcosimScen104"),
-    "SC105": os.path.join(root_dir_mc, "GeorgiaStrait2023_v103_v6_7_0_18858_64b//mc_EcosimScen105")
+    "SC109": os.path.join(root_dir_mc, "GeorgiaStrait2023_v103_v6_7_0_18858_64b//mc_EcosimScen109"),
+    "SC108": os.path.join(root_dir_mc, "GeorgiaStrait2023_v103_v6_7_0_18858_64b//mc_EcosimScen108")
 }
 
 # Define column groups for each species/subtype
@@ -51,7 +51,7 @@ def load_reference_data():
 
     refs = {}
 
-    # Chinook WO
+    # Chinook
     f = "salish_M_ocntp_sog_1971-2017.csv"
     df = pd.read_csv(os.path.join(root_dir_cwt_chin, f))
     df['year'] = df['brood_year'] + 1
@@ -64,8 +64,6 @@ def load_reference_data():
     df = pd.read_csv(os.path.join(root_dir_cwt_chin, f))
     df['year'] = df['brood_year'] + 1
     refs["Chinook WS"] = df[['year', 'mean_M_st_sog']].rename(columns={'mean_M_st_sog': 'obs'})
-    refs["Chinook H"] = df[['year', 'mean_M_st_sog']].rename(columns={'mean_M_st_sog': 'obs'})
-
 
     # Coho
     f = "coho_M_EWE_TS Jan 2025.csv"
