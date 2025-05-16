@@ -1,0 +1,30 @@
+
+```{r}
+# Install remotes if not already installed
+if (!requireNamespace("remotes", quietly = TRUE)) {
+  install.packages("remotes")
+}
+
+# Install the pacea package from GitHub
+remotes::install_github("pbs-assess/pacea", upgrade = "never")
+
+# Load libraries
+library(pacea)
+library(dplyr)
+
+# Load the zooplankton anomaly dataset
+data("zooplankton_sog")
+
+# Check structure (optional)
+str(zooplankton_sog)
+
+??zooplankton
+
+# Save to CSV
+write.csv(zooplankton_sog, "zooplankton_sog_anomalies.csv", row.names = FALSE)
+
+cat("✅ Saved to 'zooplankton_sog_anomalies.csv' in working directory:\n", getwd(), "\n")
+
+
+```
+

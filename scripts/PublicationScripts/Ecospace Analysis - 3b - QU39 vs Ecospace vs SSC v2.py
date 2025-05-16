@@ -32,6 +32,10 @@
 #       (value - monthly mean) / monthly std deviation
 #   - Log-transformed values are used for interpretability
 #   - Figures are saved to the `figs/` directory
+#   - 2025-05 - cross-check the QU39 pairings (eg class: Bacillo..) are first summed by id_x
+#             - otherwise comparisons are wonky - comparing total PP1-DIA to diatoms-by-species
+#               instead of diatoms by class. And averaging monthly is not properly stratifying
+#               unless you first sum across the whole diatom class for each id_x (station-daycombo)
 # -------------------------------------------------------------------
 
 
@@ -68,6 +72,71 @@ FILL_VALUE = -999
 months = np.arange(1, 13)
 # ------------------------------------------------------------------------ #
 
+def prepare_group_dataset(
+    df,
+    class_filter,
+    obs_field_raw='measurementValue',
+    obs_log_field='logQU39',
+    model_fields=None,
+    id_col='id_x',
+    time_col='closest_ecospace_time',
+    group_col='class'
+):
+    """
+    Prepare dataset for a functional group:
+    - Aggregates observations across species per sample (id_x)
+    - Preserves matched model values
+    - Applies log-transform
+    - Computes anomalies for both observations and model fields
+
+    Parameters:
+        df : pd.DataFrame
+        class_filter : str or list - taxonomic class(es)
+        obs_field_raw : str - raw QU39 observation field
+        obs_log_field : str - name for log-transformed observation field
+        model_fields : list of str - model columns to retain and transform
+        id_col : str - sample ID
+        time_col : str - model match datetime field
+        group_col : str - grouping column (typically 'class')
+
+    Returns:
+        pd.DataFrame
+    """
+    df_sub = df[df[group_col].isin([class_filter] if isinstance(class_filter, str) else class_filter)].copy()
+
+    if model_fields is None:
+        model_fields = ['PP1-DIA', 'PP2-NAN', 'PP3-PIC', 'PZ2-DIN', 'ssc-DIA', 'ssc-FLA', 'ssc-CIL']
+
+    # Aggregate by sample and time
+    agg_df = df_sub.groupby([id_col, time_col]).agg({
+        obs_field_raw: 'sum',
+        **{col: 'first' for col in model_fields if col in df_sub.columns}
+    }).reset_index()
+
+    # Assign class label and time fields
+    # IMPORTANT FIX: Give a consistent name to the group label
+    agg_df[group_col] = class_filter if isinstance(class_filter, str) else 'Nanophytoplankton'
+    agg_df['QU39'] = agg_df[obs_field_raw]
+    agg_df[obs_log_field] = np.log(agg_df['QU39'].clip(lower=0.01))
+    agg_df[time_col] = pd.to_datetime(agg_df[time_col])
+    agg_df['closest_ecospace_time'] = agg_df[time_col]  # ensure standardized name
+    agg_df['month'] = agg_df[time_col].dt.month
+    agg_df['year'] = agg_df[time_col].dt.year
+
+    # Log-transform model fields
+    log_model_fields = []
+    for field in model_fields:
+        if field in agg_df.columns:
+            log_field = f'log_{field}'
+            agg_df[log_field] = np.log(agg_df[field].clip(lower=0.01))
+            log_model_fields.append(log_field)
+
+    # Compute anomalies for observation and model log fields
+    all_fields_to_normalize = [obs_log_field] + log_model_fields
+    for field in all_fields_to_normalize:
+        agg_df = calculate_anomalies(agg_df, field, group_col)
+
+    return agg_df
 
 def calculate_anomalies(df, valuefield, groupon):
     """
@@ -204,6 +273,7 @@ def compute_model_stats(obs, model):
     }
 
 
+
 def run_model_statistics(df, model_obs_pairs, use_anomalies=True, aggregation_level='monthly'):
     """
     Compute model-vs-observation statistics.
@@ -234,16 +304,24 @@ def run_model_statistics(df, model_obs_pairs, use_anomalies=True, aggregation_le
             if ssc_field:
                 ssc_field += '_anomaly_fr_mean_std_norm'
 
-        df_sub = df[df['class'].isin(taxon if isinstance(taxon, list) else [taxon])]
+        if isinstance(taxon, list):
+            df_sub = df[df['class'] == group]
+        else:
+            df_sub = df[df['class'] == taxon]
         df_sub = df_sub[pd.to_datetime(df_sub['closest_ecospace_time']).dt.year >= 1980]
 
         if aggregation_level in ['monthly', 'weekly']:
             value_fields = [obs_field, ecospace_field] + ([ssc_field] if ssc_field else [])
             grouped = aggregate_means(df_sub, value_fields, level=aggregation_level)
 
-            obs_vals = grouped[f'mean_{obs_field}'].values
-            eco_vals = grouped[f'mean_{ecospace_field}'].values
-            ssc_vals = grouped[f'mean_{ssc_field}'].values if ssc_field else None
+            print(f"[DEBUG] Group: {group}")
+            print("Grouped columns:", grouped.columns.tolist())
+            print("Looking for:", f"mean_{obs_field}", f"mean_{ecospace_field}", f"mean_{ssc_field}" if ssc_field else None)
+            print("Grouped head:\n", grouped.head())
+
+            obs_vals = grouped.get(f'mean_{obs_field}', pd.Series(dtype=float)).values
+            eco_vals = grouped.get(f'mean_{ecospace_field}', pd.Series(dtype=float)).values
+            ssc_vals = grouped.get(f'mean_{ssc_field}', pd.Series(dtype=float)).values if ssc_field else None
 
         elif aggregation_level == 'none':
             obs_vals = df_sub[obs_field].values
@@ -253,19 +331,54 @@ def run_model_statistics(df, model_obs_pairs, use_anomalies=True, aggregation_le
         else:
             raise ValueError("aggregation_level must be 'monthly', 'weekly', or 'none'.")
 
-        ecospace_stats = compute_model_stats(obs_vals, eco_vals)
-        ecospace_stats.update({'Group': group, 'Model': 'Ecospace'})
-        results.append(ecospace_stats)
+        # Check for valid length before computing stats
+        if len(obs_vals) >= 2 and len(eco_vals) >= 2:
+            ecospace_stats = compute_model_stats(obs_vals, eco_vals)
+            ecospace_stats.update({'Group': group, 'Model': 'Ecospace'})
+            results.append(ecospace_stats)
+        else:
+            print(f"[Warning] Not enough data for Ecospace stats in group: {group}")
 
-        if ssc_field:
+        if ssc_field and ssc_vals is not None and len(ssc_vals) >= 2 and len(obs_vals) >= 2:
             ssc_stats = compute_model_stats(obs_vals, ssc_vals)
             ssc_stats.update({'Group': group, 'Model': 'SSC'})
             results.append(ssc_stats)
+        elif ssc_field:
+            print(f"[Warning] Not enough data for SSC stats in group: {group}")
 
     return pd.DataFrame(results)
 
 
+def aggregate_observations_by_class(df, class_filter, value_col='measurementValue', id_col='id_x', time_col='closest_ecospace_time'):
+    """
+    Aggregate observation data by summing values across species for each sample (station-time combo).
+    Keeps model data as-is (uses .first()).
 
+    Parameters:
+        df : pd.DataFrame - raw dataset
+        class_filter : str or list of str - e.g., 'Bacillariophyceae'
+        value_col : str - column with observation values (e.g., 'measurementValue')
+        id_col : str - unique sample/station ID
+        time_col : str - time matching field
+
+    Returns:
+        pd.DataFrame - aggregated by sample with model fields preserved
+    """
+    df_sub = df[df['class'].isin([class_filter] if isinstance(class_filter, str) else class_filter)].copy()
+
+    # Fields to keep from model output
+    model_cols = ['PP1-DIA', 'PP2-NAN', 'PP3-PIC', 'PZ2-DIN', 'ssc-DIA', 'ssc-FLA', 'ssc-CIL', time_col]
+
+    agg_df = df_sub.groupby([id_col, time_col]).agg({
+        value_col: 'sum',
+        **{col: 'first' for col in model_cols if col in df.columns}
+    }).reset_index()
+
+    # Rename for compatibility
+    agg_df['QU39'] = agg_df[value_col]
+    agg_df['class'] = class_filter  # assign aggregated class label for downstream processing
+
+    return agg_df
 
 def plot_monthly_boxplot(
     df,
@@ -319,7 +432,7 @@ def plot_monthly_boxplot(
 
     widths = 0.35 if len(field_codes) == 2 else 0.2
 
-    fig, ax = plt.subplots(figsize=(10, 6) if len(field_codes) == 2 else (15, 10))
+    fig, ax = plt.subplots(figsize=(10, 6) if len(field_codes) == 2 else (10, 6))
 
     # Filter for taxon of interest
     subset = df[df[groupon].isin([taxon_name] if isinstance(taxon_name, str) else taxon_name)]
@@ -350,7 +463,7 @@ def plot_monthly_boxplot(
             )
 
     # Labels and legend
-    plt.title(f'Anomaly from Means Rel to Std Dev by Month for {plot_label}')
+    plt.title(f'Anomaly from Means Rel to Std Dev by Month for {plot_label} {model_run}')
     plt.xlabel('Month')
     plt.ylabel('Normalized Anomaly')
     plt.xticks(months, [calendar.month_abbr[m] for m in months])
@@ -398,7 +511,7 @@ def plot_log_histogram(df, field, group_filter, group_column, title, output_file
 
 def plot_monthly_sample_counts(df, group_filter, group_column, output_file):
     """
-    Plot a bar chart of sample count by month for a given group.
+    Plot a bar chart of unique sample station counts by month for a given group.
 
     Parameters:
         df : pd.DataFrame
@@ -407,22 +520,65 @@ def plot_monthly_sample_counts(df, group_filter, group_column, output_file):
         output_file : str - path to save the plot
     """
     subset = df[df[group_column] == group_filter]
-    count_by_month = subset['month'].value_counts().reindex(np.arange(1, 13), fill_value=0)
+
+    # Count unique station/sample IDs by month
+    unique_counts = subset.groupby('month')['id_x'].nunique().reindex(np.arange(1, 13), fill_value=0)
 
     plt.figure(figsize=(10, 5))
-    plt.bar(count_by_month.index, count_by_month.values, color='skyblue', edgecolor='black')
-    plt.title(f'Count of Records by Month for {group_filter}')
+    plt.bar(unique_counts.index, unique_counts.values, color='skyblue', edgecolor='black')
+    plt.title(f'Unique Sample Stations by Month for {group_filter}')
     plt.xlabel('Month')
-    plt.ylabel('Sample Count')
-    plt.xticks(count_by_month.index, [calendar.month_abbr[m] for m in count_by_month.index])
+    plt.ylabel('Unique Sample Count')
+    plt.xticks(unique_counts.index, [calendar.month_abbr[m] for m in unique_counts.index])
     plt.grid(axis='y')
     plt.tight_layout()
     plt.savefig(output_file)
     print(f"[Saved] {output_file}")
     plt.show()
 
+def plot_combined_panel(dfs, field_codes_list, taxon_names, taxon_labels, labels, source_names, color_map, output_file):
+    import matplotlib.pyplot as plt
+    import calendar
+
+    fig, axes = plt.subplots(2, 2, figsize=(10, 6.5), sharex=True, sharey=True)
+    fig.subplots_adjust(left=0.17)
+    fig.text(0.004, 0.5, 'Normalized Anomaly', va='center', rotation='vertical', fontsize=10)
+    axes = axes.flatten()
+    months = list(range(1, 13))
+
+    for i, (df, fields, taxon, taxon_label, label) in enumerate(zip(dfs, field_codes_list, taxon_names, taxon_labels, labels)):
+        ax = axes[i]
+        subset = df[df['class'] == taxon]
+        for j, field in enumerate(fields):
+            for month in months:
+                mdata = subset[subset['month'] == month]
+                y = mdata[f'{field}_anomaly_fr_mean_std_norm'].dropna()
+                pos = month + j * 0.35 - 0.35
+                if len(y) > 0:
+                    ax.boxplot(y, positions=[pos], widths=0.3,
+                               patch_artist=True,
+                               boxprops=dict(facecolor=color_map[field], color='black', linewidth=0.8),
+                               medianprops=dict(color='black', linewidth=0.8),
+                               whiskerprops=dict(color='black', linewidth=0.8),
+                               capprops=dict(color='black', linewidth=0.8),
+                               showfliers=False)
+        ax.set_title(f'{taxon_label}')
+        ax.text(0.3, 7, f'{label}', fontsize=10) # (a), (b) etc
+        ax.set_xticks(months)
+        ax.set_xticklabels([calendar.month_abbr[m] for m in months])
+        ax.grid(True)
+
+    handles = [plt.Line2D([0], [0], color=color_map[f], lw=4) for f in field_codes_list[0]]
+    fig.legend(handles, source_names, loc='upper left', bbox_to_anchor=(0.37, 0.95), ncol=1, frameon=True)
+    fig.tight_layout()
+    fig.savefig(output_file)
+    print(f"[Saved] Panel to: {output_file}")
+    plt.show()
+
 
 def main():
+    generate_panel = True  # toggle to enable combined 2x2 panel output
+
     print("Loading dataset...")
     df = pd.read_csv(pathfile_QU39_SSC_Ecospace)
     df['DateTime'] = pd.to_datetime(df['DateTime'], format='%Y-%m-%d %H:%M:%S')
@@ -430,32 +586,9 @@ def main():
 
     # Derive values
     df['QU39'] = df['measurementValue']
-    df['logQU39'] = np.log(df['measurementValue'].clip(lower=0.01))  # +1 for safety
-    df['log_PP1-DIA'] = np.log(df['PP1-DIA'].clip(lower=0.01))
-    df['log_PP2-NAN'] = np.log(df['PP2-NAN'].clip(lower=0.01))
-    df['log_PP3-PIC'] = np.log(df['PP3-PIC'].clip(lower=0.01))
-    df['log_PZ2-DIN'] = np.log(df['PZ2-DIN'].clip(lower=0.01))
-    df['log_ssc-DIA'] = np.log(df['ssc-DIA'].clip(lower=0.01))
-    df['log_ssc-FLA'] = np.log(df['ssc-FLA'].clip(lower=0.01))
-    df['log_ssc-CIL'] = np.log(df['ssc-CIL'].clip(lower=0.01))
-
-    # Compute anomalies
-    df = calculate_anomalies(df, 'logQU39', 'class')
-    df = calculate_anomalies(df, 'log_PP1-DIA', 'class')
-    df = calculate_anomalies(df, 'log_ssc-DIA', 'class')
-    df = calculate_anomalies(df, 'log_PP2-NAN', 'class')
-    df = calculate_anomalies(df, 'log_ssc-FLA', 'class')
-    df = calculate_anomalies(df, 'log_PP3-PIC', 'class')
-    df = calculate_anomalies(df, 'log_PZ2-DIN', 'class')
 
     # Diatoms
-    plot_monthly_boxplot(
-        df, ['log_PP1-DIA', 'log_ssc-DIA', 'logQU39'], 'Bacillariophyceae', 'class',
-        'Diatoms', ['Ecospace', 'SMELT', 'QU39'],
-        {'log_PP1-DIA': 'blue', 'log_ssc-DIA': 'pink', 'logQU39': 'orange'},
-        output_file=os.path.join(out_p, model_run + '_Diatoms_Monthly_QU39_vs_Ecospace_vs_SSC_2016_2018.png'),
-        include_ssc=True, label_position='(a)'
-    )
+    df_dia = prepare_group_dataset(df, 'Bacillariophyceae', model_fields=['PP1-DIA', 'ssc-DIA'])
 
     # Nanoflagellates
     nanogroup = [
@@ -463,9 +596,28 @@ def main():
         'Chrysophyceae', 'Telonemea', 'Chlorodendrophyceae', 'Bicosoecophyceae',
         'Xanthophyceae', 'Coccolithophyceae', 'Euglenophyceae', 'Raphidophyceae'
     ]
-    df_nan = df[df['class'].isin(nanogroup)]
+    df_nan = prepare_group_dataset(df, nanogroup, model_fields=['PP2-NAN', 'ssc-FLA'])
+    print("After aggregation, nanophytoplankton samples:", df_nan.shape[0])
+    print("Available months:", df_nan['month'].unique())
+
+    # pico
+    df_pic = prepare_group_dataset(df, 'Pyramimonadophyceae', model_fields=['PP3-PIC'])
+
+    # dinoflag
+    df_dino = prepare_group_dataset(df, 'Dinophyceae', model_fields=['PZ2-DIN'])
+
+    # Diatoms
     plot_monthly_boxplot(
-        df_nan, ['log_PP2-NAN', 'log_ssc-FLA', 'logQU39'], nanogroup, 'class',
+        df_dia, ['log_PP1-DIA', 'log_ssc-DIA', 'logQU39'], 'Bacillariophyceae', 'class',
+        'Diatoms', ['Ecospace', 'SMELT', 'QU39'],
+        {'log_PP1-DIA': 'blue', 'log_ssc-DIA': 'pink', 'logQU39': 'orange'},
+        output_file=os.path.join(out_p, model_run + '_Diatoms_Monthly_QU39_vs_Ecospace_vs_SSC_2016_2018.png'),
+        include_ssc=True, label_position='(a)'
+    )
+
+    # nano
+    plot_monthly_boxplot(
+        df_nan, ['log_PP2-NAN', 'log_ssc-FLA', 'logQU39'], 'Nanophytoplankton', 'class',
         'Nanophytoplankton', ['Ecospace', 'SMELT', 'QU39'],
         {'log_PP2-NAN': 'blue', 'log_ssc-FLA': 'pink', 'logQU39': 'orange'},
         output_file=os.path.join(out_p, 'Nanophytoplankton_' + model_run + '_Monthly_QU39_vs_Ecospace_vs_SSC_2016_2018.png'),
@@ -474,7 +626,7 @@ def main():
 
     # Picoplankton
     plot_monthly_boxplot(
-        df, ['log_PP3-PIC', 'logQU39'], 'Pyramimonadophyceae', 'class',
+        df_pic, ['log_PP3-PIC', 'logQU39'], 'Pyramimonadophyceae', 'class',
         'Picoplankton', ['Ecospace', 'QU39'],
         {'log_PP3-PIC': 'blue', 'logQU39': 'orange'},
         output_file=os.path.join(out_p, 'Picoplankton_' + model_run + '_Monthly_QU39_vs_Ecospace_2016_2018.png'),
@@ -483,62 +635,115 @@ def main():
 
     # Dinoflagellates
     plot_monthly_boxplot(
-        df, ['log_PZ2-DIN', 'logQU39'], 'Dinophyceae', 'class',
+        df_dino, ['log_PZ2-DIN', 'logQU39'], 'Dinophyceae', 'class',
         'Dinoflagellates', ['Ecospace', 'QU39'],
         {'log_PZ2-DIN': 'blue', 'logQU39': 'orange'},
         output_file=os.path.join(out_p, 'Dinoflagellates_' + model_run + '_Monthly_QU39_vs_Ecospace_2016_2018.png'),
         include_ssc=False, label_position='(d)'
     )
 
+    if generate_panel:
+        panel_output_file = os.path.join(out_p, f'{model_run}_Monthly_Boxplot_Panel.png')
+        plot_combined_panel(
+            dfs=[df_dia, df_nan, df_pic, df_dino],
+            field_codes_list=[
+                ['log_PP1-DIA', 'log_ssc-DIA', 'logQU39'],
+                ['log_PP2-NAN', 'log_ssc-FLA', 'logQU39'],
+                ['log_PP3-PIC', 'logQU39'],
+                ['log_PZ2-DIN', 'logQU39']
+            ],
+            taxon_names=['Bacillariophyceae', 'Nanophytoplankton', 'Pyramimonadophyceae', 'Dinophyceae'],
+            taxon_labels=['Diatoms', 'Nanophytoplankton', 'Picophytoplankton', 'Dinoflagellates'],
+            labels=['(a)', '(b)', '(c)', '(d)'],
+            source_names=['Ecospace', 'SMELT', 'QU39'],
+            color_map={
+                'log_PP1-DIA': 'blue', 'log_ssc-DIA': 'pink', 'logQU39': 'orange',
+                'log_PP2-NAN': 'blue', 'log_ssc-FLA': 'pink',
+                'log_PP3-PIC': 'blue', 'log_PZ2-DIN': 'blue'
+            },
+            output_file=panel_output_file
+        )
+
     # Histograms
-    plot_log_histogram(df, 'QU39', 'Bacillariophyceae', 'class', 'Distribution - QU39', out_p + 'Histo_QU39_Diatoms.png')
-    plot_log_histogram(df, 'PP1-DIA', 'Bacillariophyceae', 'class', 'Distribution - Ecospace', out_p + 'Histo_PP1_DIA.png')
-    plot_log_histogram(df, 'ssc-DIA', 'Bacillariophyceae', 'class', 'Distribution - SSC', out_p + 'Histo_SSC_DIA.png')
+    plot_log_histogram(df_dia, 'QU39', 'Bacillariophyceae', 'class', 'Distribution - QU39', out_p + 'Histo_QU39_Diatoms.png')
+    plot_log_histogram(df_dia, 'PP1-DIA', 'Bacillariophyceae', 'class', 'Distribution - Ecospace', out_p + 'Histo_PP1_DIA.png')
+    plot_log_histogram(df_dia, 'ssc-DIA', 'Bacillariophyceae', 'class', 'Distribution - SSC', out_p + 'Histo_SSC_DIA.png')
 
     # Monthly sample count
-    plot_monthly_sample_counts(df, 'Bacillariophyceae', 'class', out_p + 'Monthly_Sample_Count_Diatoms.png')
+    plot_monthly_sample_counts(df_dia, 'Bacillariophyceae', 'class', out_p + 'Monthly_Sample_Count_Diatoms.png')
 
     print("✅ All plots generated.")
-    # Observation and model comparison definitions
+
+    # ----------------------------------------
+    # Define group-specific input to stats
+    # ----------------------------------------
+
     model_obs_pairs = [
         {
             'group': 'Diatoms',
             'taxon_filter': 'Bacillariophyceae',
             'obs': 'logQU39',
             'ecospace': 'log_PP1-DIA',
-            'ssc': 'log_ssc-DIA'
+            'ssc': 'log_ssc-DIA',
+            'df': df_dia
         },
         {
             'group': 'Nanophytoplankton',
-            'taxon_filter': [
-                'Choanoflagellatea', 'Dictyochophyceae', 'Cryptophyceae', 'Metromonadea',
-                'Chrysophyceae', 'Telonemea', 'Chlorodendrophyceae', 'Bicosoecophyceae',
-                'Xanthophyceae', 'Coccolithophyceae', 'Euglenophyceae', 'Raphidophyceae'
-            ],
+            'taxon_filter': nanogroup,
             'obs': 'logQU39',
             'ecospace': 'log_PP2-NAN',
-            'ssc': 'log_ssc-FLA'
+            'ssc': 'log_ssc-FLA',
+            'df': df_nan
         },
         {
             'group': 'Picoplankton',
             'taxon_filter': 'Pyramimonadophyceae',
             'obs': 'logQU39',
             'ecospace': 'log_PP3-PIC',
-            'ssc': None
+            'ssc': None,
+            'df': df_pic
         },
         {
             'group': 'Dinoflagellates',
             'taxon_filter': 'Dinophyceae',
             'obs': 'logQU39',
             'ecospace': 'log_PZ2-DIN',
-            'ssc': None
+            'ssc': None,
+            'df': df_dino
         }
     ]
 
-    stats_df = run_model_statistics(df, model_obs_pairs, use_anomalies=True, aggregation_level='monthly')
+    # ----------------------------------------
+    # Run model-vs-observation statistics
+    # ----------------------------------------
 
+    # crosscheck for nan
+    expected_cols = ['logQU39_anomaly_fr_mean_std_norm', 'log_PP2-NAN_anomaly_fr_mean_std_norm']
+    print("Columns in df_nan:", df_nan.columns)
+    missing = [col for col in expected_cols if col not in df_nan.columns]
+    print("Missing columns:", missing)
+
+    results = []
+    for pair in model_obs_pairs:
+        stats = run_model_statistics(
+            pair['df'],
+            model_obs_pairs=[{
+                'group': pair['group'],
+                'taxon_filter': pair['taxon_filter'],
+                'obs': pair['obs'],
+                'ecospace': pair['ecospace'],
+                'ssc': pair['ssc']
+            }],
+            use_anomalies=True,
+            aggregation_level='monthly'
+        )
+        results.append(stats)
+
+    # Combine and save
+    stats_df = pd.concat(results, ignore_index=True)
     print('stats generated!')
     print(stats_df)
+
     stats_outfile = os.path.join(out_p, f"{model_run}_ModelStats_ObsVsModel.csv")
     stats_df.to_csv(stats_outfile, index=False)
     print(f"[Saved] Model statistics written to: {stats_outfile}")

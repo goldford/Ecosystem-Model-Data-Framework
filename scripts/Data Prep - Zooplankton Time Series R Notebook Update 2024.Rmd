@@ -292,6 +292,7 @@ df_2_seasyr_specieslev = df_2_sizeclasslev %>%
       arrange(desc(B_mean_g_m2_DW), .by_group = FALSE)
 print("aggregating by species complete")
 
+
 # ////////////////////////////////////////////////////////////////////
 # label taxa by MODEL CODE and re-group
 df_2_seasyr_specieslev$modelgroup = "misc"
@@ -311,6 +312,7 @@ df_2_seasyr_specieslev = df_2_seasyr_specieslev %>%
            ) %>% 
     arrange(desc(B_mean_g_m2_DW), .by_group = FALSE)
 print("completed modelgroup labels")
+
 
 
 # ////////////////////////////////////////////////////////////////////
@@ -349,6 +351,7 @@ df_2_seasyr_specieslev = df_2_seasyr_specieslev %>%
            ) %>% 
     arrange(desc(B_mean_g_m2_WW), .by_group = FALSE)
 print("wet wet calculations complete")
+
 
 # ////////////////////////////////////////////////////////////////////
 # convert DW to CARBON
