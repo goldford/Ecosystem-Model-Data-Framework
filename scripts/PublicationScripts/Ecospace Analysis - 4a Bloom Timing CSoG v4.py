@@ -37,14 +37,24 @@ DOMAIN_CONFIG_PATH = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Frame
 DOMAIN_FILE = "analysis_domains_suchy.yml"
 SAT_MASK_PATH = os.path.join(DOMAIN_CONFIG_PATH, '..//..//data//evaluation//suchy_ecospace_mask.nc')
 
-RECOMPUTE_BLOOM_TIMING = False  # Set to True to force recomputation as needed, saves time
-SCENARIO = 'FULLKEY_SC88_1'
-ECOSPACE_CODE = "Scv88_1-All_Groups_20250506"
+RECOMPUTE_BLOOM_TIMING = True  # Set to True to force recomputation as needed, saves time
+SCENARIO = 'FULLKEY_SC89_1'
+ECOSPACE_CODE = "Scv89_1-All_Groups_20250506"
 FILENM_STRT_YR = 1978
 FILENM_END_YR = 2018
 START_YEAR = 1980 # analysis years (exclude spinup?)
 END_YEAR = 2018
 INCLUDE_GROUPS = ["PP1-DIA"]  # groups to include in assessing bloom timing
+# Bloom detection method
+LOG_TRANSFORM = True
+MEAN_OR_MEDIAN = "median"
+ANNUAL_AVG_METHOD = "annual" # annual or all
+THRESHOLD_FACTOR = 1.05
+SUB_THRESHOLD_FACTOR = 0.7
+EXCLUDE_DEC_JAN = False
+MIN_Y_TICK = 38
+CREATE_MASKS = False  # Set to True to regenerate masks
+DO_NUTRIENTS = True
 
 VARIABLES_TO_ANALYZE = {
     "PP1-DIA": os.path.join(ECOSPACE_OUT_PATH, "EcospaceMapBiomass-PP1-DIA-{}.asc"),
@@ -68,16 +78,6 @@ VARIABLES_TO_ANALYZE = {
     # "PP3-PIC": path_ecospace_out + "EcospaceMapBiomass-PP3-PIC-{}.asc",
     # "BAC-BA1": path_ecospace_out + "EcospaceMapBiomass-BAC-BA1-{}.asc",
 }
-
-# Bloom detection method
-LOG_TRANSFORM = True
-MEAN_OR_MEDIAN = "median"
-ANNUAL_AVG_METHOD = "annual"
-THRESHOLD_FACTOR = 1.05
-SUB_THRESHOLD_FACTOR = 0.7
-EXCLUDE_DEC_JAN = False
-MIN_Y_TICK = 38
-CREATE_MASKS = False  # Set to True to regenerate masks
 
 
 # ================================
@@ -612,36 +612,35 @@ def main():
     overlap_suchy, n_suchy = evaluate_overlap_by_timing(suchy_df, bloom_df_suchy)
     overlap_allen, n_allen = evaluate_overlap_by_timing(allen_df, bloom_df_allen,
                                                         obs_col='Day of Year')
+    if DO_NUTRIENTS:
+        print("\nOverlap of Bloom Timing Windows:")
+        print(f"Suchy: {overlap_suchy}/{n_suchy} years overlap within timing window")
+        print(f"Allen: {overlap_allen}/{n_allen} years overlap within timing window")
 
-    print("\nOverlap of Bloom Timing Windows:")
-    print(f"Suchy: {overlap_suchy}/{n_suchy} years overlap within timing window")
-    print(f"Allen: {overlap_allen}/{n_allen} years overlap within timing window")
+        # Example: Nutrient diagnostic for one year
+        all_biomass_vars = [
+            "NK1-COH", "NK2-CHI", "NK3-FOR",
+            "ZF1-ICT", "ZC1-EUP", "ZC2-AMP",
+            "ZC3-DEC", "ZC4-CLG", "ZC5-CSM",
+            "ZS1-JEL", "ZS2-CTH", "ZS3-CHA",
+            "ZS4-LAR", "PZ1-CIL","PZ2-DIN",
+            "PZ3-HNF","PP1-DIA", "PP2-NAN",
+            "PP3-PIC", "BAC-BA1"
+        ]
 
+        include_only = ["PP1-DIA", "PP2-NAN", "PP3-PIC"]  # example filter
+        years_to_plot = list(range(1980, 2019))
 
-    # Example: Nutrient diagnostic for one year
-    all_biomass_vars = [
-        "NK1-COH", "NK2-CHI", "NK3-FOR",
-        "ZF1-ICT", "ZC1-EUP", "ZC2-AMP",
-        "ZC3-DEC", "ZC4-CLG", "ZC5-CSM",
-        "ZS1-JEL", "ZS2-CTH", "ZS3-CHA",
-        "ZS4-LAR", "PZ1-CIL","PZ2-DIN",
-        "PZ3-HNF","PP1-DIA", "PP2-NAN",
-        "PP3-PIC", "BAC-BA1"
-    ]
+        nutrient_dfs = []
+        for yr in years_to_plot:
+            print(yr)
+            df = compute_nutrient_concentration(ds, all_biomass_vars, year=yr, include_only=include_only,
+                                                mask=mask_ds['mask'])
+            nutrient_dfs.append(df)
 
-    include_only = ["PP1-DIA", "PP2-NAN", "PP3-PIC"]  # example filter
-    years_to_plot = list(range(1980, 2019))
-
-    nutrient_dfs = []
-    for yr in years_to_plot:
-        print(yr)
-        df = compute_nutrient_concentration(ds, all_biomass_vars, year=yr, include_only=include_only,
-                                            mask=mask_ds['mask'])
-        nutrient_dfs.append(df)
-
-    df_nutrient_all = pd.concat(nutrient_dfs, ignore_index=True)
-    plot_nutrient_concentration(df_nutrient_all, ds=ds, include_only=include_only, mask=mask_ds['mask'])
-    print("Saved nutrient climatology plot for 1980–2018.")
+        df_nutrient_all = pd.concat(nutrient_dfs, ignore_index=True)
+        plot_nutrient_concentration(df_nutrient_all, ds=ds, include_only=include_only, mask=mask_ds['mask'])
+        print("Saved nutrient climatology plot for 1980–2018.")
 
 if __name__ == "__main__":
     main()

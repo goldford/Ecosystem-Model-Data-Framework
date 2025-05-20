@@ -549,13 +549,20 @@ def plot_combined_panel(dfs, field_codes_list, taxon_names, taxon_labels, labels
     for i, (df, fields, taxon, taxon_label, label) in enumerate(zip(dfs, field_codes_list, taxon_names, taxon_labels, labels)):
         ax = axes[i]
         subset = df[df['class'] == taxon]
+        num_fields = len(fields)
+        if num_fields == 2:
+            pos_offset = 0.35
+            width = 0.3
+        else:
+            pos_offset = 0.25
+            width = 0.2
         for j, field in enumerate(fields):
             for month in months:
                 mdata = subset[subset['month'] == month]
                 y = mdata[f'{field}_anomaly_fr_mean_std_norm'].dropna()
-                pos = month + j * 0.35 - 0.35
+                pos = month + j * pos_offset - pos_offset
                 if len(y) > 0:
-                    ax.boxplot(y, positions=[pos], widths=0.3,
+                    ax.boxplot(y, positions=[pos], widths=width,
                                patch_artist=True,
                                boxprops=dict(facecolor=color_map[field], color='black', linewidth=0.8),
                                medianprops=dict(color='black', linewidth=0.8),

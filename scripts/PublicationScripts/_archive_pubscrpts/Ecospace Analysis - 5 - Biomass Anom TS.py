@@ -27,15 +27,15 @@ import pickle
 log_transform = False
 
 # === Paths and constants ===
-SCENARIO = "SC88_1"
-FILENM = "Scv88_1-All_Groups_20250506_1978-2018.nc"
+SCENARIO = "SC89_1"
+FILENM = "Scv89_1-All_Groups_20250506_1978-2018.nc"
 NC_PATH = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_model//ECOSPACE_OUT//"
 netcdf_path = os.path.join(NC_PATH, FILENM)
 npgo_path = "C://Users//Greig//Documents//GitHub//Ecosystem-Model-Data-Framework//data//evaluation//npgo.csv"
 zoop_path = "C://Users//Greig//Documents//GitHub//Ecosystem-Model-Data-Framework//data//evaluation//zooplankton_sog_anomalies.csv"
 analysis_start_year = 1980
 analysis_end_year = 2018
-climatology_years = list(range(1996, 2011))
+climatology_years = list(range(1980, 2018))
 
 if log_transform:
     lg_tag = "LogTrns"
