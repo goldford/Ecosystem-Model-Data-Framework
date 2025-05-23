@@ -53,7 +53,7 @@ from scipy.stats import pearsonr
 include_SSC = True
 
 # Model run code (used in file paths and plot names)
-model_run = 'SC88_1'
+model_run = 'SC96_1'
 
 # Input data path
 pathfile_QU39_SSC_Ecospace = (

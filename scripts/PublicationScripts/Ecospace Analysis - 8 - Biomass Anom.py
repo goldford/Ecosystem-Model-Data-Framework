@@ -1,3 +1,20 @@
+"""
+Script for Analyzing Biomass Anomalies of Ecospace Groups
+---------------------------------------------------------------------------
+This script processes Ecospace output netCDF files to extract seasonal mean biomass
+anomalies (log-transformed, standardized) for a selection of groups
+across a specified time period (1980–2018) and season
+(default: Spring). The anomalies are computed relative to a climatology baseline.
+
+The script compares interannual anomaly patterns with the North Pacific Gyre Oscillation
+(NPGO) index via Pearson correlation and cross-correlation (CCF) analysis, optionally
+accounting for lagged effects.
+
+Outputs:
+- Time series plots of biomass anomalies vs NPGO
+- Correlation and cross-correlation statistics per group
+"""
+
 import xarray as xr
 import pandas as pd
 import numpy as np
@@ -5,24 +22,41 @@ import matplotlib.pyplot as plt
 import os
 from scipy.stats import pearsonr
 from statsmodels.tsa.stattools import ccf
+from helpers import read_sdomains
+from matplotlib.path import Path
+import yaml
 
 
 # === CONFIGURATION ===
-SCENARIO = "SC80_1"
-FILENAME = "Scv80_1-All_Groups_20250501_1978-2018.nc"
+SCENARIO = "SC95_1"
+FILENAME = "Scv95_1-All_Groups_20250506_1978-2018.nc"
 NC_PATH = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_model//ECOSPACE_OUT//"
 NPGO_PATH = "C://Users//Greig//Documents//GitHub//Ecosystem-Model-Data-Framework//data//evaluation//npgo.csv"
-SEASON_USE = "Spring" # choose one from season_months
 
-target_groups = ['PP1-DIA', 'PP2-NAN', 'PP3-PIC']
+# === Subdomain Masking Configuration ===
+USE_SUBDOMAIN_MASK = False
+SUBDOMAIN_NAME = "SGS"  # Choose from keys in analysis_domains_jarnikova.yml
+DOMAIN_FILE = "analysis_domains_jarnikova.yml"
+DOMAIN_PATH = "C://Users//Greig//Documents//github//Ecosystem-Model-Data-Framework//data//evaluation"
+
+
+target_groups = ['NK1-COH', 'NK2-CHI']
+# target_groups = ['ZC1-EUP', 'ZC2-AMP', 'ZC3-DEC', 'ZC4-CLG', 'ZC5-CSM']
+# target_groups = ['PZ1-CIL', 'PZ2-DIN', 'PZ3-HNF', 'PP1-DIA', 'PP2-NAN', 'PP3-PIC']
 season_months = {
     "Spring": [3, 4, 5],
     "Summer": [6, 7, 8],
     "Spring_Summer": [3, 4, 5, 6, 7, 8],
     "Fall": [9, 10, 11],
+    "Winter": [12, 1, 2],
+    "Winter_Spring": [12, 1, 2, 3, 4, 5],
     "Spring_Summer_Fall": [3, 4, 5, 6, 7, 8, 9, 10, 11],
     "Year_Round": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 }
+SEASON_USE_ECOL = "Year_Round" # choose one from season_months
+SEASON_USE_NPGO = "Spring" # choose one from season_months
+APPLY_LAG_PLOT = 3 # lag NPGO (forward?)
+APPLY_LAG_STATS = 3
 log_offset = 1e-3  # To safely log-transform
 
 analysis_start_year = 1980
@@ -39,9 +73,10 @@ df_npgo["year"] = df_npgo["date"].dt.year
 df_npgo["month"] = df_npgo["date"].dt.month
 
 # Limit to certain months?
-df_npgo_seasonal = df_npgo[df_npgo["month"].isin(season_months[SEASON_USE])]
+df_npgo_seasonal = df_npgo[df_npgo["month"].isin(season_months[SEASON_USE_NPGO])]
 df_npgo_annual = df_npgo_seasonal.groupby("year")["npgo"].mean()
-df_npgo_annual = df_npgo_annual[(df_npgo_annual.index >= analysis_start_year-2) & (df_npgo_annual.index <= analysis_end_year+2)]
+# we take more uears than needed from TS for lag analysis
+df_npgo_annual = df_npgo_annual[(df_npgo_annual.index >= analysis_start_year-10) & (df_npgo_annual.index <= analysis_end_year+10)]
 
 
 # === Utility ===
@@ -51,13 +86,34 @@ def safe_log(x):
 
 # === Load Ecospace data ===
 ds = xr.open_dataset(os.path.join(NC_PATH, FILENAME))
-mask = ds['depth'] > 0
-results = []
 
+# === Generate spatial mask if enabled ===
+if USE_SUBDOMAIN_MASK:
+    domain_fp = os.path.join(DOMAIN_PATH, DOMAIN_FILE)
+    sdomains = read_sdomains(domain_fp)
+
+    if SUBDOMAIN_NAME not in sdomains:
+        raise ValueError(f"Subdomain '{SUBDOMAIN_NAME}' not found in {DOMAIN_FILE}")
+
+    polygon = Path(sdomains[SUBDOMAIN_NAME])
+    lat = ds['lat'].values
+    lon = ds['lon'].values
+
+    # Flattened grid for point-in-polygon test
+    points = np.vstack((lat.flatten(), lon.flatten())).T
+    in_poly = polygon.contains_points(points).reshape(lat.shape)
+
+    # Mask: inside polygon AND depth > 0
+    mask = (ds['depth'].values > 0) & in_poly
+else:
+    mask = (ds['depth'].values > 0)
+
+# anomaly calc
+results = []
 for group in target_groups:
     print(group)
     da = ds[group].where(mask)
-    da_seasonal = da.sel(time=da['time.month'].isin(season_months[SEASON_USE]))
+    da_seasonal = da.sel(time=da['time.month'].isin(season_months[SEASON_USE_ECOL]))
     da_log = safe_log(da_seasonal)
     da_mean = da_log.mean(dim=('row', 'col'), skipna=True)
     series = da_mean.groupby('time.year').mean().to_pandas()
@@ -82,7 +138,8 @@ if n_groups == 1:
     axs = [axs]  # make axs iterable
 
 letters = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)']
-df_npgo_annual_plot = df_npgo_annual[(df_npgo_annual.index >= analysis_start_year) & (df_npgo_annual.index <= analysis_end_year)]
+df_npgo_annual_plot = df_npgo_annual.shift(APPLY_LAG_PLOT)
+df_npgo_annual_plot = df_npgo_annual_plot[(df_npgo_annual_plot.index >= analysis_start_year) & (df_npgo_annual_plot.index <= analysis_end_year)]
 
 
 for i, group in enumerate(target_groups):
@@ -101,8 +158,7 @@ plt.tight_layout()
 plt.show()
 
 # Lag NPGO? optional based on CCF
-df_npgo_annual_lagged = df_npgo_annual.shift(0)
-# df_npgo_annual_lagged = df_npgo_annual.shift(-1)
+df_npgo_annual_lagged = df_npgo_annual.shift(APPLY_LAG_STATS)
 
 for group in target_groups:
     print(group)

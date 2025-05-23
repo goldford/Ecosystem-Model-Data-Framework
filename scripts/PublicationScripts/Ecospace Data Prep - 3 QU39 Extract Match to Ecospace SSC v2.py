@@ -4,7 +4,7 @@
 # Last Updated: May 2025
 #
 # Description:
-#   This script matches plankton observations at station QU39
+#   This script matches plankton observations at station QU39 (del Bel Belluz)
 #   with modeled outputs from:
 #     1. Ecospace (EwE)
 #     2. SalishSeaCast (SSC)
@@ -55,8 +55,8 @@ from datetime import datetime
 # Examples of other available files:
 #   file_ecospace_out = "Scv51_4_2-PAR_PI_AllPPTemp_Wind_2000-2018.nc"
 #   ecospace_code = "SC51_4_2"
-file_ecospace_out = "Scv88_1-All_Groups_20250506_1978-2018.nc"
-ecospace_code = "SC88_1"
+file_ecospace_out = "Scv96_1-All_Groups_20250506_1978-2018.nc"
+ecospace_code = "SC96_1"
 file_ecospace_map = "Ecospace_grid_20210208_rowscols.csv"
 
 # ----- Execution toggles -----
@@ -94,7 +94,6 @@ initial_datetime_placeholder = pd.to_datetime('1900-04-23 23:42')
 fill_value = -999.9
 
 # ------------------------------------------------------ #
-
 
 
 def match_ecospace_to_QU39(df: pd.DataFrame) -> pd.DataFrame:
@@ -232,7 +231,7 @@ def main():
     if match_ssc:
         df = match_ssc_to_QU39(df)
 
-    print("All matching complete.")
+    print("All matching complete - done.")
 
 if __name__ == "__main__":
     main()

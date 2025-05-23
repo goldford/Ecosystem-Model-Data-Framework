@@ -158,10 +158,24 @@ from datetime import datetime, timedelta
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v87_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
 # ecospace_code = "Scv88_1-All_Groups_20250506" # same as 85 but NO WIND
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v88_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
-ecospace_code = "Scv89_1-All_Groups_20250506" # same as 85 but NO WIND
-path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v89_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
-
-
+# ecospace_code = "Scv89_1-All_Groups_20250506" # lost track here - is this where V's up??
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v89_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv90_1-All_Groups_20250506" # same as 89 but now with wind (sc39)
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v90_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv91_1-All_Groups_20250506" # same as 90 but sc47 wind
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v91_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv92_1-All_Groups_20250506" # same as 91 but reverted to older temp response for DIA (SC7)
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v92_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv93_1-All_Groups_20250506" # same as 92 but reverted to lower V's for groups >13, nutrients from 90 to 96 (previous runs above mislabelleD)
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v93_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv94_1-All_Groups_20250506" # same as 93 but with new intermediate wind SC94
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v94_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv95_1-All_Groups_20250506" # same as 92 but PBMax to 100 from 1000
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v95_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc///"
+# ecospace_code = "Scv88_2-All_Groups_20250506" # trying to get good QU39 fit to phyto as well as good b timing - based on v88_1 which I assume was low V's, WIND NOW IN, tweaked temp to match 92, nutr 96 instead of 90
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v88_2 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+ecospace_code = "Scv96_1-All_Groups_20250506" # similar to 92 except low v's and steeper dia temp, sc85 (shares this with v88)
+path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v96_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
 
 
 #

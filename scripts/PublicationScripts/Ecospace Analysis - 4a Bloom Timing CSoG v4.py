@@ -1,5 +1,6 @@
 """
-Main Script for Analyzing Bloom Timing in Ecospace Outputs
+Analyzing Bloom Timing in Ecospace Outputs
+by: G Oldford, 2023-2025
 ----------------------------------------------------------
 Compares bloom timing from Ecospace model outputs against:
 1. Satellite-derived bloom dates (Suchy et al. 2022)
@@ -9,6 +10,9 @@ Compares bloom timing from Ecospace model outputs against:
 Outputs:
 - CSV files of bloom timing
 - Multiple comparative figures
+
+Notes:
+- to do: if recompute bloom timing is False, and user changes the Vars to analyse - does it work?
 """
 
 # ====== Imports ======
@@ -20,7 +24,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.path import Path
 from datetime import datetime, timedelta
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 
 from helpers import (
@@ -38,13 +42,15 @@ DOMAIN_FILE = "analysis_domains_suchy.yml"
 SAT_MASK_PATH = os.path.join(DOMAIN_CONFIG_PATH, '..//..//data//evaluation//suchy_ecospace_mask.nc')
 
 RECOMPUTE_BLOOM_TIMING = True  # Set to True to force recomputation as needed, saves time
-SCENARIO = 'FULLKEY_SC89_1'
-ECOSPACE_CODE = "Scv89_1-All_Groups_20250506"
+SCENARIO = 'FULLKEY_SC96_1' #
+ECOSPACE_CODE = "Scv96_1-All_Groups_20250506"
 FILENM_STRT_YR = 1978
 FILENM_END_YR = 2018
 START_YEAR = 1980 # analysis years (exclude spinup?)
 END_YEAR = 2018
-INCLUDE_GROUPS = ["PP1-DIA"]  # groups to include in assessing bloom timing
+# multiple vars listed here, it will sum across them when computing anomalies, bloom timing etc
+# VARIABLES_TO_ANALYZE = ["PP1-DIA"]
+VARIABLES_TO_ANALYZE = ["PP1-DIA", 'PP2-NAN', 'PP3-PIC']
 # Bloom detection method
 LOG_TRANSFORM = True
 MEAN_OR_MEDIAN = "median"
@@ -54,30 +60,7 @@ SUB_THRESHOLD_FACTOR = 0.7
 EXCLUDE_DEC_JAN = False
 MIN_Y_TICK = 38
 CREATE_MASKS = False  # Set to True to regenerate masks
-DO_NUTRIENTS = True
-
-VARIABLES_TO_ANALYZE = {
-    "PP1-DIA": os.path.join(ECOSPACE_OUT_PATH, "EcospaceMapBiomass-PP1-DIA-{}.asc"),
-    #"NK1-COH": path_ecospace_out + "EcospaceMapBiomass-NK1-COH-{}.asc",
-    # "NK2-CHI": path_ecospace_out + "EcospaceMapBiomass-NK2-CHI-{}.asc",
-    # "NK3-FOR": path_ecospace_out + "EcospaceMapBiomass-NK3-FOR-{}.asc",
-    # "ZF1-ICT": path_ecospace_out + "EcospaceMapBiomass-ZF1-ICT-{}.asc",
-    # "ZC1-EUP": path_ecospace_out + "EcospaceMapBiomass-ZC1-EUP-{}.asc",
-    # "ZC2-AMP": path_ecospace_out + "EcospaceMapBiomass-ZC2-AMP-{}.asc",
-    # "ZC3-DEC": path_ecospace_out + "EcospaceMapBiomass-ZC3-DEC-{}.asc",
-    # "ZC4-CLG": path_ecospace_out + "EcospaceMapBiomass-ZC4-CLG-{}.asc",
-    # "ZC5-CSM": path_ecospace_out + "EcospaceMapBiomass-ZC5-CSM-{}.asc",
-    # "ZS1-JEL": path_ecospace_out + "EcospaceMapBiomass-ZS1-JEL-{}.asc",
-    # "ZS2-CTH": path_ecospace_out + "EcospaceMapBiomass-ZS2-CTH-{}.asc",
-    # "ZS3-CHA": path_ecospace_out + "EcospaceMapBiomass-ZS3-CHA-{}.asc",
-    # "ZS4-LAR": path_ecospace_out + "EcospaceMapBiomass-ZS4-LAR-{}.asc",
-    # "PZ1-CIL": path_ecospace_out + "EcospaceMapBiomass-PZ1-CIL-{}.asc",
-    # "PZ2-DIN": path_ecospace_out + "EcospaceMapBiomass-PZ2-DIN-{}.asc",
-    # "PZ3-HNF": path_ecospace_out + "EcospaceMapBiomass-PZ3-HNF-{}.asc",
-    # "PP2-NAN": path_ecospace_out + "EcospaceMapBiomass-PP2-NAN-{}.asc",
-    # "PP3-PIC": path_ecospace_out + "EcospaceMapBiomass-PP3-PIC-{}.asc",
-    # "BAC-BA1": path_ecospace_out + "EcospaceMapBiomass-BAC-BA1-{}.asc",
-}
+DO_NUTRIENTS = False
 
 
 # ================================
@@ -192,10 +175,10 @@ def load_ecospace_dataset():
     fname = f"{ECOSPACE_CODE}_{FILENM_STRT_YR}-{FILENM_END_YR}.nc"
     path = os.path.join(ECOSPACE_OUT_PATH, fname)
     return xr.open_dataset(path)
+
 def compute_bloom_timing(ds, var_name, mask=None, row=None, col=None,
                          bloom_early=68, bloom_late=108,
-                         yr_strt=1980, yr_end=2018,
-                         include_groups=None):
+                         yr_strt=1980, yr_end=2018):
 
     years = range(yr_strt, yr_end + 1)
     values, timestamps = [], []
@@ -212,16 +195,19 @@ def compute_bloom_timing(ds, var_name, mask=None, row=None, col=None,
         else:
             raise ValueError("Must provide either a 2D mask or specific row/col indices.")
 
-        if include_groups:
+        if isinstance(var_name, list):
             total = None
-            for g in include_groups:
+            for g in var_name:
                 if g in yearly_ds:
                     total = yearly_ds[g] if total is None else total + yearly_ds[g]
                 else:
                     print(f"Warning: {g} not found in dataset for year {year}")
             yearly_var = total
-            if LOG_TRANSFORM:
-                yearly_var = np.log(yearly_var + 0.01)
+        else:
+            yearly_var = yearly_ds[var_name]
+
+        if LOG_TRANSFORM:
+            yearly_var = np.log(yearly_var + 0.01)
         else:
             yearly_var = yearly_ds[var_name]
             if LOG_TRANSFORM:
@@ -280,7 +266,11 @@ def plot_bloom_comparison(df_model, df_obs, label_model="Ecospace",
 
     df_merged = df_model.merge(df_obs, on="Year", suffixes=("_Model", "_Obs"))
 
-    fig, ax = plt.subplots(figsize=(10, 5))
+    if label_obs == 'Satellite':
+        fig_w = 7; fig_h = 4
+    else:
+        fig_w = 10; fig_h = 5
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
     for col in df_merged.columns:
         if "Day of Year" in col and col != "Day of Year_Obs":
             df_merged = df_merged.rename(columns={col: "Day of Year_Model"})
@@ -337,17 +327,23 @@ def evaluate_model(obs, mod, label=""):
 
     rmse = np.sqrt(mean_squared_error(obs_valid, mod_valid))
     mse = mean_squared_error(obs_valid, mod_valid)
+    mae = mean_absolute_error(obs_valid, mod_valid)
     bias = np.mean(mod_valid - obs_valid)
     r = np.corrcoef(obs_valid, mod_valid)[0, 1] if len(obs_valid) > 1 else np.nan
     skill = willmott1981(obs_valid, mod_valid)
+    std_obs = np.std(obs_valid)
+    std_mod = np.std(mod_valid)
 
     return {
         "Label": label,
         "RMSE": rmse,
+        "MAE": mae,
         "MSE": mse,
         "Bias": bias,
         "R": r,
-        "Willmott Skill": skill
+        "Willmott Skill": skill,
+        "Obs StdDev": std_obs,
+        "Model StdDev": std_mod
     }
 
 def evaluate_bloom_categories(df_obs, df_mod, col_obs='Bloom Early Late', col_mod='Bloom Early Late'):
@@ -516,6 +512,7 @@ def main():
 
     # Load Ecospace model outputs
     ds = load_ecospace_dataset()
+    var_name = VARIABLES_TO_ANALYZE
 
     # Generate masks if required
     if CREATE_MASKS:
@@ -526,8 +523,6 @@ def main():
 
     mask_ds = xr.open_dataset(SAT_MASK_PATH)
 
-    var = list(VARIABLES_TO_ANALYZE.keys())[0]
-
     bloom_csv_path_suchy = f"..//..//data//evaluation//ecospace_bloom_timing_SSoG_{SCENARIO}.csv"
     bloom_csv_path_allen = f"..//..//data//evaluation//ecospace_bloom_timing_CSoG_{SCENARIO}.csv"
 
@@ -536,18 +531,18 @@ def main():
         row_allen, col_allen = 52, 100
 
         bloom_df_allen = compute_bloom_timing(
-            ds, var, mask=None, row=col_allen, col=row_allen,
+            ds, var_name, mask=None, row=col_allen, col=row_allen,
             bloom_early=allen_df['Day of Year_Allen'].mean() - allen_df['Day of Year_Allen'].std(),
             bloom_late=allen_df['Day of Year_Allen'].mean() + allen_df['Day of Year_Allen'].std(),
-            yr_strt=1980, yr_end=2018, include_groups=INCLUDE_GROUPS
+            yr_strt=1980, yr_end=2018
         )
         bloom_df_allen.to_csv(bloom_csv_path_allen, index=False)
         print(f"Saved computed bloom timing for Allen 1D to {bloom_csv_path_allen}")
 
         bloom_df_suchy = compute_bloom_timing(
-            ds, var, mask=mask_ds['mask'],
+            ds, var_name, mask=mask_ds['mask'],
             bloom_early=68, bloom_late=108,
-            yr_strt=2003, yr_end=2016, include_groups=INCLUDE_GROUPS
+            yr_strt=2003, yr_end=2016
         )
         bloom_df_suchy.to_csv(bloom_csv_path_suchy, index=False)
         print(f"Saved computed bloom timing for SSoG (Suchy) to {bloom_csv_path_suchy}")
@@ -569,8 +564,6 @@ def main():
     print("C09:", allen_df.shape)
     print("Ecospace (Satellite):", bloom_df_suchy.shape)
     print("Ecospace (C09):", bloom_df_allen.shape)
-
-
 
     # Plot comparison with Allen 1D model
     plot_bloom_comparison(
@@ -597,7 +590,10 @@ def main():
         print(
             f"{stat['Label']}: R = {stat['R']:.3f}, "
             f"RMSE = {stat['RMSE']:.2f}, "
+            f"MAE = {stat['MAE']:.2f}, "
             f"Bias = {stat['Bias']:.2f}, "
+            f"Obs σ = {stat['Obs StdDev']:.2f}, "
+            f"Model σ = {stat['Model StdDev']:.2f}, "
             f"Willmott = {stat['Willmott Skill']:.3f}")
 
     # Additional categorical comparisons

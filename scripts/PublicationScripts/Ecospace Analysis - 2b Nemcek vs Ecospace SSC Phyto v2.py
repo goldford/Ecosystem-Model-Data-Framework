@@ -42,7 +42,7 @@ import matplotlib.pyplot as plt
 # Configuration and Input Setup
 # -------------------------------
 
-ecospace_code = "Scv89_1"  # Choose scenario code that matches pre-processed dataset
+ecospace_code = "Scv96_1"  # Choose scenario code that matches pre-processed dataset
 input_dir = "C://Users//Greig/Documents//github//Ecosystem-Model-Data-Framework//data//evaluation//"
 input_file = f"Nemcek_matched_to_model_out_{ecospace_code}.csv"
 input_path = os.path.join(input_dir, input_file)
