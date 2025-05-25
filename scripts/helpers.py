@@ -1,3 +1,4 @@
+
 import numpy as np
 import netCDF4 as nc
 import yaml
@@ -911,7 +912,10 @@ def saveASCFile(filename, data, bottomleft_row_ewe, upperleft_row_ewe, upperleft
     if not (dfLandMask is None):
         dfEwEGrid = dfEwEGrid.mask(dfLandMask)
 
-    dfEwEGrid.fillna(0.0, inplace=True)
+    # dfEwEGrid.fillna(0.0, inplace=True) #deprecated
+    dfEwEGrid[dfEwEGrid.select_dtypes(include='number').columns] = (
+        dfEwEGrid.select_dtypes(include='number').fillna(0.0)
+    )
 
     np.savetxt(filename, dfEwEGrid.to_numpy(), fmt=sigdigfmt, delimiter=" ", comments='',
                header=ASCheader)  # GO 20211222 - change from %0.5f

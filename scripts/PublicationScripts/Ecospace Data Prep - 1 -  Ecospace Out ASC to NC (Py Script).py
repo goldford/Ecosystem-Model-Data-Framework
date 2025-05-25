@@ -174,8 +174,20 @@ from datetime import datetime, timedelta
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v95_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc///"
 # ecospace_code = "Scv88_2-All_Groups_20250506" # trying to get good QU39 fit to phyto as well as good b timing - based on v88_1 which I assume was low V's, WIND NOW IN, tweaked temp to match 92, nutr 96 instead of 90
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v88_2 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
-ecospace_code = "Scv96_1-All_Groups_20250506" # similar to 92 except low v's and steeper dia temp, sc85 (shares this with v88)
-path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v96_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv96_1-All_Groups_20250506" # similar to 92 except low v's and steeper dia temp, sc85 (shares this with v88)
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v96_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv97_1-All_Groups_20250506" # same as 96 with trapezoidal DIA temp response
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v97_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv98_1-All_Groups_20250506" # tweaked all dia responses to keep winter not as low and penalise summer conditions
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v98_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv99_1-All_Groups_20250506" # this is a test of effect of NO wind. Also, adjusted temp response and reverted PAR back
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//Sc216 v99_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv102_1-All_Groups_20250523" # wind back, but just spring-winter wind
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v102_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv103_1-All_Groups_20250523" # same as 102 except tweak to PAR for dia
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v103_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+ecospace_code = "Scv104_1-All_Groups_20250523" # same as 103 except tweak to PAR and light for dia
+path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v104_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
 
 
 #

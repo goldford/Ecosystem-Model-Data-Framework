@@ -53,7 +53,7 @@ from scipy.stats import pearsonr
 include_SSC = True
 
 # Model run code (used in file paths and plot names)
-model_run = 'SC96_1'
+model_run = 'SC104_1'
 
 # Input data path
 pathfile_QU39_SSC_Ecospace = (
@@ -229,33 +229,62 @@ def aggregate_means(df, value_fields, groupby_time='closest_ecospace_time', leve
     grouped.columns = group_keys + [f'mean_{col}' for col in value_fields]
     return grouped
 
-def compute_model_stats(obs, model):
+
+def assign_season(month):
+    if month in [12, 1, 2]:
+        return 'Winter'
+    elif month in [3, 4, 5]:
+        return 'Spring'
+    elif month in [6, 7, 8]:
+        return 'Summer'
+    elif month in [9, 10, 11]:
+        return 'Fall'
+    else:
+        return np.nan
+
+
+def compute_model_stats(obs, model, seasons=None):
     """
-    Compute common statistical comparisons for model skill assessment.
+    Compute model-vs-observation statistics.
+    If `seasons` is provided, compute stats per season.
 
     Parameters:
         obs : np.ndarray
         model : np.ndarray
+        seasons : array-like of str or None
 
     Returns:
-        dict with Pearson R, std devs, centered RMSE, RMSE, bias, MAE, WSS, N
+        list of dicts (seasonal) or single dict (overall)
     """
+    if seasons is not None:
+        if len(seasons) != len(obs):
+            raise ValueError(f"Length mismatch: len(seasons)={len(seasons)}, len(obs)={len(obs)}")
+
+        results = []
+        for season in ['Winter', 'Spring', 'Summer', 'Fall']:
+            mask = (np.array(seasons) == season) & ~np.isnan(obs) & ~np.isnan(model)
+            if np.sum(mask) < 2:
+                continue
+            stat = compute_model_stats(obs[mask], model[mask])  # recursive
+            stat['Season'] = season
+            results.append(stat)
+        return results
+
+    # === Overall stats ===
     mask = ~np.isnan(obs) & ~np.isnan(model)
     obs = obs[mask]
     model = model[mask]
 
+    if len(obs) < 2:
+        return {}
+
     obs_std = np.std(obs)
     model_std = np.std(model)
     r, _ = pearsonr(obs, model)
-
     bias = np.mean(model - obs)
     mae = mean_absolute_error(obs, model)
     rmse = np.sqrt(np.mean((model - obs) ** 2))
-
-    # Centered RMSE (remove means)
     centered_rmse = np.sqrt(np.mean(((model - np.mean(model)) - (obs - np.mean(obs))) ** 2))
-
-    # Willmott’s Skill Score (WSS)
     obs_mean = np.mean(obs)
     denom = np.sum((np.abs(model - obs_mean) + np.abs(obs - obs_mean)) ** 2)
     wss = 1 - (np.sum((model - obs) ** 2) / denom) if denom != 0 else np.nan
@@ -271,7 +300,6 @@ def compute_model_stats(obs, model):
         'WSS': wss,
         'N': len(obs)
     }
-
 
 
 def run_model_statistics(df, model_obs_pairs, use_anomalies=True, aggregation_level='monthly'):
@@ -313,41 +341,45 @@ def run_model_statistics(df, model_obs_pairs, use_anomalies=True, aggregation_le
         if aggregation_level in ['monthly', 'weekly']:
             value_fields = [obs_field, ecospace_field] + ([ssc_field] if ssc_field else [])
             grouped = aggregate_means(df_sub, value_fields, level=aggregation_level)
-
-            print(f"[DEBUG] Group: {group}")
-            print("Grouped columns:", grouped.columns.tolist())
-            print("Looking for:", f"mean_{obs_field}", f"mean_{ecospace_field}", f"mean_{ssc_field}" if ssc_field else None)
-            print("Grouped head:\n", grouped.head())
+            grouped['season'] = grouped['period'].map(assign_season)
 
             obs_vals = grouped.get(f'mean_{obs_field}', pd.Series(dtype=float)).values
             eco_vals = grouped.get(f'mean_{ecospace_field}', pd.Series(dtype=float)).values
             ssc_vals = grouped.get(f'mean_{ssc_field}', pd.Series(dtype=float)).values if ssc_field else None
+            seasons = grouped['season'].values
 
         elif aggregation_level == 'none':
+            df_sub['season'] = df_sub['month'].map(assign_season)
             obs_vals = df_sub[obs_field].values
             eco_vals = df_sub[ecospace_field].values
             ssc_vals = df_sub[ssc_field].values if ssc_field else None
+            seasons = df_sub['season'].values
 
         else:
             raise ValueError("aggregation_level must be 'monthly', 'weekly', or 'none'.")
 
-        # Check for valid length before computing stats
+        # === Overall stats ===
         if len(obs_vals) >= 2 and len(eco_vals) >= 2:
-            ecospace_stats = compute_model_stats(obs_vals, eco_vals)
-            ecospace_stats.update({'Group': group, 'Model': 'Ecospace'})
-            results.append(ecospace_stats)
-        else:
-            print(f"[Warning] Not enough data for Ecospace stats in group: {group}")
+            eco_all = compute_model_stats(obs_vals, eco_vals)
+            eco_all.update({'Group': group, 'Model': 'Ecospace', 'Season': 'All'})
+            results.append(eco_all)
 
-        if ssc_field and ssc_vals is not None and len(ssc_vals) >= 2 and len(obs_vals) >= 2:
-            ssc_stats = compute_model_stats(obs_vals, ssc_vals)
-            ssc_stats.update({'Group': group, 'Model': 'SSC'})
-            results.append(ssc_stats)
-        elif ssc_field:
-            print(f"[Warning] Not enough data for SSC stats in group: {group}")
+            seasonal_stats = compute_model_stats(obs_vals, eco_vals, seasons=seasons)
+            for stat in seasonal_stats:
+                stat.update({'Group': group, 'Model': 'Ecospace'})
+                results.append(stat)
+
+        if ssc_field and ssc_vals is not None and len(obs_vals) >= 2 and len(ssc_vals) >= 2:
+            ssc_all = compute_model_stats(obs_vals, ssc_vals)
+            ssc_all.update({'Group': group, 'Model': 'SSC', 'Season': 'All'})
+            results.append(ssc_all)
+
+            seasonal_stats = compute_model_stats(obs_vals, ssc_vals, seasons=seasons)
+            for stat in seasonal_stats:
+                stat.update({'Group': group, 'Model': 'SSC'})
+                results.append(stat)
 
     return pd.DataFrame(results)
-
 
 def aggregate_observations_by_class(df, class_filter, value_col='measurementValue', id_col='id_x', time_col='closest_ecospace_time'):
     """

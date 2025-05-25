@@ -52,11 +52,9 @@ from datetime import datetime
 # ---------------- Configuration ---------------- #
 
 # ----- Ecospace files -----
-# Examples of other available files:
-#   file_ecospace_out = "Scv51_4_2-PAR_PI_AllPPTemp_Wind_2000-2018.nc"
-#   ecospace_code = "SC51_4_2"
-file_ecospace_out = "Scv96_1-All_Groups_20250506_1978-2018.nc"
-ecospace_code = "SC96_1"
+
+file_ecospace_out = "Scv104_1-All_Groups_20250523_1978-2018.nc"
+ecospace_code = "SC104_1"
 file_ecospace_map = "Ecospace_grid_20210208_rowscols.csv"
 
 # ----- Execution toggles -----

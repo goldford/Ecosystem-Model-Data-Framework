@@ -41,23 +41,33 @@ DOMAIN_CONFIG_PATH = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Frame
 DOMAIN_FILE = "analysis_domains_suchy.yml"
 SAT_MASK_PATH = os.path.join(DOMAIN_CONFIG_PATH, '..//..//data//evaluation//suchy_ecospace_mask.nc')
 
-RECOMPUTE_BLOOM_TIMING = True  # Set to True to force recomputation as needed, saves time
-SCENARIO = 'FULLKEY_SC96_1' #
-ECOSPACE_CODE = "Scv96_1-All_Groups_20250506"
+RECOMPUTE_BLOOM_TIMING_SAT = True  # Set to True to force recomputation as needed, saves time
+RECOMPUTE_BLOOM_TIMING_C09 = True
+
+SCENARIO = 'FULLKEY_SC88_2'
+ECOSPACE_CODE = "Scv88_2-All_Groups_20250506"
 FILENM_STRT_YR = 1978
 FILENM_END_YR = 2018
 START_YEAR = 1980 # analysis years (exclude spinup?)
 END_YEAR = 2018
-# multiple vars listed here, it will sum across them when computing anomalies, bloom timing etc
-# VARIABLES_TO_ANALYZE = ["PP1-DIA"]
-VARIABLES_TO_ANALYZE = ["PP1-DIA", 'PP2-NAN', 'PP3-PIC']
+
+# if multiple vars listed here, it will sum across them when computing anomalies, bloom timing etc
+#OK with run 96 this is first time model fit has been okay with all pp groups
+VARIABLES_TO_ANALYZE_SAT = ["PP1-DIA", "PP2-NAN", "PP3-PIC"]
+VARIABLES_TO_ANALYZE_C09 = ["PP1-DIA"]
+
+ANNUAL_AVG_METHOD_SAT = "all" # should average bloom compared against be from all years, or just one year
+ANNUAL_AVG_METHOD_C09 = "annual" # annual or all
+
+EXCLUDE_DEC_JAN_SAT = True
+EXCLUDE_DEC_JAN_C09 = False
+
 # Bloom detection method
 LOG_TRANSFORM = True
 MEAN_OR_MEDIAN = "median"
-ANNUAL_AVG_METHOD = "annual" # annual or all
 THRESHOLD_FACTOR = 1.05
 SUB_THRESHOLD_FACTOR = 0.7
-EXCLUDE_DEC_JAN = False
+
 MIN_Y_TICK = 38
 CREATE_MASKS = False  # Set to True to regenerate masks
 DO_NUTRIENTS = False
@@ -178,7 +188,9 @@ def load_ecospace_dataset():
 
 def compute_bloom_timing(ds, var_name, mask=None, row=None, col=None,
                          bloom_early=68, bloom_late=108,
-                         yr_strt=1980, yr_end=2018):
+                         yr_strt=1980, yr_end=2018,
+                         exclude_dec_jan=False,
+                         avg_method="annual"):
 
     years = range(yr_strt, yr_end + 1)
     values, timestamps = [], []
@@ -229,9 +241,9 @@ def compute_bloom_timing(ds, var_name, mask=None, row=None, col=None,
         df, 'Value',
         thrshld_fctr=THRESHOLD_FACTOR,
         sub_thrshld_fctr=SUB_THRESHOLD_FACTOR,
-        average_from=ANNUAL_AVG_METHOD,
+        average_from=avg_method,
         mean_or_median=MEAN_OR_MEDIAN,
-        exclude_juntojan=EXCLUDE_DEC_JAN,
+        exclude_juntojan=exclude_dec_jan,
         bloom_early=bloom_early,
         bloom_late=bloom_late
     )
@@ -512,7 +524,6 @@ def main():
 
     # Load Ecospace model outputs
     ds = load_ecospace_dataset()
-    var_name = VARIABLES_TO_ANALYZE
 
     # Generate masks if required
     if CREATE_MASKS:
@@ -526,30 +537,45 @@ def main():
     bloom_csv_path_suchy = f"..//..//data//evaluation//ecospace_bloom_timing_SSoG_{SCENARIO}.csv"
     bloom_csv_path_allen = f"..//..//data//evaluation//ecospace_bloom_timing_CSoG_{SCENARIO}.csv"
 
-    if RECOMPUTE_BLOOM_TIMING:
+    var_name_C09 = VARIABLES_TO_ANALYZE_C09
+
+    if RECOMPUTE_BLOOM_TIMING_C09:
         # Hardcoded Allen 1D location
         row_allen, col_allen = 52, 100
 
         bloom_df_allen = compute_bloom_timing(
-            ds, var_name, mask=None, row=col_allen, col=row_allen,
+            ds, var_name_C09, mask=None, row=col_allen, col=row_allen,
             bloom_early=allen_df['Day of Year_Allen'].mean() - allen_df['Day of Year_Allen'].std(),
             bloom_late=allen_df['Day of Year_Allen'].mean() + allen_df['Day of Year_Allen'].std(),
-            yr_strt=1980, yr_end=2018
+            yr_strt=1980, yr_end=2018,
+            exclude_dec_jan=EXCLUDE_DEC_JAN_C09,
+            avg_method=ANNUAL_AVG_METHOD_C09
         )
         bloom_df_allen.to_csv(bloom_csv_path_allen, index=False)
         print(f"Saved computed bloom timing for Allen 1D to {bloom_csv_path_allen}")
 
+    else:
+        bloom_df_allen = pd.read_csv(bloom_csv_path_allen)
+        print(f"Loaded bloom timing from cached files: {bloom_csv_path_allen}")
+
+    var_name_SAT = VARIABLES_TO_ANALYZE_SAT
+
+    if RECOMPUTE_BLOOM_TIMING_SAT:
         bloom_df_suchy = compute_bloom_timing(
-            ds, var_name, mask=mask_ds['mask'],
+            ds, var_name_SAT, mask=mask_ds['mask'],
             bloom_early=68, bloom_late=108,
-            yr_strt=2003, yr_end=2016
+            yr_strt=2003, yr_end=2016,
+            exclude_dec_jan=EXCLUDE_DEC_JAN_SAT,
+            avg_method=ANNUAL_AVG_METHOD_SAT
         )
         bloom_df_suchy.to_csv(bloom_csv_path_suchy, index=False)
         print(f"Saved computed bloom timing for SSoG (Suchy) to {bloom_csv_path_suchy}")
+
     else:
         bloom_df_suchy = pd.read_csv(bloom_csv_path_suchy)
-        bloom_df_allen = pd.read_csv(bloom_csv_path_allen)
-        print(f"Loaded bloom timing from cached files: {bloom_csv_path_suchy} and {bloom_csv_path_allen}")
+        print(f"Loaded bloom timing from cached files: {bloom_csv_path_suchy}")
+
+
 
     print('bloom doy mean, C09:')
     print(allen_df['Day of Year_Allen'].mean())
