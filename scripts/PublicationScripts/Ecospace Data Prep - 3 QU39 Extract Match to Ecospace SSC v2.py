@@ -53,8 +53,8 @@ from datetime import datetime
 
 # ----- Ecospace files -----
 
-file_ecospace_out = "Scv104_1-All_Groups_20250523_1978-2018.nc"
-ecospace_code = "SC104_1"
+file_ecospace_out = "Scv114_1-All_Groups_20250523_1978-2018.nc"
+ecospace_code = "SC114_1"
 file_ecospace_map = "Ecospace_grid_20210208_rowscols.csv"
 
 # ----- Execution toggles -----

@@ -14,8 +14,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Load data
+ecospace_code = "Scv114_1"  # Choose scenario code that matches pre-processed dataset
 nemcek_matched_p = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation"
-nemcek_matched_f = "Nemcek_matched_to_model_out.csv"
+nemcek_matched_f = f"Nemcek_matched_to_model_out_{ecospace_code}.csv"
 nemcek_fp = os.path.join(nemcek_matched_p, nemcek_matched_f)
 
 if os.path.exists(nemcek_fp):
@@ -178,7 +179,16 @@ annual_stats = df_filtered.groupby('sdomain')[fields_to_average].agg(['mean', 's
 
 # Merge annual stats with seasonal means
 seasonal_merged = averages_by_season_sdomain.melt(id_vars=['Season', 'sdomain'], var_name='Field', value_name='Seasonal Mean')
-annual_merged = annual_stats.melt(id_vars=['sdomain'], var_name=['Field', 'Statistic'], value_name='Value')
+
+# -----------------------------
+# 2025 fix
+# annual_merged = annual_stats.melt(id_vars=['sdomain'], var_name=['Field', 'Statistic'], value_name='Value')
+annual_stats.columns = ['sdomain'] + [f"{var}_{stat}" for var, stat in annual_stats.columns[1:]]
+
+annual_merged = annual_stats.melt(id_vars=['sdomain'], var_name='Field_Statistic', value_name='Value')
+annual_merged[['Field', 'Statistic']] = annual_merged['Field_Statistic'].str.rsplit('_', n=1, expand=True)
+# -----------------------------
+
 annual_merged = annual_merged.pivot_table(index=['sdomain', 'Field'], columns='Statistic', values='Value').reset_index()
 merged_data = pd.merge(seasonal_merged, annual_merged, on=['sdomain', 'Field'])
 

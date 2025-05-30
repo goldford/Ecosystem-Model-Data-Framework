@@ -8,7 +8,7 @@ import os
 from calendar import monthrange
 import math
 from GO_helpers import is_leap_year, buildSortableString, saveASCFile, getDataFrame 
-
+from functools import partial
 
 #import matplotlib.pyplot as plt
 

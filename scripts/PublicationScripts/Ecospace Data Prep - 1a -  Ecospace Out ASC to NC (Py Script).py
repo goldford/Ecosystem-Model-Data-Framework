@@ -186,8 +186,29 @@ from datetime import datetime, timedelta
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v102_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
 # ecospace_code = "Scv103_1-All_Groups_20250523" # same as 102 except tweak to PAR for dia
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v103_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
-ecospace_code = "Scv104_1-All_Groups_20250523" # same as 103 except tweak to PAR and light for dia
-path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v104_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv104_1-All_Groups_20250523" # same as 103 except tweak to PAR and light for dia
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v104_1 - PAR_PI_AllPPTemp_Wind - 3DAY 1yr10yr//asc//"
+# ecospace_code = "Scv105_1-All_Groups_20250523" # same as 88_2 except with a trapzdl temp rspnse for dia.
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v105_2 - PAR_PI_AllPPTemp_Wind//asc//"
+# ecospace_code = "Scv106_1-All_Groups_20250523" # same as 105 except added wind 'floor' of 0.2 env resp for dia
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v106_1 - PAR_PI_AllPPTemp_Wind//asc//"
+# ecospace_code = "Scv107_1-All_Groups_20250523" # same as 106 but increased steepness from SC47 env resp for DIA PAR and added higher floor than SC107 of 0.25
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v107_1 - PAR_PI_AllPPTemp_Wind//asc//"
+# ecospace_code = "Scv108_1-All_Groups_20250523" # same as 107 but increased steepness from SC47 env resp for DIA PAR SC107 of 0.25; LP 18 RP 30, w/ 0.25 floor
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v108_1 - PAR_PI_AllPPTemp_Wind//asc//"
+# ecospace_code = "Scv109_1-All_Groups_20250523" # same as 108 but now with shallower PAR curve
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v109_1 - PAR_PI_AllPPTemp_Wind//asc//"
+# ecospace_code = "Scv110_1-All_Groups_20250523" # same as 109 but now with steep dia temp trapz resp w/ 0.2 floor
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v110_1 - PAR_PI_AllPPTemp_Wind//asc//"
+# ecospace_code = "Scv111_1-All_Groups_20250523" # same as 110 but essentially fixed glitch in declining part of dia temp trap resp
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v111_1 - PAR_PI_AllPPTemp_Wind//asc//"
+# ecospace_code = "Scv112_1-All_Groups_20250523" #
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v112_1 - PAR_PI_AllPPTemp_Wind//asc//"
+# ecospace_code = "Scv113_1-All_Groups_20250523" #
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v113_1 - PAR_PI_AllPPTemp_Wind//asc//"
+ecospace_code = "Scv114_1-All_Groups_20250523" #
+path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v114_1 - PAR_PI_AllPPTemp_Wind//asc//"
+
 
 
 #

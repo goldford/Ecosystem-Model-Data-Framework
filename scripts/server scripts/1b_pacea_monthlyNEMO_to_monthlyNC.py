@@ -160,6 +160,7 @@ tmask_fix = np.ma.masked_where(tmask == 0, tmask)
 
 # prep array with indices of deepest lev
 bottom_idxs = np.zeros([tmask.shape[2],tmask.shape[3]], dtype=np.int32)
+
 # x_grid, y_grid = np.meshgrid(np.arange(tmask.shape[2]), np.arange(tmask.shape[3]), indexing='ij')
 for i in range(tmask.shape[2]):
     for j in range(tmask.shape[3]):
@@ -231,6 +232,7 @@ for stat in stat_types:
                         for i in range(var_dat.shape[2]):
                             for j in range(var_dat.shape[3]):
                                 dat_fin[0, i, j] = var_dat[0,bottom_idxs[i,j],i,j]
+
                     elif dep_bin == "5m":
                         dat_fin = var_dat[:,5,...]
                     else:

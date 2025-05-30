@@ -5,7 +5,7 @@ import seaborn as sns
 
 # === Configuration ===
 path_evalout = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation"
-ecospace_code = 'Scv80_1'
+ecospace_code = 'Scv114_1'
 input_file = f"Zooplankton_matched_to_model_out_{ecospace_code}.csv"
 
 # === Load Data ===

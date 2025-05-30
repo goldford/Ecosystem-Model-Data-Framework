@@ -37,15 +37,19 @@ from helpers import (
 # Configuration
 # ================================
 ECOSPACE_OUT_PATH = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_model//ECOSPACE_OUT//"
+STATS_OUT_PATH = "..//..//data//evaluation//"
 DOMAIN_CONFIG_PATH = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation"
 DOMAIN_FILE = "analysis_domains_suchy.yml"
 SAT_MASK_PATH = os.path.join(DOMAIN_CONFIG_PATH, '..//..//data//evaluation//suchy_ecospace_mask.nc')
 
-RECOMPUTE_BLOOM_TIMING_SAT = True  # Set to True to force recomputation as needed, saves time
-RECOMPUTE_BLOOM_TIMING_C09 = True
+RECOMPUTE_BLOOM_TIMING_SAT = False  # Set to True to force recomputation as needed, saves time
+RECOMPUTE_BLOOM_TIMING_C09 = False
 
-SCENARIO = 'FULLKEY_SC88_2'
-ECOSPACE_CODE = "Scv88_2-All_Groups_20250506"
+# for run 114,
+# satellite: set vars = PP1-DIA only, annual_avg_method_sat = annual, exclude dec-jan=False
+# c09: vars = PP1-DIA, annual_avg_method_co9 = all, exclude dec jan = False
+SCENARIO = 'FULLKEY_SC114_1'
+ECOSPACE_CODE = "Scv114_1-All_Groups_20250523"
 FILENM_STRT_YR = 1978
 FILENM_END_YR = 2018
 START_YEAR = 1980 # analysis years (exclude spinup?)
@@ -53,13 +57,17 @@ END_YEAR = 2018
 
 # if multiple vars listed here, it will sum across them when computing anomalies, bloom timing etc
 #OK with run 96 this is first time model fit has been okay with all pp groups
-VARIABLES_TO_ANALYZE_SAT = ["PP1-DIA", "PP2-NAN", "PP3-PIC"]
+# VARIABLES_TO_ANALYZE_SAT = ["PP1-DIA"] #for 88_2 - pp1-dai only, annual, keep janfeb
+VARIABLES_TO_ANALYZE_SAT = ["PP1-DIA"]
 VARIABLES_TO_ANALYZE_C09 = ["PP1-DIA"]
 
-ANNUAL_AVG_METHOD_SAT = "all" # should average bloom compared against be from all years, or just one year
-ANNUAL_AVG_METHOD_C09 = "annual" # annual or all
+ANNUAL_AVG_METHOD_SAT = "annual" # should average bloom compared against be from all years, or just one year
+ANNUAL_AVG_METHOD_C09 = "all" # annual or all
 
-EXCLUDE_DEC_JAN_SAT = True
+# use mask c09 instead of pnt?
+USE_SAT_MASK_CO9 = True
+
+EXCLUDE_DEC_JAN_SAT = False
 EXCLUDE_DEC_JAN_C09 = False
 
 # Bloom detection method
@@ -287,16 +295,20 @@ def plot_bloom_comparison(df_model, df_obs, label_model="Ecospace",
         if "Day of Year" in col and col != "Day of Year_Obs":
             df_merged = df_merged.rename(columns={col: "Day of Year_Model"})
             break  # Stop after the first match
-    ax.errorbar(df_merged['Year'], df_merged['Day of Year_Model'],
-                yerr=1.5, fmt='o', markersize=4,
-                label=label_model, color='black')
     ax.errorbar(df_merged['Year'], df_merged['Day of Year_Obs'],
                 yerr=4, fmt='s', markersize=4,
                 label=label_obs, color='blue')
+    ax.errorbar(df_merged['Year'], df_merged['Day of Year_Model'],
+                yerr=1.5, fmt='o', markersize=4,
+                label=label_model, color='black')
 
     mean = np.nanmean(df_merged['Day of Year_Obs'])
     std = np.nanstd(df_merged['Day of Year_Obs'])
 
+    print(label_obs)
+    print(f"late bloom DoY: {mean+std}")
+    print(f"average bloom DoY {mean}")
+    print(f"early bloom DoY: {mean-std}")
     ax.axhline(y=mean+std, linestyle='--', color='grey', label='') # late threshold
     ax.axhline(y=mean, linestyle='-', color='grey', label='')      # average
     ax.axhline(y=mean-std, linestyle='--', color='grey', label='') # early threshold
@@ -542,9 +554,14 @@ def main():
     if RECOMPUTE_BLOOM_TIMING_C09:
         # Hardcoded Allen 1D location
         row_allen, col_allen = 52, 100
+        mask = None
 
+        # override option to use satellite 2d mask
+        if USE_SAT_MASK_CO9:
+            row_allen = None; col_allen = None
+            mask = mask_ds['mask']
         bloom_df_allen = compute_bloom_timing(
-            ds, var_name_C09, mask=None, row=col_allen, col=row_allen,
+            ds, var_name_C09, mask=mask, row=col_allen, col=row_allen,
             bloom_early=allen_df['Day of Year_Allen'].mean() - allen_df['Day of Year_Allen'].std(),
             bloom_late=allen_df['Day of Year_Allen'].mean() + allen_df['Day of Year_Allen'].std(),
             yr_strt=1980, yr_end=2018,
@@ -612,6 +629,7 @@ def main():
         allen_df["Day of Year_Allen"], bloom_df_allen["Day of Year"], label="Allen")
 
     print("\nEvaluation Statistics:")
+    stats_out = [stats_suchy, stats_allen]
     for stat in [stats_suchy, stats_allen]:
         print(
             f"{stat['Label']}: R = {stat['R']:.3f}, "
@@ -622,6 +640,12 @@ def main():
             f"Model σ = {stat['Model StdDev']:.2f}, "
             f"Willmott = {stat['Willmott Skill']:.3f}")
 
+    # write to csv
+    stats_df = pd.DataFrame(stats_out)
+    stats_csv_path = os.path.join(STATS_OUT_PATH, f"bloom_timing_stats_{SCENARIO}.csv")
+    stats_df.to_csv(stats_csv_path, index=False)
+    print(f"Saved evaluation stats to {stats_csv_path}")
+
     # Additional categorical comparisons
     agree_cat_suchy, total_cat_suchy = evaluate_bloom_categories(suchy_df, bloom_df_suchy)
     agree_cat_allen, total_cat_allen = evaluate_bloom_categories(allen_df, bloom_df_allen,
@@ -630,10 +654,51 @@ def main():
     print(f"Suchy: {agree_cat_suchy}/{total_cat_suchy} years agree in category")
     print(f"Allen: {agree_cat_allen}/{total_cat_allen} years agree in category")
 
+    # for cat. agrmnt to csv
+    cat_stats = [
+        {
+            "Label": "Suchy",
+            "Type": "Categorical Agreement",
+            "Count": agree_cat_suchy,
+            "Total": total_cat_suchy,
+            "Proportion": agree_cat_suchy / total_cat_suchy if total_cat_suchy > 0 else np.nan
+        },
+        {
+            "Label": "Allen",
+            "Type": "Categorical Agreement",
+            "Count": agree_cat_allen,
+            "Total": total_cat_allen,
+            "Proportion": agree_cat_allen / total_cat_allen if total_cat_allen > 0 else np.nan
+        }
+    ]
+
     # Overlap by timing comparison
     overlap_suchy, n_suchy = evaluate_overlap_by_timing(suchy_df, bloom_df_suchy)
     overlap_allen, n_allen = evaluate_overlap_by_timing(allen_df, bloom_df_allen,
                                                         obs_col='Day of Year')
+
+    cat_stats.extend([
+        {
+            "Label": "Suchy",
+            "Type": "Timing Window Overlap",
+            "Count": overlap_suchy,
+            "Total": n_suchy,
+            "Proportion": overlap_suchy / n_suchy if n_suchy > 0 else np.nan
+        },
+        {
+            "Label": "Allen",
+            "Type": "Timing Window Overlap",
+            "Count": overlap_allen,
+            "Total": n_allen,
+            "Proportion": overlap_allen / n_allen if n_allen > 0 else np.nan
+        }
+    ])
+
+    cat_stats_df = pd.DataFrame(cat_stats)
+    cat_stats_csv_path = os.path.join(STATS_OUT_PATH, f"bloom_timing_agreement_{SCENARIO}.csv")
+    cat_stats_df.to_csv(cat_stats_csv_path, index=False)
+    print(f"Saved categorical/timing agreement stats to {cat_stats_csv_path}")
+
     if DO_NUTRIENTS:
         print("\nOverlap of Bloom Timing Windows:")
         print(f"Suchy: {overlap_suchy}/{n_suchy} years overlap within timing window")

@@ -28,8 +28,8 @@ import yaml
 
 
 # === CONFIGURATION ===
-SCENARIO = "SC95_1"
-FILENAME = "Scv95_1-All_Groups_20250506_1978-2018.nc"
+SCENARIO = "SC114_1"
+FILENAME = "Scv114_1-All_Groups_20250523_1978-2018.nc"
 NC_PATH = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_model//ECOSPACE_OUT//"
 NPGO_PATH = "C://Users//Greig//Documents//GitHub//Ecosystem-Model-Data-Framework//data//evaluation//npgo.csv"
 
@@ -38,11 +38,11 @@ USE_SUBDOMAIN_MASK = False
 SUBDOMAIN_NAME = "SGS"  # Choose from keys in analysis_domains_jarnikova.yml
 DOMAIN_FILE = "analysis_domains_jarnikova.yml"
 DOMAIN_PATH = "C://Users//Greig//Documents//github//Ecosystem-Model-Data-Framework//data//evaluation"
+FIG_OUT_PATH = os.path.normpath("..//..//figs//") + os.sep
 
-
-target_groups = ['NK1-COH', 'NK2-CHI']
+# target_groups = ['NK1-COH', 'NK2-CHI']
 # target_groups = ['ZC1-EUP', 'ZC2-AMP', 'ZC3-DEC', 'ZC4-CLG', 'ZC5-CSM']
-# target_groups = ['PZ1-CIL', 'PZ2-DIN', 'PZ3-HNF', 'PP1-DIA', 'PP2-NAN', 'PP3-PIC']
+target_groups = ['PZ1-CIL', 'PZ2-DIN', 'PZ3-HNF', 'PP1-DIA', 'PP2-NAN', 'PP3-PIC']
 season_months = {
     "Spring": [3, 4, 5],
     "Summer": [6, 7, 8],
@@ -141,7 +141,7 @@ letters = ['(a)', '(b)', '(c)', '(d)', '(e)', '(f)']
 df_npgo_annual_plot = df_npgo_annual.shift(APPLY_LAG_PLOT)
 df_npgo_annual_plot = df_npgo_annual_plot[(df_npgo_annual_plot.index >= analysis_start_year) & (df_npgo_annual_plot.index <= analysis_end_year)]
 
-
+group_out_names = "" # for file name
 for i, group in enumerate(target_groups):
     sub = anomaly_df[anomaly_df['Group'] == group].set_index('Year')
     colors = ['blue' if x > 0 else 'red' for x in sub['Anomaly']]
@@ -151,11 +151,16 @@ for i, group in enumerate(target_groups):
     axs[i].text(0.05, 0.95, f'{letters[i]} {group}', transform=axs[i].transAxes, fontsize=12, verticalalignment='top')
     # axs[i].set_title(f'{letters[i]} {group}', loc='left', fontsize=12)
     axs[i].set_ylabel('Standardised Annual Anomaly')
-    axs[i].legend(loc='upper right')
+    if i == 0:
+        axs[i].legend(loc='lower left')
+    group_out_names = group_out_names + "_" + group
 
 axs[-1].set_xlabel('Year')
 plt.tight_layout()
 plt.show()
+output_file = FIG_OUT_PATH + "anom_plots_" + SCENARIO + \
+              "_" + SUBDOMAIN_NAME + "_" + group_out_names
+fig.savefig(output_file)
 
 # Lag NPGO? optional based on CCF
 df_npgo_annual_lagged = df_npgo_annual.shift(APPLY_LAG_STATS)

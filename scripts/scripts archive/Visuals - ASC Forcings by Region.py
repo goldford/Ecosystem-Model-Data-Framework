@@ -19,33 +19,38 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
 
-
 # paths
 path_ecospace_map = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/basemap"
 file_ecospace_map = "Ecospace_grid_20210208_rowscols.csv"
+year_start = 1980
+year_end = 2018
 
-path_NEMO_ASCs_root = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/forcing"
+path_NEMO_ASCs_root = "C:/Users/Greig/Documents/GitHub/Ecosystem-Model-Data-Framework/data/forcing/"
 # after processing to NC they are too large for github, so moved here
-path_NEMO_NCs_root = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/NEMO forcings"
+path_NEMO_NCs_root = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/NEMO forcings/"
 path_RDRS_ASCs_root = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/RDRS forcings/Wind_RDRS/Ecospace/"
 path_RDRS_NCs_root = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/RDRS forcings/Wind_RDRS/Ecospace/"
 
-subpath_NEMO_ASCs_PAR = "/ECOSPACE_in_3day_PAR3_Sal4m_2003-2018_20240527/PAR-VarZ-VarK"
-subpath_NEMO_ASCs_vars = "/ECOSPACE_in_3day_vars_2003-2018_20240527/ECOSPACE_in_3day_vars"
+subpath_NEMO_ASCs_PAR = f"/ECOSPACE_in_3day_PAR3_Sal4m_{year_start}-{year_end}/PAR-VarZ-VarK"
+subpath_NEMO_ASCs_vars = f"/ECOSPACE_in_3day_vars_{year_start}-{year_end}/ECOSPACE_in_3day_vars"
 subfolder_NEMO_PAR = "/PAR-VarZ-VarK"
 subfolder_NEMO_PARxMixing = "/RUN216_PARxMixing"
 subfolder_NEMO_temp0to10m = "/vartemp1_C_0-10mAvg"
+subfolder_NEMO_temp0to4m = "/vartemp2_C_0-4m"
+subfolder_NEMO_temp30to40m = "/vartemp3_C_30-40mAvg"
+subfolder_NEMO_salt_0to4m = "/varsalt2_PSU_0-4m"
 subfolder_NEMO_mixing = "/varmixing_m"
 
 subfolders = {
-    "PAR":         path_NEMO_ASCs_root + "ECOSPACE_in_3day_PAR3_Sal4m_2003-2018_20240527/PAR-VarZ-VarK",
-    "PARxMixing":  path_NEMO_ASCs_root + "ECOSPACE_in_3day_PAR3_Sal4m_2003-2018_20240527/RUN216_PARxMixing",
-    "MixingZ":     path_NEMO_ASCs_root + "ECOSPACE_in_3day_vars_2003-2018_20240527/ECOSPACE_in_3day_vars/varmixing_m",
-    "Wind_Stress_10m_RDRS":     path_RDRS_ASCs_root + "stress",
-    "Wind_Speed_10m_RDRS":     path_RDRS_ASCs_root + "speed",
-    "Temp_0to10m": "ECOSPACE_in_3day_vars_2003-2018_20240527/ECOSPACE_in_3day_vars/vartemp1_C_0-10mAvg",
-    "Salt_0to4m": "ECOSPACE_in_3day_vars_2003-2018_20240527/ECOSPACE_in_3day_vars/varsalt2_PSU_0-4m",
-    "Temp_0to4m": "ECOSPACE_in_3day_vars_2003-2018_20240527/ECOSPACE_in_3day_vars/vartemp2_C_0-4m"
+    "PAR":         path_NEMO_ASCs_root + f"ECOSPACE_in_3day_PAR3_Sal4m_{year_start}-{year_end}/{subfolder_NEMO_PAR}",
+    "PARxMixing":  path_NEMO_ASCs_root + f"ECOSPACE_in_3day_PAR3_Sal4m_{year_start}-{year_end}/{subfolder_NEMO_PARxMixing}",
+    "MixingZ":     path_NEMO_ASCs_root + f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/{subfolder_NEMO_mixing}",
+    "Wind_Stress_10m_RDRS":     path_RDRS_ASCs_root + "stress_",
+    "Wind_Speed_10m_RDRS":     path_RDRS_ASCs_root + "speed_",
+    "Temp_0to10m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/{subfolder_NEMO_temp0to10m}",
+    "Salt_0to4m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/{subfolder_NEMO_salt_0to4m}",
+    "Temp_0to4m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/{subfolder_NEMO_temp0to4m}",
+    "Temp_30to40m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/{subfolder_NEMO_temp30to40m}"
 }
 
 ASC_file_fmts = {"PAR": "PAR-VarZ-VarK_{}_{}.asc", # month, doy
@@ -55,7 +60,8 @@ ASC_file_fmts = {"PAR": "PAR-VarZ-VarK_{}_{}.asc", # month, doy
                  "Wind_Speed_10m_RDRS": "RDRS_windspeed10m_{}_{}.asc",
                  "Temp_0to10m": "vartemp1_C_0-10mAvg_{}_{}.asc",
                  "Salt_0to4m": "varsalt2_PSU_0-4m_{}_{}.asc",
-                 "Temp_0to4m": "vartemp2_C_0-4mAvg_{}_{}.asc"
+                 "Temp_0to4m": "vartemp2_C_0-4mAvg_{}_{}.asc",
+                 "Temp_30to40m": "vartemp3_C_30-40mAvg"
                  }
 
 path_regions_asc = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/basemap"
@@ -91,10 +97,10 @@ if process_asc:
     for var, subfolder in subfolders.items():
 
         ####################################
-        if var != 'Temp_0to4m':
+        if var != 'PAR':
             continue
         ####################################
-
+        print(var)
         timestamps = []
         file_paths = []
         folder_path = os.path.join(path_NEMO_ASCs_root, subfolder)
@@ -103,8 +109,12 @@ if process_asc:
             if file_name.endswith('.asc'):
                 # Extract year and doy from file name
                 parts = file_name.split('_')
-                year = int(parts[-2])
-                doy = int(parts[-1].split('.')[0])
+                if "really_clima" in file_name or "butreally" in file_name:
+                    year = int(parts[-5])
+                    doy = int(parts[-4].split('.')[0])
+                else:
+                    year = int(parts[-2])
+                    doy = int(parts[-1].split('.')[0])
 
                 # Create timestamp
                 timestamp = pd.Timestamp(year, 1, 1) + pd.Timedelta(days=doy - 1)
@@ -147,9 +157,17 @@ if process_asc:
 
         # Read and load data from each ASC file into the dataset
         for t, file_path in enumerate(file_paths):
-            parts = file_path.split('_')
-            year = int(parts[-2])
-            doy = int(parts[-1].split('.')[0])
+            if "really_clima" in file_path or "butreally" in file_path:
+                parts = file_path.split('_')
+                year = int(parts[-5])
+                doy = int(parts[-4].split('.')[0])
+            else:
+                parts = file_path.split('_')
+                year = int(parts[-2])
+                doy = int(parts[-1].split('.')[0])
+
+            print(year)
+
             with open(file_path) as f:
                 data = np.loadtxt(f, skiprows=skiprows)
                 ds[var][t-1, :, :] = data
@@ -161,6 +179,11 @@ if process_asc:
         else:
             ds.to_netcdf(os.path.join(path_RDRS_NCs_root, f'{var}.nc'))
             print(f"Saved {var}.nc to {path_RDRS_NCs_root}")
+
+print("DONE")
+exit()
+print ("should be done")
+
 
 doy_suchy = [100, 68, 50, 83, 115, 115, 100, 100, 92, 88, 92, 92, 55, 77]
 

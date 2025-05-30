@@ -49,21 +49,22 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 from scipy.stats import pearsonr
 
 
-# Toggle whether SSC outputs are included in the comparison
-include_SSC = True
 
 # Model run code (used in file paths and plot names)
-model_run = 'SC104_1'
+MODEL_RUN = 'SC114_1'
+
+# Toggle whether SSC outputs are included in the comparison
+INCLUDE_SSC = True # IS THIS HOOKED UP?
 
 # Input data path
 pathfile_QU39_SSC_Ecospace = (
     r'C:\Users\Greig\Sync\6. SSMSP Model\Model Greig\Data\28. Phytoplankton'
     r'\Phyto Concent del Bel Belluz 2024 2016 - 2019\MODIFIED'
-    r'\QU39_joined_matchtoEcospace_SSC_' + model_run + '.csv'
+    r'\QU39_joined_matchtoEcospace_SSC_' + MODEL_RUN + '.csv'
 )
 
 # Output figure path
-out_p = os.path.normpath("..//..//figs//") + os.sep
+out_p = os.path.normpath("..//..//data//evaluation//") + os.sep
 
 # Standard placeholder for bad data
 FILL_VALUE = -999
@@ -117,7 +118,7 @@ def prepare_group_dataset(
     # IMPORTANT FIX: Give a consistent name to the group label
     agg_df[group_col] = class_filter if isinstance(class_filter, str) else 'Nanophytoplankton'
     agg_df['QU39'] = agg_df[obs_field_raw]
-    agg_df[obs_log_field] = np.log(agg_df['QU39'].clip(lower=0.01))
+    agg_df[obs_log_field] = np.log(agg_df['QU39'].clip(lower=0.001))
     agg_df[time_col] = pd.to_datetime(agg_df[time_col])
     agg_df['closest_ecospace_time'] = agg_df[time_col]  # ensure standardized name
     agg_df['month'] = agg_df[time_col].dt.month
@@ -128,7 +129,7 @@ def prepare_group_dataset(
     for field in model_fields:
         if field in agg_df.columns:
             log_field = f'log_{field}'
-            agg_df[log_field] = np.log(agg_df[field].clip(lower=0.01))
+            agg_df[log_field] = np.log(agg_df[field].clip(lower=0.001))
             log_model_fields.append(log_field)
 
     # Compute anomalies for observation and model log fields
@@ -190,8 +191,12 @@ def calculate_anomalies(df, valuefield, groupon):
     df[valuefield + '_anomaly_fr_median_std_norm'] = (
             df[valuefield + '_anomaly_fr_median'] / df[valuefield + '_annual_std']
     )
-    df[valuefield + '_log_anomaly_fr_mean_std_norm'] = np.log1p(
-        df[valuefield + '_anomaly_fr_mean_std_norm'] - df[valuefield + '_anomaly_fr_mean_std_norm'].min()
+    # df[valuefield + '_log_anomaly_fr_mean_std_norm'] = np.log1p(
+    #     df[valuefield + '_anomaly_fr_mean_std_norm'] - df[valuefield + '_anomaly_fr_mean_std_norm'].min()
+    # )
+
+    df[valuefield + '_log_anomaly_fr_mean_std_norm'] = np.log(
+        df[valuefield + '_anomaly_fr_mean_std_norm'] - df[valuefield + '_anomaly_fr_mean_std_norm'].min() + 0.0001
     )
 
     return df
@@ -229,6 +234,22 @@ def aggregate_means(df, value_fields, groupby_time='closest_ecospace_time', leve
     grouped.columns = group_keys + [f'mean_{col}' for col in value_fields]
     return grouped
 
+# NOT USED YET - 2025-05-29
+# nemcek et al (2023) define a more thoughtful 'season'
+# this follows their approach
+def assign_nemcek_season(dt):
+    month = dt.month
+    day = dt.day
+    if (month == 11 and day >= 16) or month in [12, 1, 2] or (month == 3 and day <= 1):
+        return 'Winter'
+    elif month in [3, 4, 5]:
+        return 'Spring'
+    elif month in [6, 7, 8] or (month == 9 and day <= 15):
+        return 'Summer'
+    elif (month == 9 and day >= 16) or month in [10] or (month == 11 and day <= 15):
+        return 'Fall'
+    else:
+        return 'Unknown'  # Shouldn't happen
 
 def assign_season(month):
     if month in [12, 1, 2]:
@@ -241,6 +262,8 @@ def assign_season(month):
         return 'Fall'
     else:
         return np.nan
+
+
 
 
 def compute_model_stats(obs, model, seasons=None):
@@ -302,7 +325,10 @@ def compute_model_stats(obs, model, seasons=None):
     }
 
 
-def run_model_statistics(df, model_obs_pairs, use_anomalies=True, aggregation_level='monthly'):
+def run_model_statistics(df, model_obs_pairs,
+                         use_anomalies=True,
+                         aggregation_level='monthly',
+                         seasons_to_exclude=None):
     """
     Compute model-vs-observation statistics.
 
@@ -318,6 +344,14 @@ def run_model_statistics(df, model_obs_pairs, use_anomalies=True, aggregation_le
         pd.DataFrame
     """
     results = []
+
+    if seasons_to_exclude is None:
+        season_tag = "All"
+    else:
+        seasons_tag = ""
+        for se in seasons_to_exclude:
+            seasons_tag = seasons_tag + se
+        season_tag = f"All_except_{seasons_tag}"
 
     for pair in model_obs_pairs:
         taxon = pair['taxon_filter']
@@ -359,24 +393,43 @@ def run_model_statistics(df, model_obs_pairs, use_anomalies=True, aggregation_le
             raise ValueError("aggregation_level must be 'monthly', 'weekly', or 'none'.")
 
         # === Overall stats ===
-        if len(obs_vals) >= 2 and len(eco_vals) >= 2:
-            eco_all = compute_model_stats(obs_vals, eco_vals)
-            eco_all.update({'Group': group, 'Model': 'Ecospace', 'Season': 'All'})
+        if seasons_to_exclude:
+            valid_mask = ~np.isin(seasons, seasons_to_exclude)
+            obs_vals_all = obs_vals[valid_mask]
+            eco_vals_all = eco_vals[valid_mask]
+            if ssc_vals is not None:
+                ssc_vals_all = ssc_vals[valid_mask]
+        else:
+            obs_vals_all = obs_vals
+            eco_vals_all = eco_vals
+            if ssc_vals is not None:
+                ssc_vals_all = ssc_vals
+
+        if len(obs_vals_all) >= 2 and len(eco_vals_all) >= 2:
+            eco_all = compute_model_stats(obs_vals_all, eco_vals_all)
+            eco_all.update({'Group': group, 'Model': 'Ecospace', 'Season': season_tag})
             results.append(eco_all)
 
+        if len(obs_vals) >= 2 and len(eco_vals) >= 2:
             seasonal_stats = compute_model_stats(obs_vals, eco_vals, seasons=seasons)
             for stat in seasonal_stats:
                 stat.update({'Group': group, 'Model': 'Ecospace'})
                 results.append(stat)
 
-        if ssc_field and ssc_vals is not None and len(obs_vals) >= 2 and len(ssc_vals) >= 2:
-            ssc_all = compute_model_stats(obs_vals, ssc_vals)
-            ssc_all.update({'Group': group, 'Model': 'SSC', 'Season': 'All'})
+        if ssc_field and ssc_vals_all is not None and len(obs_vals_all) >= 2 and len(ssc_vals_all) >= 2:
+            ssc_all = compute_model_stats(obs_vals_all, ssc_vals_all)
+            ssc_all.update({'Group': group, 'Model': 'SSC', 'Season': season_tag})
             results.append(ssc_all)
 
-            seasonal_stats = compute_model_stats(obs_vals, ssc_vals, seasons=seasons)
+        if ssc_field and ssc_vals is not None and len(obs_vals) >= 2 and len(ssc_vals) >= 2:
+            seasonal_stats = compute_model_stats(obs_vals, eco_vals, seasons=seasons)
+
+            # If seasonal_stats is a dict (not a list), wrap it in a list
+            if isinstance(seasonal_stats, dict):
+                seasonal_stats = [seasonal_stats]
+
             for stat in seasonal_stats:
-                stat.update({'Group': group, 'Model': 'SSC'})
+                stat.update({'Group': group, 'Model': 'Ecospace'})
                 results.append(stat)
 
     return pd.DataFrame(results)
@@ -495,7 +548,7 @@ def plot_monthly_boxplot(
             )
 
     # Labels and legend
-    plt.title(f'Anomaly from Means Rel to Std Dev by Month for {plot_label} {model_run}')
+    plt.title(f'Anomaly from Means Rel to Std Dev by Month for {plot_label} {MODEL_RUN}')
     plt.xlabel('Month')
     plt.ylabel('Normalized Anomaly')
     plt.xticks(months, [calendar.month_abbr[m] for m in months])
@@ -635,6 +688,7 @@ def main():
         'Chrysophyceae', 'Telonemea', 'Chlorodendrophyceae', 'Bicosoecophyceae',
         'Xanthophyceae', 'Coccolithophyceae', 'Euglenophyceae', 'Raphidophyceae'
     ]
+
     df_nan = prepare_group_dataset(df, nanogroup, model_fields=['PP2-NAN', 'ssc-FLA'])
     print("After aggregation, nanophytoplankton samples:", df_nan.shape[0])
     print("Available months:", df_nan['month'].unique())
@@ -650,7 +704,7 @@ def main():
         df_dia, ['log_PP1-DIA', 'log_ssc-DIA', 'logQU39'], 'Bacillariophyceae', 'class',
         'Diatoms', ['Ecospace', 'SMELT', 'QU39'],
         {'log_PP1-DIA': 'blue', 'log_ssc-DIA': 'pink', 'logQU39': 'orange'},
-        output_file=os.path.join(out_p, model_run + '_Diatoms_Monthly_QU39_vs_Ecospace_vs_SSC_2016_2018.png'),
+        output_file=os.path.join(out_p, MODEL_RUN + '_Diatoms_Monthly_QU39_vs_Ecospace_vs_SSC_2016_2018.png'),
         include_ssc=True, label_position='(a)'
     )
 
@@ -659,7 +713,7 @@ def main():
         df_nan, ['log_PP2-NAN', 'log_ssc-FLA', 'logQU39'], 'Nanophytoplankton', 'class',
         'Nanophytoplankton', ['Ecospace', 'SMELT', 'QU39'],
         {'log_PP2-NAN': 'blue', 'log_ssc-FLA': 'pink', 'logQU39': 'orange'},
-        output_file=os.path.join(out_p, 'Nanophytoplankton_' + model_run + '_Monthly_QU39_vs_Ecospace_vs_SSC_2016_2018.png'),
+        output_file=os.path.join(out_p, 'Nanophytoplankton_' + MODEL_RUN + '_Monthly_QU39_vs_Ecospace_vs_SSC_2016_2018.png'),
         include_ssc=True, label_position='(b)'
     )
 
@@ -668,7 +722,7 @@ def main():
         df_pic, ['log_PP3-PIC', 'logQU39'], 'Pyramimonadophyceae', 'class',
         'Picoplankton', ['Ecospace', 'QU39'],
         {'log_PP3-PIC': 'blue', 'logQU39': 'orange'},
-        output_file=os.path.join(out_p, 'Picoplankton_' + model_run + '_Monthly_QU39_vs_Ecospace_2016_2018.png'),
+        output_file=os.path.join(out_p, 'Picoplankton_' + MODEL_RUN + '_Monthly_QU39_vs_Ecospace_2016_2018.png'),
         include_ssc=False, label_position='(c)'
     )
 
@@ -677,12 +731,12 @@ def main():
         df_dino, ['log_PZ2-DIN', 'logQU39'], 'Dinophyceae', 'class',
         'Dinoflagellates', ['Ecospace', 'QU39'],
         {'log_PZ2-DIN': 'blue', 'logQU39': 'orange'},
-        output_file=os.path.join(out_p, 'Dinoflagellates_' + model_run + '_Monthly_QU39_vs_Ecospace_2016_2018.png'),
+        output_file=os.path.join(out_p, 'Dinoflagellates_' + MODEL_RUN + '_Monthly_QU39_vs_Ecospace_2016_2018.png'),
         include_ssc=False, label_position='(d)'
     )
 
     if generate_panel:
-        panel_output_file = os.path.join(out_p, f'{model_run}_Monthly_Boxplot_Panel.png')
+        panel_output_file = os.path.join(out_p, f'{MODEL_RUN}_Monthly_Boxplot_Panel.png')
         plot_combined_panel(
             dfs=[df_dia, df_nan, df_pic, df_dino],
             field_codes_list=[
@@ -774,7 +828,8 @@ def main():
                 'ssc': pair['ssc']
             }],
             use_anomalies=True,
-            aggregation_level='monthly'
+            aggregation_level='monthly',
+            seasons_to_exclude = None # NOT WORKING, meant for pooled stats to exclude season optionally
         )
         results.append(stats)
 
@@ -783,7 +838,7 @@ def main():
     print('stats generated!')
     print(stats_df)
 
-    stats_outfile = os.path.join(out_p, f"{model_run}_ModelStats_ObsVsModel.csv")
+    stats_outfile = os.path.join(out_p, f"{MODEL_RUN}_QU39_ModelStats_ObsVsModel.csv")
     stats_df.to_csv(stats_outfile, index=False)
     print(f"[Saved] Model statistics written to: {stats_outfile}")
     print('DONE')

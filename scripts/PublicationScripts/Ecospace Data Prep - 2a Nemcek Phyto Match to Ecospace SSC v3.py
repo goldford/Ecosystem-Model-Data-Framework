@@ -64,8 +64,8 @@ from helpers import (
 # -------------------------------
 
 # File names
-file_Ecospace = "Scv96_1-All_Groups_20250506_1978-2018.nc"
-ecospace_code = 'Scv96_1'
+file_Ecospace = "Scv114_1-All_Groups_20250523_1978-2018.nc"
+ecospace_code = 'Scv114_1'
 file_SSC_mo = "SalishSeaCast_biology_2008.nc"
 file_SSC_grd = "ubcSSnBathymetryV21-08_a29d_efc9_4047.nc"
 file_Nemcek = "Nemcek_Supp_Data.csv"
