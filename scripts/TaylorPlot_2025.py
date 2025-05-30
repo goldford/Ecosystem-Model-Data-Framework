@@ -35,10 +35,17 @@ PLOT_OUT_PATH = "../figs/"
 SCENARIOS = ["FULLKEY_SC114_1", "FULLKEY_SC115_1", "FULLKEY_SC116_2"]
 # Label and color mapping for each scenario
 MODEL_CONFIGS = {
-    "FULLKEY_SC114_1": {"label": "key run", "color": "blue", "marker": "o"},
-    "FULLKEY_SC115_1": {"label": "no wind", "color": "green", "marker": "s"},
-    "FULLKEY_SC116_2": {"label": "PI curve", "color": "red", "marker": "x"},
+    "FULLKEY_SC114_1": {"label": "key run", "marker": "o", "edgecolor": "red"},
+    "FULLKEY_SC115_1": {"label": "no wind", "marker": "s", "edgecolor": "black"},
+    "FULLKEY_SC116_2": {"label": "PI curve", "marker": "v", "edgecolor": "black"},
 }
+
+# Mapping from reference dataset label to plot label and marker color
+REFERENCE_CONFIGS = {
+    "Allen": {"label": "CO9", "color": "grey"},
+    "Suchy": {"label": "satellite", "color": "black"},
+}
+
 
 # ------------------------------
 # Taylor Diagram Functions
@@ -51,8 +58,8 @@ def get_taylor_diagram_axes(fig, rect, refstd, srange, contour_levs, clr_std_cnt
     clbl_sz = 10
     clbl_clr = '#858585'
     axs_lbl_fs = 10
-    str_sz = 9
-    star_offset = 0.02
+    str_sz = 10
+    star_offset = 0.0
 
     rlocs = np.array([0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 0.99, 1])
     tr = PolarAxes.PolarTransform()
@@ -95,12 +102,19 @@ def get_taylor_diagram_axes(fig, rect, refstd, srange, contour_levs, clr_std_cnt
     plt.clabel(contours, inline=1, fontsize=clbl_sz, fmt='%.1f', colors=clbl_clr)
     return ax
 
+
 def plot_model_points(ax, refstd, model_stats):
+    # Sort so that all 'CO9' (Allen) entries are drawn first, then 'satellite' (Suchy)
+    model_stats = sorted(model_stats, key=lambda x: x['source_label'])
     for entry in model_stats:
         theta = np.arccos(entry['corrcoef'])
         std = entry['model_stddev'] / entry['obs_stddev']  # Normalize
-        ax.plot(theta, std, marker=entry['marker'], color=entry['color'], markersize=8, label=entry['label'])
-    ax.legend(loc='upper right')
+        ax.plot(theta, std, marker=entry['marker'], color=entry['color'],
+                markeredgecolor=entry['edgecolor'], markersize=8,
+                linestyle='None',
+                label=f"{entry['label']} ({entry['source_label']})")
+    ax.legend(loc='upper right', fontsize=8)
+
 
 # ------------------------------
 # Main Execution
@@ -117,21 +131,27 @@ def main():
         stats_file = os.path.join(STATS_PATH, f"bloom_timing_stats_{scenario}.csv")
         df = pd.read_csv(stats_file)
 
-        # Use the first row assuming it's scenario-level summary stats
-        row = df.iloc[0]
-        model_stats.append({
-            'model_stddev': row['Model StdDev'],
-            'obs_stddev': row['Obs StdDev'],
-            'corrcoef': row['R'],
-            'label': MODEL_CONFIGS[scenario]['label'],
-            'color': MODEL_CONFIGS[scenario]['color'],
-            'marker': MODEL_CONFIGS[scenario]['marker']
-        })
+        for _, row in df.iterrows():
+            source = row['Label']  # e.g., "Allen" or "Suchy"
+            if source not in REFERENCE_CONFIGS:
+                continue
+            ref_config = REFERENCE_CONFIGS[source]
+            model_stats.append({
+                'model_stddev': row['Model StdDev'],
+                'obs_stddev': row['Obs StdDev'],
+                'corrcoef': row['R'],
+                'label': MODEL_CONFIGS[scenario]['label'],
+                'color': ref_config['color'],
+                'edgecolor': MODEL_CONFIGS[scenario]['edgecolor'],
+                'marker': MODEL_CONFIGS[scenario]['marker'],
+                'source_label': ref_config['label']
+            })
 
     plot_model_points(ax, refstd, model_stats)
     plt.tight_layout()
-    plt.savefig(os.path.join(STATS_PATH, "taylor_diagram_BloomTiming.png"), dpi=300)
+    plt.savefig(os.path.join(PLOT_OUT_PATH, "taylor_diagram_BloomTiming.png"), dpi=300)
     plt.show()
 
 if __name__ == "__main__":
     main()
+    print("done")
