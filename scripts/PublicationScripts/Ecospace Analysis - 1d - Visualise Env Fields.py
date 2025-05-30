@@ -6,7 +6,9 @@ import os
 import pandas as pd
 import xarray as xr
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
+matplotlib.use('TkAgg')
 from datetime import datetime
 
 # --- User Configuration ---
@@ -16,12 +18,13 @@ REGIONS_ASC = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/da
 FIG_OUT_PATH = "..//..//figs//"
 
 REGION_ID = 2  # Central SoG
-YEARS_TO_PLOT = list(range(2015, 2019))  # individual lines
+YEARS_TO_PLOT = list(range(1980, 1985))  # individual lines
 CLIM_YEARS = list(range(1980, 2018))     # shaded bands
 
 variables = {
-    "Temp_0to10m": os.path.join(NEMO_NC_ROOT, f"Temp_0to10m_region{REGION_ID}.nc"),
-    "Temp_30to40m": os.path.join(NEMO_NC_ROOT, f"Temp_30to40m_region{REGION_ID}.nc")
+    # "Temp_0to10m": os.path.join(NEMO_NC_ROOT, f"Temp_0to10m_region{REGION_ID}.nc"),
+    # "Temp_30to40m": os.path.join(NEMO_NC_ROOT, f"Temp_30to40m_region{REGION_ID}.nc"), # 30to40m bad ASC data not sure why
+    "Temp_at150m": os.path.join(NEMO_NC_ROOT, f"Temp_at150m_region{REGION_ID}.nc")
 }
 
 skiprows = 6
