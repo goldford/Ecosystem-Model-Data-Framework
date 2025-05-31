@@ -1,3 +1,7 @@
+# this doesn't make a ton of sense
+# going 1d NC -> 3 day ASC -> 3 day NC
+# but it is what it is for now
+
 import os
 import pandas as pd
 import xarray as xr
@@ -5,10 +9,10 @@ import numpy as np
 
 
 # --- User Configuration ---
+NEMO_ASCs_ROOT = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/forcing/"
 NEMO_NC_ROOT = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/NEMO forcings/"
 RDRS_NC_ROOT = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/RDRS forcings/Wind_RDRS/Ecospace/"
 REGIONS_ASC = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/basemap/ecospace_regions_3day.asc"
-NEMO_ASCs_ROOT = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/forcing/"
 FIG_OUT_PATH = "..//..//figs//"
 
 BLOOM_SOURCE = "suchy"  # suchy or C09
@@ -27,7 +31,8 @@ variables = {
     # "MixingZ": os.path.join(NEMO_NC_ROOT, "MixingZ" + f"_region{REGION_ID}.nc"),
     # "Wind_Stress_10m_RDRS": os.path.join(RDRS_NC_ROOT, "Wind_Stress_10m_RDRS" + f"_region{REGION_ID}.nc"),
     # "Temp_0to10m": os.path.join(NEMO_NC_ROOT, "Temp_0to10m" + f"_region{REGION_ID}.nc"),
-    "Temp_30to40m": os.path.join(NEMO_NC_ROOT, "Temp_30to40m" + f"_region{REGION_ID}.nc")
+    "Temp_at150m": os.path.join(NEMO_NC_ROOT, "Temp_at150m" + f"_region{REGION_ID}.nc"),
+    #"Temp_30to40m": os.path.join(NEMO_NC_ROOT, "Temp_30to40m" + f"_region{REGION_ID}.nc") # 2025-05 - the 30 to 40 source data in asc is bad - errors
 
 }
 
@@ -43,7 +48,8 @@ subpath_NEMO_ASCs_vars = f"/ECOSPACE_in_3day_vars_{year_start}-{year_end}/ECOSPA
 subfolder_NEMO_PAR = "/PAR-VarZ-VarK"
 subfolder_NEMO_PARxMixing = "/RUN216_PARxMixing"
 subfolder_NEMO_temp0to10m = "/vartemp1_C_0-10mAvg"
-subfolder_NEMO_temp0to10m = "/vartemp3_C_30-40mAvg"
+subfolder_NEMO_tempat150m = "vartemp_at150m"
+subfolder_NEMO_temp30to40m = "/vartemp3_C_30-40mAvg"
 subfolder_NEMO_mixing = "/varmixing_m"
 
 subfolders = {
@@ -55,7 +61,8 @@ subfolders = {
     # "Temp_0to10m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/vartemp1_C_0-10mAvg",
     # "Salt_0to4m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/varsalt2_PSU_0-4m",
     # "Temp_0to4m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/vartemp2_C_0-4m",
-    "Temp_30to40m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/vartemp3_C_30-40mAvg"
+    "Temp_at150m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/{subfolder_NEMO_tempat150m}",
+    # "Temp_30to40m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/vartemp3_C_30-40mAvg"
 }
 
 ASC_file_fmts = {"PAR": "PAR-VarZ-VarK_{}_{}.asc",  # month, doy
@@ -66,6 +73,7 @@ ASC_file_fmts = {"PAR": "PAR-VarZ-VarK_{}_{}.asc",  # month, doy
                  "Temp_0to10m": "vartemp1_C_0-10mAvg_{}_{}.asc",
                  "Salt_0to4m": "varsalt2_PSU_0-4m_{}_{}.asc",
                  "Temp_0to4m": "vartemp2_C_0-4mAvg_{}_{}.asc",
+                 "Temp_at150m": "vartemp_at150m_{}_{}.asc",
                  "Temp_30to40m": "vartemp3_C_30-40mAvg_{}_{}.asc"
                  }
 
