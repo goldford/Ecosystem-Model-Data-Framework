@@ -206,8 +206,14 @@ from datetime import datetime, timedelta
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v112_1 - PAR_PI_AllPPTemp_Wind//asc//"
 # ecospace_code = "Scv113_1-All_Groups_20250523" #
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v113_1 - PAR_PI_AllPPTemp_Wind//asc//"
-ecospace_code = "Scv114_1-All_Groups_20250523" #
-path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v114_1 - PAR_PI_AllPPTemp_Wind//asc//"
+# ecospace_code = "Scv114_1-All_Groups_20250523" # key run
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v114_1 - PAR_PI_AllPPTemp_Wind//asc//"
+# ecospace_code = "Scv115_1-All_Groups_20250523" # key run 114 but w/ no wind experiment
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v115_1 - PAR_PI_AllPPTemp_Wind//asc//"
+# ecospace_code = "Scv116_1-All_Groups_20250523" # ERROR - wind was not on - key run 114 but w/ olson et al PI for dia
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v116_1 - PAR_PI_AllPPTemp_Wind//asc//"
+ecospace_code = "Scv116_2-All_Groups_20250523" # ERROR - wind was not on - key run 114 but w/ olson et al PI for dia
+path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v116_2 - PAR_PI_AllPPTemp_Wind//asc//"
 
 
 
@@ -221,6 +227,9 @@ da_end = 30
 
 path_out = "..//..//data//ecospace_out//"
 nemo_ewe_csv = "..//..//data//basemap//Ecospace_grid_20210208_rowscols.csv"
+
+DO_CROSSCHECK = False # can be memory intesnive to crosscheck NC with ASC after (they always match anyway)
+
 
 # mxng_p = "NEMO_prepped_as_ASC/{var}/"
 # tmp_p = "NEMO_prepped_as_ASC/{var}/"
@@ -343,8 +352,11 @@ def asc_to_nc_3day(v_f, outfilename, nemo_ewe_csv,
     ds.to_netcdf(output_file, format='NETCDF4', encoding=encoding)
 
     # Check if the original and loaded datasets are identical
-    ds_loaded = xr.open_dataset(output_file)
-    datasets_identical = ds.equals(ds_loaded)
+    if DO_CROSSCHECK:
+        ds_loaded = xr.open_dataset(output_file)
+        datasets_identical = ds.equals(ds_loaded)
+    else:
+        datasets_identical = "opted out of check"
     print("Datasets are identical:", datasets_identical)
 
     return ds, datasets_identical

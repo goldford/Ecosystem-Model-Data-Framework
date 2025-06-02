@@ -42,14 +42,14 @@ DOMAIN_CONFIG_PATH = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Frame
 DOMAIN_FILE = "analysis_domains_suchy.yml"
 SAT_MASK_PATH = os.path.join(DOMAIN_CONFIG_PATH, '..//..//data//evaluation//suchy_ecospace_mask.nc')
 
-RECOMPUTE_BLOOM_TIMING_SAT = False  # Set to True to force recomputation as needed, saves time
-RECOMPUTE_BLOOM_TIMING_C09 = False
+RECOMPUTE_BLOOM_TIMING_SAT = True  # Set to True to force recomputation as needed, saves time
+RECOMPUTE_BLOOM_TIMING_C09 = True
 
 # for run 114,
 # satellite: set vars = PP1-DIA only, annual_avg_method_sat = annual, exclude dec-jan=False
 # c09: vars = PP1-DIA, annual_avg_method_co9 = all, exclude dec jan = False
-SCENARIO = 'FULLKEY_SC114_1'
-ECOSPACE_CODE = "Scv114_1-All_Groups_20250523"
+SCENARIO = 'FULLKEY_SC116_2'
+ECOSPACE_CODE = "Scv116_2-All_Groups_20250523"
 FILENM_STRT_YR = 1978
 FILENM_END_YR = 2018
 START_YEAR = 1980 # analysis years (exclude spinup?)
