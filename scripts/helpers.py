@@ -8,6 +8,8 @@ from scipy import interpolate
 import matplotlib.pyplot as plt
 from matplotlib import patches
 import xarray as xr
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # basemap is currently not compatible with Python 3.10+ as far as I can tell
 from mpl_toolkits.basemap import Basemap # to fix install, may need to revert to python 3.10

@@ -28,8 +28,8 @@ from helpers import (
 # -------------------------------
 # Configuration
 # -------------------------------
-file_Ecospace = "Scv114_1-All_Groups_20250523_1978-2018.nc"
-ecospace_code = 'Scv114_1'
+file_Ecospace = "Scv114_2-All_Groups_20250602_1978-2018.nc"
+ecospace_code = 'Scv114_2'
 file_Zoop = "Zooplankton_B_C_gm2_EWEMODELGRP_Wide.csv"
 file_ecospace_map = "Ecospace_grid_20210208_rowscols.csv"
 

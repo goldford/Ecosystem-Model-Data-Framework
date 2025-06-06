@@ -208,12 +208,19 @@ from datetime import datetime, timedelta
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v113_1 - PAR_PI_AllPPTemp_Wind//asc//"
 # ecospace_code = "Scv114_1-All_Groups_20250523" # key run
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v114_1 - PAR_PI_AllPPTemp_Wind//asc//"
+# ecospace_code = "Scv114_2-All_Groups_20250602" # test of key run 114 on big PC with some issues fixed (pop-up issue related to NAN omnivory in debug vers)
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC114_2//asc//"
 # ecospace_code = "Scv115_1-All_Groups_20250523" # key run 114 but w/ no wind experiment
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v115_1 - PAR_PI_AllPPTemp_Wind//asc//"
 # ecospace_code = "Scv116_1-All_Groups_20250523" # ERROR - wind was not on - key run 114 but w/ olson et al PI for dia
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v116_1 - PAR_PI_AllPPTemp_Wind//asc//"
-ecospace_code = "Scv116_2-All_Groups_20250523" # ERROR - wind was not on - key run 114 but w/ olson et al PI for dia
-path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v116_2 - PAR_PI_AllPPTemp_Wind//asc//"
+# ecospace_code = "Scv116_2-All_Groups_20250523" # ERROR - wind was not on - key run 114 but w/ olson et al PI for dia
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v116_2 - PAR_PI_AllPPTemp_Wind//asc//"
+# ecospace_code = "Scv117_1-All_Groups_20250602" # same as 114_2 (big PC) but with nutrients dropped to 50%
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_1//asc//"
+ecospace_code = "Scv117_2-All_Groups_20250602" # same as 117_1 (big PC) but with nutrients at 70%
+path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_2//asc//"
+
 
 
 
@@ -357,7 +364,7 @@ def asc_to_nc_3day(v_f, outfilename, nemo_ewe_csv,
         datasets_identical = ds.equals(ds_loaded)
     else:
         datasets_identical = "opted out of check"
-    print("Datasets are identical:", datasets_identical)
+    print("Datasets identical? ", datasets_identical)
 
     return ds, datasets_identical
 

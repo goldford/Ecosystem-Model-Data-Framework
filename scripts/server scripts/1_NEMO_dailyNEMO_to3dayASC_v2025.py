@@ -570,8 +570,9 @@ for var_key, meta in var_defs.items():
             day_end = day_strt + 2
             middle_day = day_strt + 2
 
-            if lump_final and iday == 121:
+            if iday == 121:
                 vardays = var_full[day_strt:, :, :, :]
+                middle_day += 1
             else:
                 vardays = var_full[day_strt:day_end + 1, :, :, :]
 

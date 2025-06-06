@@ -24,6 +24,8 @@ from scipy.stats import pearsonr
 from statsmodels.tsa.stattools import ccf
 from helpers import read_sdomains
 from matplotlib.path import Path
+import matplotlib
+matplotlib.use('TkAgg')
 import yaml
 
 
@@ -41,8 +43,8 @@ DOMAIN_PATH = "C://Users//Greig//Documents//github//Ecosystem-Model-Data-Framewo
 FIG_OUT_PATH = os.path.normpath("..//..//figs//") + os.sep
 
 # target_groups = ['NK1-COH', 'NK2-CHI']
-# target_groups = ['ZC1-EUP', 'ZC2-AMP', 'ZC3-DEC', 'ZC4-CLG', 'ZC5-CSM']
-target_groups = ['PZ1-CIL', 'PZ2-DIN', 'PZ3-HNF', 'PP1-DIA', 'PP2-NAN', 'PP3-PIC']
+target_groups = ['ZC1-EUP', 'ZC2-AMP', 'ZC3-DEC', 'ZC4-CLG', 'ZC5-CSM']
+# target_groups = ['PZ1-CIL', 'PZ2-DIN', 'PZ3-HNF', 'PP1-DIA', 'PP2-NAN', 'PP3-PIC']
 season_months = {
     "Spring": [3, 4, 5],
     "Summer": [6, 7, 8],

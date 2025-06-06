@@ -1,11 +1,13 @@
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 # === Configuration ===
 path_evalout = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation"
-ecospace_code = 'Scv114_1'
+ecospace_code = 'Scv114_2'
 input_file = f"Zooplankton_matched_to_model_out_{ecospace_code}.csv"
 
 # === Load Data ===
@@ -204,7 +206,7 @@ for col in obs_cols + ['TOT']:
 
 skill_df = pd.DataFrame(skill_rows)
 skill_df = skill_df.sort_values(by='WSS', ascending=False)
-skill_df.to_csv(f"{path_evalout}/model_skill_stats_log10.csv", index=False)
+skill_df.to_csv(f"{path_evalout}/model_skill_stats_log10_{ecospace_code}.csv", index=False)
 
 print("\n=== Skill Statistics Saved to model_skill_stats_log10.csv ===")
 print(skill_df)

@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('TkAgg')
 import seaborn as sns
 from scipy.stats import pearsonr
 from statsmodels.tsa.stattools import ccf
@@ -9,19 +11,19 @@ import os
 
 # === USER CONFIGURATION ===
 data_path = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation"
-input_file = "Zooplankton_matched_to_model_out_Scv114_1.csv"  # used when use_raw_ecospace = False
-ecospace_run = "Scv114_1"
-raw_ecospace_nc = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_model//ECOSPACE_OUT//Scv114_1-All_Groups_20250523_1978-2018.nc"
+input_file = "Zooplankton_matched_to_model_out_Scv114_2.csv"  # used when use_raw_ecospace = False
+ecospace_run = "Scv114_2"
+raw_ecospace_nc = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_model//ECOSPACE_OUT//Scv114_2-All_Groups_20250602_1978-2018.nc"
 npgo_file = "npgo.csv"
 output_fig = f"../../figs/{ecospace_run}_anom_panel_Zoop_vs_Model_with_NPGO.png"
 total_fig = f"../../figs/{ecospace_run}_anom_TOTAL_stacked_Model_vs_Obs.png"
-# groups = ['ZC1-EUP', 'ZC2-AMP', 'ZC3-DEC', 'ZC4-CLG', 'ZC5-CSM']
-groups = ['ZC1-EUP', 'ZC3-DEC', 'ZC4-CLG'] # just EUP, DEC, and CLG?
+groups = ['ZC1-EUP', 'ZC2-AMP', 'ZC3-DEC', 'ZC4-CLG', 'ZC5-CSM']
+# groups = ['ZC1-EUP', 'ZC3-DEC', 'ZC4-CLG'] # just EUP, DEC, and CLG?
 include_total = True
-use_raw_ecospace = True  # if True, use raw Ecospace NetCDF, otherwise use pre-matched CSV
+use_raw_ecospace = False  # if True, use raw Ecospace NetCDF, otherwise use pre-matched CSV
 season_order = ['Winter', 'Spring', 'Summer', 'Fall']
 log_offset = 1e-6
-lag_years = 3
+lag_years = 0
 
 # === LOAD NPGO ===
 df_npgo = pd.read_csv(f"{data_path}/{npgo_file}")
@@ -145,3 +147,4 @@ if include_total:
     plt.savefig(total_fig)
     plt.show()
     print(f"Saved total panel plot to {total_fig}")
+print("DONE")

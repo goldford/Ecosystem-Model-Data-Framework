@@ -25,7 +25,8 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.path import Path
 from datetime import datetime, timedelta
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-
+import matplotlib
+matplotlib.use('TkAgg')
 
 from helpers import (
     read_sdomains, find_nearest_point, find_bloom_doy,
@@ -48,8 +49,8 @@ RECOMPUTE_BLOOM_TIMING_C09 = True
 # for run 114,
 # satellite: set vars = PP1-DIA only, annual_avg_method_sat = annual, exclude dec-jan=False
 # c09: vars = PP1-DIA, annual_avg_method_co9 = all, exclude dec jan = False
-SCENARIO = 'FULLKEY_SC116_2'
-ECOSPACE_CODE = "Scv116_2-All_Groups_20250523"
+SCENARIO = 'FULLKEY_SC117_2'
+ECOSPACE_CODE = "Scv117_2-All_Groups_20250602"
 FILENM_STRT_YR = 1978
 FILENM_END_YR = 2018
 START_YEAR = 1980 # analysis years (exclude spinup?)
@@ -79,6 +80,7 @@ SUB_THRESHOLD_FACTOR = 0.7
 MIN_Y_TICK = 38
 CREATE_MASKS = False  # Set to True to regenerate masks
 DO_NUTRIENTS = False
+# OVERRIDE_REDFIELD = True # added by GO to help eval 2025-06-03
 
 
 # ================================
@@ -407,8 +409,11 @@ def evaluate_overlap_by_timing(df_obs, df_mod, obs_col='Day of Year', mod_col='D
 
 def compute_nutrient_concentration(ds, vars_list, year=2005, include_only=None, exclude=None, mask=None):
     # Constants
-    N_free_init = 41.0   # g N m^-2 (96%)
-    N_bound_init = 1.54  # g N m^-2 (4%)
+    # N_free_init = 41.0   # g N m^-2 (96%)
+    # N_bound_init = 1.54  # g N m^-2 (4%)
+    N_free_init = 21.27   # g N m^-2 (50%)
+    N_bound_init = 21.27  # g N m^-2 (50%)
+    # Ecopath_Base_B_Tot_C =
     total_N = N_free_init + N_bound_init
 
     # Molar mass ratios (Redfield C:N is 106:16)
@@ -728,6 +733,7 @@ def main():
         df_nutrient_all = pd.concat(nutrient_dfs, ignore_index=True)
         plot_nutrient_concentration(df_nutrient_all, ds=ds, include_only=include_only, mask=mask_ds['mask'])
         print("Saved nutrient climatology plot for 1980–2018.")
+        print("done nutr")
 
 if __name__ == "__main__":
     main()

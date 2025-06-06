@@ -42,8 +42,8 @@ MODEL_CONFIGS = {
 
 # Mapping from reference dataset label to plot label and marker color
 REFERENCE_CONFIGS = {
-    "Allen": {"label": "CO9", "color": "grey"},
-    "Suchy": {"label": "satellite", "color": "black"},
+    "Allen": {"label": "vs. CO9", "color": "lightgreen"},
+    "Suchy": {"label": "vs. satellite", "color": "black"},
 }
 
 
@@ -59,7 +59,7 @@ def get_taylor_diagram_axes(fig, rect, refstd, srange, contour_levs, clr_std_cnt
     clbl_clr = '#858585'
     axs_lbl_fs = 10
     str_sz = 10
-    star_offset = 0.0
+    star_offset = 0.01
 
     rlocs = np.array([0, 0.2, 0.4, 0.6, 0.8, 0.9, 0.95, 0.99, 1])
     tr = PolarAxes.PolarTransform()
@@ -113,18 +113,25 @@ def plot_model_points(ax, refstd, model_stats):
                 markeredgecolor=entry['edgecolor'], markersize=8,
                 linestyle='None',
                 label=f"{entry['label']} ({entry['source_label']})")
-    ax.legend(loc='upper right', fontsize=8)
+    ax.legend(
+        loc='upper left',  # Anchor position
+        bbox_to_anchor=(0.75, 1.02),  # Shift legend box right and slightly up
+        fontsize=7,
+        ncols=1,
+        frameon=True,
+        borderaxespad=0.0
+    )
 
 
 # ------------------------------
 # Main Execution
 # ------------------------------
 def main():
-    fig = plt.figure(figsize=(7, 6))
+    fig = plt.figure(figsize=(6, 5))
     refstd = 1.0
     srange = (0, 1.5)
     contour_levs = [0.5, 1.0, 1.5, 2.0]
-    ax = get_taylor_diagram_axes(fig, 111, refstd, srange, contour_levs, clr_std_cntr='gray')
+    ax = get_taylor_diagram_axes(fig, 111, refstd, srange, contour_levs, clr_std_cntr='grey')
 
     model_stats = []
     for scenario in SCENARIOS:
@@ -149,7 +156,8 @@ def main():
 
     plot_model_points(ax, refstd, model_stats)
     plt.tight_layout()
-    plt.savefig(os.path.join(PLOT_OUT_PATH, "taylor_diagram_BloomTiming.png"), dpi=300)
+    plt.savefig(os.path.join(PLOT_OUT_PATH, "taylor_diagram_BloomTiming_c09Suchy.png"), dpi=300)
+    print("fig saved")
     plt.show()
 
 if __name__ == "__main__":
