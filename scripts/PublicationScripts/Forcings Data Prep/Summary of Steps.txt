@@ -1,3 +1,7 @@
+Steps to prep fields for offline linking 
+of HOTSSea v1 NEMO model to ECOSPACE 2D (and Ecosim)
+3 day, carbon-based model
+
 # ------------------------------------
 Forcings from HOTSSea v1 NEMO Model:
 # ------------------------------------
@@ -7,6 +11,7 @@ Forcings from HOTSSea v1 NEMO Model:
  - scheduler for on-server processing of script 1a
 1b_NEMO_dailyNEMO_to3dayASC_vPC.py
  - version of script 1a but for local PC runs (v slow)
+
 
 # ------------------------------------
 Light from RDRS v2.1 Model
@@ -26,6 +31,7 @@ Photosynthetically Active Radiation (PAR) Depth Integrated over the Mixing Layer
  - schedules batch job for submission of 3a to HPC server
 3b_PAR3_VarK_VarZ_clima1980-2018.py
  - produces a climatological mean from 3a outputs
+
 
 # ------------------------------------
 Wind from RDRS v2.1 Model

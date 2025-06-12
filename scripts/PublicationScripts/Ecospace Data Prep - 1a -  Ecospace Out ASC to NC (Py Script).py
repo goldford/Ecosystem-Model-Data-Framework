@@ -218,8 +218,13 @@ from datetime import datetime, timedelta
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v12 - DEBUG//v116_2 - PAR_PI_AllPPTemp_Wind//asc//"
 # ecospace_code = "Scv117_1-All_Groups_20250602" # same as 114_2 (big PC) but with nutrients dropped to 50%
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_1//asc//"
-ecospace_code = "Scv117_2-All_Groups_20250602" # same as 117_1 (big PC) but with nutrients at 70%
-path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_2//asc//"
+#ecospace_code = "Scv117_2-All_Groups_20250602" # same as 117_1 (big PC) but with nutrients at 70%
+#path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_2//asc//"
+# ecospace_code = "Scv117_3-All_Groups_20250602" # same as 117_2 (big PC) but with nutrients at 66
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_3//asc//"
+ecospace_code = "Scv117_4-All_Groups_20250602" # same as 117_2 (big PC) but with nutrients at 66
+path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_4//asc//"
+
 
 
 
