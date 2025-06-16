@@ -44,13 +44,13 @@ DOMAIN_FILE = "analysis_domains_suchy.yml"
 SAT_MASK_PATH = os.path.join(DOMAIN_CONFIG_PATH, '..//..//data//evaluation//suchy_ecospace_mask.nc')
 
 RECOMPUTE_BLOOM_TIMING_SAT = True  # Set to True to force recomputation as needed, saves time
-RECOMPUTE_BLOOM_TIMING_C09 = False
+RECOMPUTE_BLOOM_TIMING_C09 = True
 
 # for run 114,
 # satellite: set vars = PP1-DIA only, annual_avg_method_sat = annual, exclude dec-jan=False
 # c09: vars = PP1-DIA, annual_avg_method_co9 = all, exclude dec jan = False
-SCENARIO = 'FULLKEY_SC117_4'
-ECOSPACE_CODE = "Scv117_4-All_Groups_20250602"
+SCENARIO = 'FULLKEY_SC117_8'
+ECOSPACE_CODE = "Scv117_8-All_Groups_20250602"
 FILENM_STRT_YR = 1978
 FILENM_END_YR = 2018
 START_YEAR = 1980 # analysis years (exclude spinup?)
@@ -59,7 +59,7 @@ END_YEAR = 2018
 # if multiple vars listed here, it will sum across them when computing anomalies, bloom timing etc
 #OK with run 96 this is first time model fit has been okay with all pp groups
 # VARIABLES_TO_ANALYZE_SAT = ["PP1-DIA"] #for 88_2 - pp1-dai only, annual, keep janfeb
-VARIABLES_TO_ANALYZE_SAT = ["PP1-DIA"]
+VARIABLES_TO_ANALYZE_SAT = ["PP1-DIA", "PP2-NAN", "PP3-PIC"]
 VARIABLES_TO_ANALYZE_C09 = ["PP1-DIA"]
 
 ANNUAL_AVG_METHOD_SAT = "annual" # should average bloom compared against be from all years, or just one year
