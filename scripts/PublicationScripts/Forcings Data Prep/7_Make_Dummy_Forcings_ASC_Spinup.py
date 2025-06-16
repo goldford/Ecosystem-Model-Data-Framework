@@ -1,6 +1,9 @@
+<<<<<<< Updated upstream
 # Simply repeats 1980 forcings for Ecospace input fields
 # Does not do ecosim
 
+=======
+>>>>>>> Stashed changes
 import os
 import shutil
 
