@@ -222,10 +222,16 @@ from datetime import datetime, timedelta
 #path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_2//asc//"
 # ecospace_code = "Scv117_3-All_Groups_20250602" # same as 117_2 (big PC) but with nutrients at 66
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_3//asc//"
-ecospace_code = "Scv117_4-All_Groups_20250602" # same as 117_2 (big PC) but with nutrients at 66
-path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_4//asc//"
-
-
+# ecospace_code = "Scv117_4-All_Groups_20250602" # same as 117_3 (big PC) but tweaks to temp, wind
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_4//asc//"
+# ecospace_code = "Scv117_5-All_Groups_20250602" # based on 117_4 (big PC) w/ adjustment to temp for dia
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_5//asc//"
+# ecospace_code = "Scv117_6-All_Groups_20250602" # based on 117_5 (big PC) w/ Khangoankar
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_6//asc//"
+# ecospace_code = "Scv117_7-All_Groups_20250602" # based on 117_6 (big PC) w/ adjustment to temp for dia
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_7//asc//"
+ecospace_code = "Scv117_8-All_Groups_20250602" # based on 117_7 (big PC) w/ olson t response
+path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_8//asc//"
 
 
 
