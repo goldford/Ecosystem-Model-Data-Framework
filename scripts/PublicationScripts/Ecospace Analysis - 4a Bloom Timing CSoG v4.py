@@ -49,8 +49,8 @@ RECOMPUTE_BLOOM_TIMING_C09 = True
 # for run 114,
 # satellite: set vars = PP1-DIA only, annual_avg_method_sat = annual, exclude dec-jan=False
 # c09: vars = PP1-DIA, annual_avg_method_co9 = all, exclude dec jan = False
-SCENARIO = 'FULLKEY_SC117_8'
-ECOSPACE_CODE = "Scv117_8-All_Groups_20250602"
+SCENARIO = 'FULLKEY_SC122_8'
+ECOSPACE_CODE = "Scv122_8-All_Groups_20250618"
 FILENM_STRT_YR = 1978
 FILENM_END_YR = 2018
 START_YEAR = 1980 # analysis years (exclude spinup?)
@@ -66,7 +66,7 @@ ANNUAL_AVG_METHOD_SAT = "annual" # should average bloom compared against be from
 ANNUAL_AVG_METHOD_C09 = "all" # annual or all
 
 # use mask c09 instead of pnt?
-USE_SAT_MASK_CO9 = True
+USE_SAT_MASK_CO9 = False
 
 EXCLUDE_DEC_JAN_SAT = False
 EXCLUDE_DEC_JAN_C09 = False

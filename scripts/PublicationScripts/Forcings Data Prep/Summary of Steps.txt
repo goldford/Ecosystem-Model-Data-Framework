@@ -1,4 +1,4 @@
-Steps to prep fields for offline linking 
+Steps to prep data fields for offline linking 
 of HOTSSea v1 NEMO model to ECOSPACE 2D (and Ecosim)
 3 day, carbon-based model
 
@@ -11,6 +11,9 @@ Forcings from HOTSSea v1 NEMO Model:
  - scheduler for on-server processing of script 1a
 1b_NEMO_dailyNEMO_to3dayASC_vPC.py
  - version of script 1a but for local PC runs (v slow)
+1c_EcospaceASC_NEMO3day_toEcosim3Day.py
+- allows separate creation of Ecosim TS give Ecospace ASC
+  (saves a little time for post-processing)
 
 
 # ------------------------------------
@@ -45,3 +48,14 @@ Wind from RDRS v2.1 Model
 4c_Data Prep - 1 Day to 3 Day Wind RDRS vPC.py
  - processes from 1 day to 3 day; setup for desktop PC (slow)
 
+# ------------------------------------
+Miscellaneous Helper Scripts
+# ------------------------------------
+5_ecospacelandmask_fromdepths.py
+ - self-explanatory
+6_Ecospace Data Prep - 1b - 3day ASC to NC.py
+ - creates nicer NC file from the ASCs (kind of redundant)
+7_Make_Dummy_Forcings_ASC_Spinup.py
+ - repeats the first year 1980 for fake 1978, 1979 years for spin-up
+8_Forcing_Climatol_anoms_from3dayASC.py
+ - helps convert the Ecospace ASC's to anomalies (eg for bottom temp experiment)

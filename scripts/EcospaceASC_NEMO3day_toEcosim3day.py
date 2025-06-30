@@ -10,10 +10,15 @@ startyear = 1980
 endyear = 2018
 timestep = "3day"
 out_code = "var"
-# wind alread done
-# var_key = "vartemp1_C_0-10mAvg"
-var_key = "varsalt1_PSU_0-10mAvg"
-# var_key = "PAR-VarZ-VarK"
+# wind already done
+timestep = "3day"
+out_code = "var"
+var_keys = [
+    "varsalt1_PSU_0-10mAvg",
+    "vartemp1_C_0-10mAvg",
+    "PAR-VarZ-VarK"
+]
+
 NEMO_run = "216"
 sigdig = 1  # number of decimal places to round
 num_digits_ecospace_asc_month = 2
@@ -22,10 +27,6 @@ num_digits_ecospace_asc_month = 2
 # FILE PATHS
 # --------------------------------------
 forcing_root = "C:/Users/Greig/Documents/GitHub/Ecosystem-Model-Data-Framework/data/forcing"
-asc_dir = f"{forcing_root}/ECOSPACE_in_3day_vars_1980-2018/{var_key}/"
-if var_key == "PAR-VarZ-VarK":
-    asc_dir = f"{forcing_root}/ECOSPACE_in_3day_PAR3_Sal4m_1980-2018/{var_key}/"
-output_csv = f"{forcing_root}/ECOSIM_in_3day_vars_1980-2018_fromASC_202506/ECOSIM_in_NEMO_{var_key}_1980-2018_fromASC_202506.csv"
 
 
 # Mask files (must be 151x93 trimmed ASC format used by saveASCFile)
@@ -54,54 +55,49 @@ def getDataFrame_custom(f_n, skiprows=6):
 
     return data
 
-
 # --------------------------------------
-# PROCESS EACH FILE
+# LOOP OVER VARIABLES
 # --------------------------------------
-records = []
-for year in range(startyear, endyear + 1):
-    print(year)
-    is_leap = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
-    nsteps = 120
+for var_key in var_keys:
+    print(f"Processing variable: {var_key}")
 
-    for iday in range(1, nsteps + 1):
-        middle_day = (iday - 1) * 3 + 2
+    asc_dir = f"{forcing_root}/ECOSPACE_in_3day_vars_1980-2018/{var_key}/"
+    if var_key == "PAR-VarZ-VarK":
+        asc_dir = f"{forcing_root}/ECOSPACE_in_3day_PAR3_Sal4m_1980-2018/{var_key}/"
 
-        if iday >= 120:
-            if is_leap:
-                middle_day += 2
-            else:
-                middle_day += 1
+    output_csv = f"{forcing_root}/ECOSIM_in_3day_vars_1980-2018_fromASC_202506/ECOSIM_in_NEMO_{var_key}_1980-2018.csv"
 
-        fname = f"{var_key}_{year}_{buildSortableString(middle_day, num_digits_ecospace_asc_month)}.asc"
-        fpath = os.path.join(asc_dir, fname)
+    records = []
+    for year in range(startyear, endyear + 1):
+        print(year)
+        is_leap = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+        nsteps = 120
 
-        if not os.path.exists(fpath):
-            print(f"Skipping missing file: {fpath}")
-            continue
+        for iday in range(1, nsteps + 1):
+            middle_day = (iday - 1) * 3 + 2
+            if iday >= 120:
+                middle_day += 2 if is_leap else 1
 
-        data = getDataFrame_custom(fpath)
+            fname = f"{var_key}_{year}_{buildSortableString(middle_day, num_digits_ecospace_asc_month)}.asc"
+            fpath = os.path.join(asc_dir, fname)
 
-        print(f"File: {fname} | Data shape: {data.shape} | Mask shape: {combined_mask.shape}")
+            if not os.path.exists(fpath):
+                print(f"Skipping missing file: {fpath}")
+                continue
 
-        if data.shape != combined_mask.shape:
-            raise ValueError(f"Mismatch in shape between data ({data.shape}) and mask ({combined_mask.shape})")
+            data = getDataFrame_custom(fpath)
 
-        data = np.ma.masked_array(data, mask=combined_mask)
-        mean_val = round(np.nanmean(data), sigdig)
+            if data.shape != combined_mask.shape:
+                raise ValueError(f"Mismatch in shape between data ({data.shape}) and mask ({combined_mask.shape})")
 
-        print(f"Mean value (masked): {mean_val}")
+            data = np.ma.masked_array(data, mask=combined_mask)
+            mean_val = round(np.nanmean(data), sigdig)
+            records.append([year, middle_day, mean_val])
 
-        records.append([year, middle_day, mean_val])
-
-# --------------------------------------
-# SAVE ECOSIM-COMPATIBLE TIME SERIES
-# --------------------------------------
-df = pd.DataFrame(records, columns=["year", "dayofyear", f"{out_code}{var_key}"])
-df["threeday_yrmo"] = range(1, len(df) + 1)
-df["threeday_yr"] = df.index + 1
-df = df[["threeday_yrmo", "threeday_yr", "year", "dayofyear", f"{out_code}{var_key}"]]
-
-df.to_csv(output_csv, index=False)
-print(f"Ecosim-compatible CSV saved to:\n{output_csv}")
+    df = pd.DataFrame(records, columns=["year", "dayofyear", f"{out_code}{var_key}"])
+    df["threeday_yrmo"] = range(1, len(df) + 1)
+    df["threeday_yr"] = df.index + 1
+    df = df[["threeday_yrmo", "threeday_yr", "year", "dayofyear", f"{out_code}{var_key}"]]
+    df.to_csv(output_csv, index=False)
+    print(f"Saved CSV for {var_key} to:\n{output_csv}")
 

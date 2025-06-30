@@ -46,15 +46,15 @@ import os
 import netCDF4 as nc
 import pandas as pd
 import numpy as np
-import requests
+# import requests
 from datetime import datetime
 
 # ---------------- Configuration ---------------- #
 
 # ----- Ecospace files -----
 
-file_ecospace_out = "Scv114_1-All_Groups_20250523_1978-2018.nc"
-ecospace_code = "SC114_1"
+file_ecospace_out = "Scv122_8-All_Groups_20250618_1978-2018.nc"
+ecospace_code = "SC122_8"
 file_ecospace_map = "Ecospace_grid_20210208_rowscols.csv"
 
 # ----- Execution toggles -----

@@ -22,7 +22,7 @@ from GO_helpers import is_leap_year, buildSortableString, saveASCFile, getDataFr
 #         - PAR1a - variable mixing depth, fixed K value
 #         - PAR1b - variable mixed depth, fixed K value
 #         - PAR2a - fixed mix depth, linear salinity->turbidity to modify K by cell, function using salinity vertmean 0-10 m
-#     --> - PAR2b - fixed mix depth, linear salinity->turbidity f(n) using salinity at one depth
+#          - PAR2b - fixed mix depth, linear salinity->turbidity f(n) using salinity at one depth
 #         - PAR3 -  variable mix depth (turbocline threshold), turbidity from 2b, salin at one depth or avg depth
 #         - PAR3b - no longer using 
 

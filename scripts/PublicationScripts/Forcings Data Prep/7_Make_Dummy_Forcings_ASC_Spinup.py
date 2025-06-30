@@ -1,15 +1,13 @@
-<<<<<<< Updated upstream
-# Simply repeats 1980 forcings for Ecospace input fields
+# Simply repeats 1980 forcings for Ecospace input fields for 1978, 1979 spinup
 # Does not do ecosim
 
-=======
->>>>>>> Stashed changes
 import os
 import shutil
 
 # paths
+source_folder = "C://Users//Greig//Documents//github//Ecosystem-Model-Data-Framework//data//forcing//ECOSPACE_in_3day_vars_1980-2018//vartemp_avg150toBot//anomalies"  #
 #source_folder = "C://Users//Greig//Documents//github//Ecosystem-Model-Data-Framework//data//forcing//ECOSPACE_in_3day_vars_1980-2018//vartemp1_C_0-10mAvg"  #
-source_folder = "C://Users//Greig//Documents//github//Ecosystem-Model-Data-Framework//data//forcing//ECOSPACE_in_3day_vars_1980-2018//varsalt1_PSU_0-10mAvg"  #
+# source_folder = "C://Users//Greig//Documents//github//Ecosystem-Model-Data-Framework//data//forcing//ECOSPACE_in_3day_vars_1980-2018//varsalt1_PSU_0-10mAvg"  #
 # source_folder = "C://Users//Greig//Documents//GitHub//Ecosystem-Model-Data-Framework//data//forcing//NEMO_prepped_as_ASC_monthly//TempVertMean4m"
 # source_folder = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_model//LTL_MODELS//RDRS forcings//Wind_RDRS//Ecospace//stress_"
 # source_folder = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_model//LTL_MODELS//RDRS forcings//Wind_RDRS//Ecospace//stress_winter_spring"
@@ -19,9 +17,10 @@ destination_folder = source_folder
 os.makedirs(destination_folder, exist_ok=True)
 files = os.listdir(source_folder)
 years_to_fake = [1978,1979]
+variable = "vartemp_avg150toBot_scaled" # scaled anoms 0 - 2
 # variable = "PAR-VarZ-VarK"
 #variable = "vartemp1_C_0-10mAvg"
-variable = "varsalt1_PSU_0-10mAvg"
+# variable = "varsalt1_PSU_0-10mAvg"
 # variable = "RDRS_windstress10m_"
 # variable = "RDRS_windstress10m_winter_spring"
 
@@ -43,6 +42,9 @@ for year_to_fake in years_to_fake:
                 print(day_of_year)
             elif variable == "RDRS_windstress10m_winter_spring":
                 day_of_year = file_name.split("_")[5].split(".")[0]
+                print(day_of_year)
+            elif variable == "vartemp_avg150toBot_scaled":
+                day_of_year = file_name.split("_")[4].split(".")[0]
                 print(day_of_year)
             else:
                 day_of_year = file_name.split("_")[2].split(".")[0]

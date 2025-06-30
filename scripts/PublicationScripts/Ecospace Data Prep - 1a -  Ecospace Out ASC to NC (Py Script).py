@@ -230,9 +230,22 @@ from datetime import datetime, timedelta
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_6//asc//"
 # ecospace_code = "Scv117_7-All_Groups_20250602" # based on 117_6 (big PC) w/ adjustment to temp for dia
 # path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_7//asc//"
-ecospace_code = "Scv117_8-All_Groups_20250602" # based on 117_7 (big PC) w/ olson t response
-path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_8//asc//"
-
+# ecospace_code = "Scv117_8-All_Groups_20250602" # based on 117_7 (big PC) w/ olson t response
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC117_8//asc//"
+# ecospace_code = "Scv122_1-All_Groups_20250602" # revised fish v's lower (they crash in ecosim)
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC122_1//asc//"
+# ecospace_code = "Scv122_2-All_Groups_20250602" # experiment with PI's halved (accounting for night) - made bloom late
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC122_2//asc//"
+# ecospace_code = "Scv122_3-All_Groups_20250602" # diagnostic based on 122_2 but with no wind
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC122_3//asc//"
+# ecospace_code = "Scv122_4-All_Groups_20250602" # diagnostic based on 122_1 but with higher V's for grazers of DIA
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC122_4//asc//"
+# ecospace_code = "Scv122_6-All_Groups_20250618" # diagnostic based on 122_2 which is late with higher V's for DIA grazers (makes early) - result was more variable than usual, still early
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC122_6//asc//"
+# ecospace_code = "Scv122_7-All_Groups_20250618" # based on 122_6 but tried mediation - still too early
+# path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC122_7//asc//"
+ecospace_code = "Scv122_8-All_Groups_20250618" # based on 122_7, mediation, lowered v's for grazers of dia to 1.5 from 2, decreased slope PI DIA
+path_ecospace_out= "C://Users//Greig//Documents//EwE output//ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v13_BigPC//Ecospace_SC122_8//asc//"
 
 
 #

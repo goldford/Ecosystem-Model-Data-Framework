@@ -47,11 +47,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from scipy.stats import pearsonr
-
+import matplotlib
+matplotlib.use('TkAgg')
 
 
 # Model run code (used in file paths and plot names)
-MODEL_RUN = 'SC114_1'
+MODEL_RUN = 'SC122_8'
 
 # Toggle whether SSC outputs are included in the comparison
 INCLUDE_SSC = True # IS THIS HOOKED UP?

@@ -16,10 +16,12 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('TkAgg')
 
 # ====== Configuration ======
-SCENARIO = 'FULLKEY_SC116_2'
-ECOSPACE_OUT_F = "Scv116_2-All_Groups_20250523_1978-2018.nc"
+SCENARIO = 'FULLKEY_SC117_8'
+ECOSPACE_OUT_F = "Scv117_8-All_Groups_20250602_1978-2018.nc"
 ECOSPACE_OUT_PATH = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_model//ECOSPACE_OUT//"
 DOMAIN_MASK_PATH = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation/suchy_ecospace_mask.nc"
 OUTPUT_FIG_DIR = "../../figs/"

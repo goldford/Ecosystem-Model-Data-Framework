@@ -57,6 +57,7 @@ from scipy.interpolate import interp1d
 import multiprocessing as mp
 import warnings
 
+
 # warnings.simplefilter(action='ignore', category="FutureWarning")
 
 # Config
@@ -490,11 +491,58 @@ def interpolate_depth_range_parallel(var3d, gdepth, min_depth, max_depth, dz=1.0
 
     return out
 
+def interpolate_below_depth(var3d, gdepth, min_depth, dz=1.0):
+    """
+    Interpolates from min_depth to the bottom of the water column at each cell
+    and returns the average over that range.
+
+    Args:
+        var3d: 3D array [depth, y, x]
+        gdepth: 4D array [1, depth, y, x] of depth centers
+        min_depth: Minimum depth to start averaging from
+        dz: Vertical resolution (default 1 m)
+
+    Returns:
+        2D array [y, x] of interpolated averages below min_depth
+    """
+    nz, ny, nx = var3d.shape
+    out = np.full((ny, nx), np.nan)
+
+    for i in range(ny):
+        for j in range(nx):
+            raw_profile = var3d[:, i, j]
+            depths = gdepth[0, :, i, j]
+
+            if np.all((raw_profile == 0) | np.isnan(raw_profile)):
+                continue
+
+            profile = ma.masked_invalid(raw_profile)
+            profile = ma.masked_where(profile == 0, profile)
+
+            if np.all(profile.mask):
+                continue
+
+            valid = ~profile.mask
+            if valid.sum() < 2:
+                continue
+
+            max_local_depth = depths[valid].max()
+            if max_local_depth < min_depth:
+                continue  # too shallow for this threshold
+
+            zvals = np.arange(min_depth, max_local_depth + dz, dz)
+            f = interp1d(depths[valid], profile[valid], bounds_error=False, fill_value='extrapolate')
+            interp_vals = f(zvals)
+            out[i, j] = np.nanmean(interp_vals)
+
+    return np.nan_to_num(out, nan=0.0)
+
 
 min_d_0to4m, max_d_0to4m = get_depth_indices(gdept_0, 1.5, 4) # exclude top-most metre b/c biased
 min_d_0to10m, max_d_0to10m = get_depth_indices(gdept_0, 0, 10)
 min_d_30to40m, max_d_30to40m = get_depth_indices(gdept_0, 30, 40)
 
+# crashes PC - as of June 16 2025
 if USE_MP_PARALLEL:
     func_at150m = partial(interpolate_at_depth_parallel, gdepth=gdept_0, target_depth=150)
     func_temp_avg0to10m = (partial(interpolate_depth_range_parallel, gdepth=gdept_0, min_depth=0, max_depth=10, dz=1.0)
@@ -513,16 +561,17 @@ var_defs = {
     #     "func": partial(interpolate_at_depth_parallel, gdepth=gdept_0, target_depth=35),
     #     "sigdig": '%0.1f'
     # },
-    "temp_at150m": {
-        "filename": "votemper",
-        "func": func_at150m,
-        "sigdig": '%0.1f'
-    } #,
+    # "temp_at150m": {
+    #     "filename": "votemper",
+    #     "func": func_at150m,
+    #     "sigdig": '%0.1f'
+    #},
     # "temp_avg0to10m": {
     #     "filename": "votemper",
     #     "func": func_temp_avg0to10m,
     #     "sigdig": '%0.1f'
     # },
+
     # "temp_bottom": {
     #     "filename": "votemper",
     #     "func": extract_near_bottom,
@@ -545,7 +594,13 @@ var_defs = {
     #     "func": extract_near_bottom,
     #     "sigdig": '%0.1f'
     # }
+    "temp_avg150toBot": {
+        "filename": "votemper",
+        "func": partial(interpolate_below_depth, gdepth=gdept_0, min_depth=150, dz=1.0),
+        "sigdig": '%0.1f'
+    }
 }
+
 for var_key, meta in var_defs.items():
     varname = meta["filename"]
     process_func = meta["func"]
@@ -591,6 +646,7 @@ for var_key, meta in var_defs.items():
             save_path = os.path.join(path_out, save_name)
             print(f"Saving {save_path}")
             saveASCFile(save_path, varday_clip, 102, 253, 39, sigdigfmt, ASCheader, plume_mask, land_mask)
+
 
             # Save mean for Ecosim
             var_flat = varday_clip.compressed()
