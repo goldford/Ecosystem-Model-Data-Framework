@@ -1,10 +1,14 @@
-# ============================================================================================
-# Script:    Nemcek Observation Time Series Prep (Modified)
-# By: G Oldford, 2025
-# Purpose:
-#    Create 3-day averaged time series from Nemcek et al. observations,
-#    with custom subdomain groupings
-# ============================================================================================
+"""
+Script:    Nemcek Observation Time Series Prep (Modified)
+ By: G Oldford, 2025
+ Purpose:
+    Create 3-day averaged time series from Nemcek et al. observations,
+    with custom subdomain groupings
+ Input:
+   - Supp data from Nemcek et al publication 10.1016/j.pocean.2023.103108
+ Output:
+ - Same data, averaged to time step of model, with subdomain tagged
+"""
 
 import pandas as pd
 import numpy as np
@@ -20,13 +24,13 @@ matplotlib.use('TkAgg')
 # Configuration
 # -------------------------------
 
-file_Nemcek = "Nemcek_Supp_Data.csv"
-path_Nemcek = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/28. Phytoplankton/Phytoplankton Salish Sea Nemcek2023 2015-2019/MODIFIED"
-output_path = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation"
-domain_path = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation"
-domain_file = "analysis_domains_jarnikova.yml"
-output_file = "Nemcek_obs_timeseries_all_domains.csv"
-subdomains_to_include = ["SGI", "SGN", "SGS"]
+NEMCEK_FILE = "Nemcek_Supp_Data.csv"
+NEMCEK_PATH = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/28. Phytoplankton/Phytoplankton Salish Sea Nemcek2023 2015-2019/MODIFIED"
+OUTPUT_PATH = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation"
+DOMAIN_PATH = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation"
+DOMAIN_FILE = "analysis_domains_jarnikova.yml"
+OUTPUT_FILE = "Nemcek_obs_timeseries_all_domains.csv"
+SUBDOMAINS = ["SGI", "SGN", "SGS"]
 
 # Define custom region groupings
 region_map = {
@@ -42,7 +46,7 @@ end_year = 2019
 # Load Data
 # -------------------------------
 
-nemcek_df = pd.read_csv(os.path.join(path_Nemcek, file_Nemcek))
+nemcek_df = pd.read_csv(os.path.join(NEMCEK_PATH, NEMCEK_FILE))
 nemcek_df['Date.Time'] = pd.to_datetime(nemcek_df['Date.Time'])
 
 # -------------------------------
@@ -50,7 +54,7 @@ nemcek_df['Date.Time'] = pd.to_datetime(nemcek_df['Date.Time'])
 # -------------------------------
 
 if 'sdomain' not in nemcek_df.columns or nemcek_df['sdomain'].eq("").any():
-    sdomains = read_sdomains(os.path.join(domain_path, domain_file))
+    sdomains = read_sdomains(os.path.join(DOMAIN_PATH, DOMAIN_FILE))
     nemcek_df['sdomain'] = ""
     for idx, row in nemcek_df.iterrows():
         lat, lon = row['Lat'], row['Lon']
@@ -59,7 +63,7 @@ if 'sdomain' not in nemcek_df.columns or nemcek_df['sdomain'].eq("").any():
                 nemcek_df.at[idx, 'sdomain'] = sd
                 break
 
-nemcek_df = nemcek_df[nemcek_df['sdomain'].isin(subdomains_to_include)].copy()
+nemcek_df = nemcek_df[nemcek_df['sdomain'].isin(SUBDOMAINS)].copy()
 
 # -------------------------------
 # Create Derived Variables
@@ -145,5 +149,5 @@ for var in phyto_vars + ['N']:
 # -------------------------------
 # Save Output
 # -------------------------------
-block_avg.to_csv(os.path.join(output_path, output_file), index=False)
-print(f"Saved 3-day block time series (region and ALL) to {output_file}")
+block_avg.to_csv(os.path.join(OUTPUT_PATH, OUTPUT_FILE), index=False)
+print(f"Saved 3-day block time series (region and ALL) to {OUTPUT_FILE}")

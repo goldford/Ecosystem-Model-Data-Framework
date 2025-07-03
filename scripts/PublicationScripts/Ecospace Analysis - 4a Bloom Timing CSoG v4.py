@@ -79,7 +79,7 @@ SUB_THRESHOLD_FACTOR = 0.7
 
 MIN_Y_TICK = 38
 CREATE_MASKS = False  # Set to True to regenerate masks
-DO_NUTRIENTS = False
+DO_NUTRIENTS = False # script 9 visualises nutrients now
 # OVERRIDE_REDFIELD = True # added by GO to help eval 2025-06-03
 
 

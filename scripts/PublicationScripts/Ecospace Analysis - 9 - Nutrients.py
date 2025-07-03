@@ -23,8 +23,8 @@ matplotlib.use('TkAgg')
 SCENARIO = 'FULLKEY_SC117_8'
 ECOSPACE_OUT_F = "Scv117_8-All_Groups_20250602_1978-2018.nc"
 ECOSPACE_OUT_PATH = "C://Users//Greig//Sync//PSF//EwE//Georgia Strait 2021//LTL_model//ECOSPACE_OUT//"
-DOMAIN_MASK_PATH = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation/suchy_ecospace_mask.nc"
-OUTPUT_FIG_DIR = "../../figs/"
+DOMAIN_MASK_PATH = "C://Users//Greig//Documents//github//Ecosystem-Model-Data-Framework//data//evaluation//suchy_ecospace_mask.nc"
+OUTPUT_FIG_DIR = "..//..//figs//"
 
 YEARS_TO_PLOT = list(range(1980, 2019))
 
@@ -139,6 +139,12 @@ def main():
         nutrient_dfs.append(df)
 
     df_nutrient_all = pd.concat(nutrient_dfs, ignore_index=True)
+
+    # Save to CSV
+    output_csv_path = os.path.join(OUTPUT_FIG_DIR, f"nutrient_concentration_{SCENARIO}.csv")
+    df_nutrient_all.to_csv(output_csv_path, index=False)
+    print(f"Nutrient concentration data saved to: {output_csv_path}")
+
     plot_nutrient_concentration(df_nutrient_all, scenario=SCENARIO)
     print("Done.")
 
