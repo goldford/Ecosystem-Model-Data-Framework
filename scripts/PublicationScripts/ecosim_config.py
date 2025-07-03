@@ -60,11 +60,11 @@ MEAN_OR_MEDIAN = "median"
 # -------------------------------------------
 
 C_TO_N_RATIO = 106 / 16  # molar Redfield ratio
-N_FREE_AVG = 18 # see ecosim_data_prep_2_nutrients.py
-N_FREE_MIN = 7
+N_FREE_AVG = 18 # see ecosim_data_prep_2_nutrients.py, depth int N
+N_FREE_MIN = 7 # the lowest the depth int N falls
 N_FREE_DRAWDOWN = (N_FREE_AVG - N_FREE_MIN)
 N_BOUND_PROP = N_FREE_DRAWDOWN / N_FREE_AVG
-PP_COLUMNS = [17, 18, 19]
+PP_COLUMNS = ['17', '18', '19'] # for implicit calc of N
 
 # FIX SO IT'S READING FROM FIRST TIME STEP
 INIT_TOT_PP_B = 3.7  # g C m^-2, for initial phytoplankton biomass only
