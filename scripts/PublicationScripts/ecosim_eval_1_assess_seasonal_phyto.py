@@ -27,7 +27,6 @@ matplotlib.use('TkAgg')
 SCENARIO = ecosim_config.SCENARIO
 START_DATE = ecosim_config.START_DATA_PHYT_SEAS
 END_DATE = ecosim_config.END_DATE_PHYT_SEAS
-# Path to CSV with date and season columns
 OUTPUT_ECOSIM_FILE = ecosim_config.ECOSIM_F_PREPPED_SINGLERUN
 OUTPUT_FIG_PATH = ecosim_config.OUTPUT_DIR_FIGS
 OUTPUT_STAT_PATH = ecosim_config.OUTPUT_DIR_EVAL

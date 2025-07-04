@@ -102,7 +102,7 @@ combined_df['season'] = combined_df['month'].map(season_map)
 # Export to CSV
 # -------------------------------
 
-output_file = os.path.join(OUTPUT_PATH, "combined_nutrients.csv")
+output_file = os.path.join(OUTPUT_PATH, "nutrients_ios_csop_combined_sampled.csv")
 combined_df.to_csv(output_file, index=False)
 
 print(f"Combined dataset saved to: {output_file}")

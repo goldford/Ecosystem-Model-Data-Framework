@@ -53,6 +53,7 @@ SUB_THRESHOLD_FACTOR = ecosim_config.SUB_THRESHOLD_FACTOR
 LOG_TRANSFORM = ecosim_config.LOG_TRANSFORM
 MEAN_OR_MEDIAN = ecosim_config.MEAN_OR_MEDIAN
 
+
 # -------------------------------------------
 # Load observation datasets
 # -------------------------------------------
@@ -76,6 +77,7 @@ def load_observation_bloom_dfs():
 
     return satellite_df, C09_df
 
+
 # -------------------------------------------
 # Load Ecosim model outputs and compute total biomass
 # -------------------------------------------
@@ -91,6 +93,7 @@ def load_ecosim_dataset():
     df[TOTAL_BIOMASS_COL_C09] = df[BIOMASS_COLS_C09].sum(axis=1, skipna=True)
 
     return df
+
 
 # -------------------------------------------
 # Bloom detection
@@ -127,10 +130,12 @@ def find_bloom_doy(df, biomass_col, threshold_factor=1.05):
 def align_years(df_model, df_obs):
     return df_model[df_model['Year'].isin(df_obs['Year'])]
 
-# -------------------------------------------
+# ------------------------------------------
+# -
 #  Plotting
 # -------------------------------------------
 def plot_bloom_comparison(df_model, df_obs, label_model="Ecosim", label_obs="Observation", filename="bloom_timing_ecosim.png"):
+
     df_merged = df_model.merge(df_obs, on="Year", suffixes=("_Model", "_Obs"))
 
     plt.figure(figsize=(10, 5))
@@ -157,6 +162,7 @@ def plot_bloom_comparison(df_model, df_obs, label_model="Ecosim", label_obs="Obs
     plt.savefig(os.path.join(STATS_OUT_PATH, filename))
     plt.show()
 
+
 # -------------------------------------------
 # Evaluation
 # -------------------------------------------
@@ -173,6 +179,7 @@ def willmott1981(obs, mod):
         return np.nan
     else:
         return max(0, 1 - num / den)
+
 
 def evaluate_model(obs, mod):
     obs = np.asarray(obs)
@@ -202,9 +209,13 @@ def evaluate_model(obs, mod):
         "Model StdDev": round(std_mod, 3)
     }
 
+
 def export_evaluation_stats(stats_list, out_path, scenario):
     df_stats = pd.DataFrame(stats_list)
-    df_stats.to_csv(os.path.join(STATS_OUT_PATH, f"ecosim_bloom_eval_stats_{scenario}.csv"), index=False)
+    outfile = os.path.join(STATS_OUT_PATH, f"ecosim_bloom_eval_stats_{scenario}.csv")
+    df_stats.to_csv(outfile, index=False)
+    print("Exported bloom timing stats to: " + outfile)
+
 
 # -------------------------------------------
 # Main script
