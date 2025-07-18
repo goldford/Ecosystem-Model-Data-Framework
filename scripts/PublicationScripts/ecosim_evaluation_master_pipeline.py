@@ -11,19 +11,24 @@ Output:
   - results of others scripts
 """
 
-import ecosim_config
+import ecosim_eval_config
 
 # Import the three modules you revised
 import ecosim_data_prep_1_single_run_outputs as data_prep
-import ecosim_eval_1_assess_seasonal_phyto as seasonal_eval
-import ecosim_eval_2_assess_nutrients as nutrient_eval
-import ecosim_eval_3_assess_bloom_timing as bloom_eval
+import ecosim_eval_1_PPmultcalc as relPP_eval
+import ecosim_eval_2_assess_seasonal_phyto as seasonal_eval
+import ecosim_eval_3_assess_nutrients as nutrient_eval
+import ecosim_eval_4_assess_bloom_timing as bloom_eval
 
 
-def run_pipeline(run_prep=True, run_seasonal=True, run_bloom=True, run_nutrient=True):
+def run_pipeline(run_prep=True, run_relPP=True, run_seasonal=True, run_bloom=True, run_nutrient=True):
     if run_prep:
         print("=== Running Data Prep Step ===")
         data_prep.run_data_prep()
+
+    if run_relPP:
+        print("=== Running Eval of Rel PP mult ===")
+        relPP_eval.run_relPP_eval()
 
     if run_seasonal:
         print("=== Running Seasonal Evaluation Step ===")

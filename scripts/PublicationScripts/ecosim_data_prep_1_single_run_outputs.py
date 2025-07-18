@@ -9,17 +9,17 @@ Purpose:
 # Import pandas
 import pandas as pd
 from datetime import datetime, timedelta
-import ecosim_config
+import ecosim_eval_config
 
 # Config vars from master config
-SCENARIO = ecosim_config.SCENARIO
-FILE_PATH = ecosim_config.ECOSIM_RAW_DIR
-OUTPUT_EXPORT_FILE = ecosim_config.ECOSIM_F_PREPPED_SINGLERUN
-TIMESTEP_DAYS = ecosim_config.TIMESTEP_DAYS # 3 days (not flexible right now)
-HEADER_N = ecosim_config.ECOSIM_F_RAW_HEADERN
-MAX_TIMESTEPS = ecosim_config.MAX_TIMESTEPS # per year (will lump >120 with 120)
-YEAR_START = ecosim_config.YEAR_START_FULLRUN
-YEAR_END = ecosim_config.YEAR_END_FULLRUN
+SCENARIO = ecosim_eval_config.SCENARIO
+FILE_PATH = ecosim_eval_config.ECOSIM_RAW_DIR
+OUTPUT_EXPORT_FILE = ecosim_eval_config.ECOSIM_F_PREPPED_SINGLERUN
+TIMESTEP_DAYS = ecosim_eval_config.TIMESTEP_DAYS # 3 days (not flexible right now)
+HEADER_N = ecosim_eval_config.ECOSIM_F_RAW_HEADERN
+MAX_TIMESTEPS = ecosim_eval_config.MAX_TIMESTEPS # per year (will lump >120 with 120)
+YEAR_START = ecosim_eval_config.YEAR_START_FULLRUN
+YEAR_END = ecosim_eval_config.YEAR_END_FULLRUN
 
 # === ADD SEASON COLUMN ===
 # matches McEwan

@@ -13,7 +13,7 @@ Output:
 - not done: seasonal boxplots (McEwan right now data is just barplot - would need to revert to Nemcek)
             ie would need to go to raw data, depth integrate, do chl c conversions, taxa groupings etc
 """
-import ecosim_config
+import ecosim_eval_config
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
@@ -24,12 +24,12 @@ matplotlib.use('TkAgg')
 # User inputs
 # -------------------------------------------
 
-SCENARIO = ecosim_config.SCENARIO
-START_DATE = ecosim_config.START_DATA_PHYT_SEAS
-END_DATE = ecosim_config.END_DATE_PHYT_SEAS
-OUTPUT_ECOSIM_FILE = ecosim_config.ECOSIM_F_PREPPED_SINGLERUN
-OUTPUT_FIG_PATH = ecosim_config.OUTPUT_DIR_FIGS
-OUTPUT_STAT_PATH = ecosim_config.OUTPUT_DIR_EVAL
+SCENARIO = ecosim_eval_config.SCENARIO
+START_DATE = ecosim_eval_config.START_DATA_PHYT_SEAS
+END_DATE = ecosim_eval_config.END_DATE_PHYT_SEAS
+OUTPUT_ECOSIM_FILE = ecosim_eval_config.ECOSIM_F_PREPPED_SINGLERUN
+OUTPUT_FIG_PATH = ecosim_eval_config.OUTPUT_DIR_FIGS
+OUTPUT_STAT_PATH = ecosim_eval_config.OUTPUT_DIR_EVAL
 
 # -------------------------------------------
 # Function definitions
@@ -58,9 +58,9 @@ def plot_boxplots_by_season(df, value_column, title_prefix=""):
 def run_seasonal_eval():
     # Hardcoded McEwan observations (carbon units per m²)
     obs_data = {
-        'Diatoms': {'Winter': 0.65, 'Spring': 8.06, 'Summer': 1.34},
-        'Nano': {'Winter': 1.57, 'Spring': 1.58, 'Summer': 1.53},
-        'Other': {'Winter': 0.12, 'Spring': 0.19, 'Summer': 0.74}
+        'Diatoms': {'Winter': 0.7, 'Spring': 6, 'Summer': 1.24},
+        'Nano': {'Winter': 1.51, 'Spring': 1.74, 'Summer': 1.69},
+        'Other': {'Winter': 0.11, 'Spring': 0.19, 'Summer': 0.55}
     }
 
     # Model columns mapping

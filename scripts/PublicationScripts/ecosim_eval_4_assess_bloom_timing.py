@@ -29,29 +29,32 @@ matplotlib.use('TkAgg')
 from datetime import datetime, timedelta
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import os
-import ecosim_config # eval config file
+import ecosim_eval_config # eval config file
 
 # -------------------------------------------
 # Configuration
 # -------------------------------------------
 
-SCENARIO = ecosim_config.SCENARIO
-ECOSIM_CSV_PATH = ecosim_config.ECOSIM_F_PREPPED_SINGLERUN
-STATS_OUT_PATH = ecosim_config.OUTPUT_DIR_EVAL
-FIGS_OUT_PATH = ecosim_config.OUTPUT_DIR_FIGS
+SCENARIO = ecosim_eval_config.SCENARIO
+ECOSIM_CSV_PATH = ecosim_eval_config.ECOSIM_F_PREPPED_SINGLERUN
+STATS_OUT_PATH = ecosim_eval_config.OUTPUT_DIR_EVAL
+FIGS_OUT_PATH = ecosim_eval_config.OUTPUT_DIR_FIGS
 
 # User-specified biomass columns for Satellite and C09
-BIOMASS_COLS_SATELLITE = ecosim_config.BIOMASS_COLS_SATELLITE
-BIOMASS_COLS_C09 = ecosim_config.BIOMASS_COLS_C09
+BIOMASS_COLS_SATELLITE = ecosim_eval_config.BIOMASS_COLS_SATELLITE
+BIOMASS_COLS_C09 = ecosim_eval_config.BIOMASS_COLS_C09
 
-TOTAL_BIOMASS_COL_SATELLITE = ecosim_config.TOTAL_BIOMASS_COL_SATELLITE
-TOTAL_BIOMASS_COL_C09 = ecosim_config.TOTAL_BIOMASS_COL_C09
+TOTAL_BIOMASS_COL_SATELLITE = ecosim_eval_config.TOTAL_BIOMASS_COL_SATELLITE
+TOTAL_BIOMASS_COL_C09 = ecosim_eval_config.TOTAL_BIOMASS_COL_C09
+
+START_FULL_BLM = ecosim_eval_config.START_FULL_BLM
+END_FULL_BLM = ecosim_eval_config.END_FULL_BLM
 
 # Bloom detection parameters
-THRESHOLD_FACTOR = ecosim_config.THRESHOLD_FACTOR
-SUB_THRESHOLD_FACTOR = ecosim_config.SUB_THRESHOLD_FACTOR
-LOG_TRANSFORM = ecosim_config.LOG_TRANSFORM
-MEAN_OR_MEDIAN = ecosim_config.MEAN_OR_MEDIAN
+THRESHOLD_FACTOR = ecosim_eval_config.THRESHOLD_FACTOR
+SUB_THRESHOLD_FACTOR = ecosim_eval_config.SUB_THRESHOLD_FACTOR
+LOG_TRANSFORM = ecosim_eval_config.LOG_TRANSFORM
+MEAN_OR_MEDIAN = ecosim_eval_config.MEAN_OR_MEDIAN
 
 
 # -------------------------------------------
@@ -138,7 +141,7 @@ def plot_bloom_comparison(df_model, df_obs, label_model="Ecosim", label_obs="Obs
 
     df_merged = df_model.merge(df_obs, on="Year", suffixes=("_Model", "_Obs"))
 
-    plt.figure(figsize=(10, 5))
+    # plt.figure(figsize=(10, 5))
 
     # Plot model with error bars and line
     plt.errorbar(df_merged['Year'], df_merged['Day of Year_Model'], yerr=1.5,
@@ -159,8 +162,9 @@ def plot_bloom_comparison(df_model, df_obs, label_model="Ecosim", label_obs="Obs
     plt.title(f"Bloom Timing Comparison: {label_model} vs {label_obs}")
     plt.legend()
     plt.tight_layout()
-    plt.savefig(os.path.join(STATS_OUT_PATH, filename))
     plt.show()
+    plt.savefig(os.path.join(STATS_OUT_PATH, filename))
+
 
 
 # -------------------------------------------
@@ -236,6 +240,11 @@ def run_bloom_eval():
     # Align model to observation years
     bloom_df_satellite_aligned = bloom_df_satellite[bloom_df_satellite['Year'].isin(satellite_df['Year'])]
     bloom_df_C09_aligned = bloom_df_C09[bloom_df_C09['Year'].isin(C09_df['Year'])]
+    bloom_df_C09_aligned = bloom_df_C09_aligned[(bloom_df_C09_aligned['Bloom Date'] >= START_FULL_BLM) &
+                                                (bloom_df_C09_aligned['Bloom Date'] <= END_FULL_BLM)]
+
+    C09_df = C09_df[(C09_df['Year'] >= pd.to_datetime(START_FULL_BLM).year) &
+                    (C09_df['Year'] <= pd.to_datetime(END_FULL_BLM).year)]
 
     # Evaluation
     stats_suchy = evaluate_model(satellite_df['Day of Year'], bloom_df_satellite_aligned['Day of Year'])
