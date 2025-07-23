@@ -19,9 +19,11 @@ import ecosim_eval_1_PPmultcalc as relPP_eval
 import ecosim_eval_2_assess_seasonal_phyto as seasonal_eval
 import ecosim_eval_3_assess_nutrients as nutrient_eval
 import ecosim_eval_4_assess_bloom_timing as bloom_eval
+import ecosim_eval_5_zoop as zoop_eval
 
 
-def run_pipeline(run_prep=True, run_relPP=True, run_seasonal=True, run_bloom=True, run_nutrient=True):
+def run_pipeline(run_prep=True, run_relPP=True, run_seasonal=True,
+                 run_bloom=True, run_nutrient=True, run_zoop=True):
     if run_prep:
         print("=== Running Data Prep Step ===")
         data_prep.run_data_prep()
@@ -41,6 +43,12 @@ def run_pipeline(run_prep=True, run_relPP=True, run_seasonal=True, run_bloom=Tru
     if run_nutrient:
         print("=== Running Nutrientg Evaluation Step ===")
         nutrient_eval.run_nutrient_eval()
+
+    if run_zoop:
+        print("=== Running Zooplankton Evaluation Step ===")
+        zoop_eval.run_zoop_eval()
+
+
 
     print("=== Pipeline completed successfully. ===")
 

@@ -27,7 +27,9 @@ matplotlib.use('TkAgg')
 SCENARIO = cfg.SCENARIO
 ECOSIM_CSV = cfg.ECOSIM_F_PREPPED_SINGLERUN
 OBS_CSV = os.path.join(cfg.Z_P_PREPPED, cfg.Z_F_PREPPED)
-OUTPUT_DIR = cfg.OUTPUT_DIR_EVAL
+OUTPUT_DIR_STATS = cfg.OUTPUT_DIR_EVAL
+OUTPUT_DIR_FIGS = cfg.OUTPUT_DIR_FIGS
+
 
 # Full list of zoop groups in config (wide-form obs columns)
 GROUP_MAP = cfg.Z_GROUP_MAP
@@ -54,7 +56,11 @@ title_map['Total'] = 'Total'
 
 
 def run_zoop_eval():
-    # Load obs and model
+
+    # -----------------------------------------
+    # data prep
+    # -----------------------------------------
+
     obs = pd.read_csv(OBS_CSV)
     obs['date'] = pd.to_datetime(obs['date']) if 'date' in obs.columns else pd.to_datetime(obs[['Year','Month','Day']])
 
@@ -68,6 +74,10 @@ def run_zoop_eval():
         mod_df = mod.rename(columns={'Season':'season'})[['date','season'] + list(map(str,GROUP_MAP.values()))]
     mod_df = mod_df.rename(columns={str(v): f"EWE-{k}" for k,v in GROUP_MAP.items()})
 
+    # -----------------------------------------
+    # Matching ecosim to zoop obs
+    # -----------------------------------------
+
     # Match by nearest date
     obs = obs.sort_values('date')
     mod_df = mod_df.sort_values('date')
@@ -75,8 +85,8 @@ def run_zoop_eval():
     matched = matched.dropna(subset=[f"EWE-{g}" for g in GROUP_MAP])
 
     # Save matched tables
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    wide_csv = os.path.join(OUTPUT_DIR, f"ecosim_{SCENARIO}_zoop_matched_wide.csv")
+    os.makedirs(OUTPUT_DIR_STATS, exist_ok=True)
+    wide_csv = os.path.join(OUTPUT_DIR_STATS, f"ecosim_{SCENARIO}_zoop_matched_wide.csv")
     matched.to_csv(wide_csv, index=False)
     print(f"Saved wide-match: {wide_csv}")
 
@@ -97,11 +107,15 @@ def run_zoop_eval():
             })
         )
     paired = pd.concat(long_dfs, ignore_index=True)
-    long_csv = os.path.join(OUTPUT_DIR, f"ecosim_{SCENARIO}_zoop_matched_long.csv")
+    long_csv = os.path.join(OUTPUT_DIR_STATS, f"ecosim_{SCENARIO}_zoop_matched_long.csv")
     paired.to_csv(long_csv, index=False)
     print(f"Saved long-match: {long_csv}")
 
-    # Seasonal barplots
+
+    # -------------------------------------------
+    # Seasonal barplots model v obs
+    # -----------------------------------------
+
     seasonal = (
         paired.groupby(['season','group'], as_index=False)
               .agg(obs_biomass=('obs_biomass','mean'), model_biomass=('model_biomass','mean'))
@@ -119,11 +133,15 @@ def run_zoop_eval():
         if g==PLOT_GROUPS[0]: ax.legend()
     for ax in axes[len(PLOT_GROUPS):]: ax.axis('off')
     fig.tight_layout()
-    out1 = os.path.join(OUTPUT_DIR, f"ecosim_{SCENARIO}_zoop_seasonal_barplots.png")
+    out1 = os.path.join(OUTPUT_DIR_FIGS, f"ecosim_{SCENARIO}_zoop_seasonal_barplots.png")
     fig.savefig(out1, dpi=300)
     print(f"Saved seasonal plots: {out1}")
 
+
+    # -------------------------------------------
     # Compute seasonal anomalies per year
+    # -------------------------------------------
+
     paired['year'] = paired['date'].dt.year
     hist = paired[(paired.year >= ANOM_START) & (paired.year <= ANOM_END)]
     anoms = []
@@ -137,13 +155,14 @@ def run_zoop_eval():
         df['mod_anom'] = (df.model_biomass - df.mod_mean) / df.mod_sd
         anoms.append(df[['year', 'season', 'group', 'obs_anom', 'mod_anom']])
     anom_df = pd.concat(anoms, ignore_index=True)
-    anom_csv = os.path.join(OUTPUT_DIR, f"ecosim_{SCENARIO}_zoop_anomalies.csv")
+    anom_csv = os.path.join(OUTPUT_DIR_STATS, f"ecosim_{SCENARIO}_zoop_anomalies.csv")
     anom_df.to_csv(anom_csv, index=False)
     print(f"Saved anomalies: {anom_csv}")
 
-
-
+    # -------------------------------------------
     # Plot anomaly barplots by year
+    # -------------------------------------------
+
     fig2, axes2 = plt.subplots(int(np.ceil(len(PLOT_GROUPS) / NCOLS)), NCOLS, sharey=True,
                                figsize=(5 * NCOLS, 4 * np.ceil(len(PLOT_GROUPS) / NCOLS)))
     axes2 = axes2.flatten()
@@ -163,16 +182,12 @@ def run_zoop_eval():
     # Turn off any unused axes
     for ax in axes2[len(PLOT_GROUPS):]:
         ax.axis('off')
+
     fig2.tight_layout()
-    out2 = os.path.join(OUTPUT_DIR, f"ecosim_{SCENARIO}_zoop_anomaly_barplots.png")
+    out2 = os.path.join(OUTPUT_DIR_FIGS, f"ecosim_{SCENARIO}_zoop_anomaly_barplots.png")
     fig2.savefig(out2, dpi=300)
     print(f"Saved anomaly plots: {out2}")
-    fig2.tight_layout()
-    fig2.show()
-OUTPUT_DIR SHOULD BE FIGS
-    out2 = os.path.join(OUTPUT_DIR, f"ecosim_{SCENARIO}_zoop_anomaly_barplots.png")
-    fig2.savefig(out2, dpi=300)
-    print(f"Saved anomaly plots: {out2}")
+    plt.show()
 
 
 if __name__=='__main__':

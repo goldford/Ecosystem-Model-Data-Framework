@@ -15,7 +15,7 @@ import pandas as pd # would rather not do imports here
 # -------------------------------------------
 # General settings
 # -------------------------------------------
-SCENARIO = "SC126"
+SCENARIO = "SC125"
 
 # ===== Paths =====
 YEAR_START_FULLRUN = 1978
@@ -127,36 +127,6 @@ print(f"Nitrogen bound at initialisation: {N_B_INIT:.3f}")
 
 
 
-
-# # N_FREE_MIN = 7 # the lowest the depth int N falls
-# # N_FREE_DRAWDOWN = (N_FREE_AVG - N_FREE_MIN)
-#
-# PP_COLUMNS = ['17', '18', '19'] # for calc of N
-#
-# # FIX SO IT'S READING FROM FIRST TIME STEP
-#
-# # let's move all this to nutrients script
-# # df = pd.read_csv(ECOSIM_F_PREPPED_SINGLERUN, skiprows=0)
-# INITIAL_BIOMASS = 8.5  # g C m^-2, for initial phytoplankton biomass only
-#
-# MAX_BIOMASS = 15.2 # under bloom conditions
-# # New input assumptions
-# INITIAL_NUTRIENT_CONC_FREE = 18  # umol N L^-1 annual avg
-# MIN_N_CONC = 7        # μmol N L^-1, observed minimum concentration
-#
-# # Calculation of 'Free' Nutrients (THIS SHOULD MATCH ECOSIM SCENARIO)
-# B_MAX_INCREASE_PROP = (MAX_BIOMASS - INITIAL_BIOMASS) / INITIAL_BIOMASS
-# N_MAX_DECREASE_PROP = 1 - (MIN_N_CONC / INITIAL_NUTRIENT_CONC_FREE)
-# N_EQ_TO_B_EQ = B_MAX_INCREASE_PROP / N_MAX_DECREASE_PROP
-#
-# # Calculate total nitrogen in the system
-# # T = N_eq + P_eq
-# # Let P_eq = 1 unit (arbitrary), then N_eq = N_eq_to_P_eq * P_eq
-# P_eq = 1  # define as 1 unit for proportional calculation
-# N_eq = N_EQ_TO_B_EQ * P_eq
-# T = N_eq + P_eq
-# # Calculate the proportion that is 'free' (i.e. as dissolved nutrients)
-# PROP_N_FREE = N_eq / T
 
 # -------------------------------------------
 # evaluation 4 - bloom timing
