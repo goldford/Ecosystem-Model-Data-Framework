@@ -2,7 +2,7 @@
 # Zooplankton Carbon Biomass Preparation and Anomaly Calculation
 # Author: Greig Oldford (2025)
 # 
-# This script performs two major tasks:
+# Process:
 #
 # (1) Raw Data Transformation:
 #     - Convert zooplankton biomass from dry weight to carbon using taxon-specific factors

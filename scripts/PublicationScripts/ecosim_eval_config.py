@@ -178,3 +178,21 @@ THRESHOLD_FACTOR = 1.05
 SUB_THRESHOLD_FACTOR = 0.7
 LOG_TRANSFORM = True
 MEAN_OR_MEDIAN = "median"
+
+# -------------------------------------------
+# evaluation 5 - zooplankton eval
+# -------------------------------------------
+
+# Mapping from obs column names to numeric column indices in the model output
+Z_GROUP_MAP = {
+    'ZF1-ICT': 4,
+    'ZC1-EUP': 5,
+    'ZC2-AMP': 6,
+    'ZC3-DEC': 7,
+    'ZC4-CLG': 8,
+    'ZC5-CSM': 9,
+    'ZS1-JEL': 10,
+    'ZS2-CTH': 11,
+    'ZS3-CHA': 12,
+    'ZS4-LAR': 14,
+}
