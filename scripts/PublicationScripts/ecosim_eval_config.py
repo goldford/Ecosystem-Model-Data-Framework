@@ -183,6 +183,9 @@ MEAN_OR_MEDIAN = "median"
 # evaluation 5 - zooplankton eval
 # -------------------------------------------
 
+Z_F_PREPPED = "Zooplankton_B_C_gm2_EWEMODELGRP_Wide.csv"
+Z_P_PREPPED = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/4. Zooplankton/Zoop_Perryetal_2021/MODIFIED"
+
 # Mapping from obs column names to numeric column indices in the model output
 Z_GROUP_MAP = {
     'ZF1-ICT': 4,

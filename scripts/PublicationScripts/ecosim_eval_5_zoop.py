@@ -15,76 +15,78 @@ Output:
 
 import pandas as pd
 import os
-import ecosim_eval_config
+import ecosim_eval_config as cfg
 
-# ====== Config ======
-SCENARIO = ecosim_eval_config.SCENARIO
-# 1D Ecosim (wide-form) output CSV with numeric columns for zooplankton groups
-ecosim_csv = ecosim_eval_config.ECOSIM_F_PREPPED_SINGLERUN
-# Semi-prepared zooplankton observations CSV
-oobs_csv = ecosim_eval_config.ZOOP_F_PREPPED  # define this in config
-# Where to write matched table
-OUTPUT_DIR_EVAL = ecosim_eval_config.OUTPUT_DIR_EVAL
+SCENARIO = cfg.SCENARIO
+# 1D model output and obs tables
+ECOSIM_CSV = cfg.ECOSIM_F_PREPPED_SINGLERUN
+OBS_CSV = os.path.join(cfg.Z_P_PREPPED, cfg.Z_F_PREPPED)
+OUTPUT_DIR = cfg.OUTPUT_DIR_EVAL
 
-# Mapping from obs column names to numeric column indices in the model output
-GROUP_MAP = ecosim_eval_config.Z_GROUP_MAP
+# mapping from obs groups to model numeric columns
+GROUP_MAP = cfg.Z_GROUP_MAP
+# tolerance for matching dates (in days)
+TIME_TOL = pd.Timedelta(days=cfg.TIMESTEP_DAYS)
 
-def run_zoop_matching():
-    """
-    Load obs and model 1D outputs, pivot to long form, match on date + group,
-    and save paired table for downstream analysis.
-    """
-    # ---- Load observations ----
-    obs = pd.read_csv(oobs_csv)
-    # If date column is not already present, construct it
-    if 'date' not in obs.columns:
-        obs['date'] = pd.to_datetime(obs[['Year', 'Month', 'Day']])
-    else:
+
+def run_zoop_eval():
+    # load observations
+    obs = pd.read_csv(OBS_CSV)
+    # ensure date column
+    if 'date' in obs.columns:
         obs['date'] = pd.to_datetime(obs['date'])
+    else:
+        obs['date'] = pd.to_datetime(obs[['Year', 'Month', 'Day']])
 
-    # Pivot obs to long form
-    obs_long = (
-        obs
-        .melt(
-            id_vars=['date'],
-            value_vars=list(GROUP_MAP.keys()),
-            var_name='group',
-            value_name='obs_biomass'
-        )
-        .dropna(subset=['obs_biomass'])
+    # load model output
+    mod = pd.read_csv(ECOSIM_CSV, parse_dates=['date'])
+    mod['date'] = pd.to_datetime(mod['date'])
+
+    # sort for merge_asof
+    obs = obs.sort_values('date')
+    mod = mod.sort_values('date')
+
+    # prepare model columns: rename numeric cols to EWE-<group>
+    mod_ewe = mod[['date'] + [str(v) for v in GROUP_MAP.values()]].copy()
+    rename_map = {str(v): f"EWE-{k}" for k, v in GROUP_MAP.items()}
+    mod_ewe = mod_ewe.rename(columns=rename_map)
+
+    # merge on nearest date
+    matched = pd.merge_asof(
+        left=obs,
+        right=mod_ewe,
+        on='date',
+        direction='nearest',
+        tolerance=TIME_TOL
     )
 
-    # ---- Load model output ----
-    mod = pd.read_csv(ecosim_csv, parse_dates=['date'])
+    # drop rows without a match
+    matched = matched.dropna(subset=[f"EWE-{g}" for g in GROUP_MAP.keys()])
 
-    # Build long-form from numeric columns via mapping
-    mod_list = []
-    for grp, col_idx in GROUP_MAP.items():
-        col_name = str(col_idx)
-        if col_name not in mod.columns:
-            raise KeyError(f"Column '{col_name}' not found in model output.")
-        df = mod[['date', col_name]].rename(columns={col_name: 'model_biomass'})
-        df['group'] = grp
-        mod_list.append(df)
-    mod_long = pd.concat(mod_list, ignore_index=True)
+    # save wide matched table
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    wide_out = os.path.join(OUTPUT_DIR, f"ecosim_{SCENARIO}_zoop_matched_wide.csv")
+    matched.to_csv(wide_out, index=False)
+    print(f"Wide match saved to: {wide_out}")
 
-    # ---- Match observations to model ----
-    paired = pd.merge(
-        obs_long,
-        mod_long,
-        on=['date', 'group'],
-        how='left'
-    )
+    # build long paired table
+    long_rows = []
+    for grp in GROUP_MAP.keys():
+        df = pd.DataFrame({
+            'date': matched['date'],
+            'group': grp,
+            'obs_biomass': matched[grp],
+            'model_biomass': matched[f"EWE-{grp}"]
+        })
+        long_rows.append(df)
+    paired_long = pd.concat(long_rows, ignore_index=True)
 
-    # ---- Save results ----
-    os.makedirs(OUTPUT_DIR_EVAL, exist_ok=True)
-    out_file = os.path.join(
-        OUTPUT_DIR_EVAL,
-        f"ecosim_{SCENARIO}_zoop_obs_model_matched.csv"
-    )
-    paired.to_csv(out_file, index=False)
-    print(f"Matched zooplankton table saved to: {out_file}")
+    # save paired long table
+    long_out = os.path.join(OUTPUT_DIR, f"ecosim_{SCENARIO}_zoop_obs_model_matched.csv")
+    paired_long.to_csv(long_out, index=False)
+    print(f"Long-paired table saved to: {long_out}")
 
 
 if __name__ == '__main__':
-    run_zoop_matching()
+    run_zoop_eval()
+
