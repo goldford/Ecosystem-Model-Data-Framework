@@ -15,7 +15,7 @@ import pandas as pd # would rather not do imports here
 # -------------------------------------------
 # General settings
 # -------------------------------------------
-SCENARIO = "SC125"
+SCENARIO = "SC128"
 
 # ===== Paths =====
 YEAR_START_FULLRUN = 1978
@@ -116,6 +116,11 @@ MONTHLY_N_FLUX_MULT = {
     7: 0.42, 8: 0.45, 9: 0.74, 10: 0.94, 11: 1.0, 12: 1.0
 }
 
+MONTHLY_N_FLUX_MULT = {
+    1: 1.0, 2: 1.0, 3: 1, 4: 1, 5: 1, 6: 1,
+    7: 1, 8: 1, 9: 1, 10: 1, 11: 1.0, 12: 1.0
+}
+
 SEASON_MAP = {
     1:  "Winter", 2: "Winter", 12: "Winter",
     3:  "Spring", 4: "Spring", 5:  "Spring",
@@ -124,8 +129,6 @@ SEASON_MAP = {
 }
 
 print(f"Nitrogen bound at initialisation: {N_B_INIT:.3f}")
-
-
 
 
 # -------------------------------------------
@@ -153,10 +156,9 @@ MEAN_OR_MEDIAN = "median"
 # evaluation 5 - zooplankton eval
 # -------------------------------------------
 
-Z_F_PREPPED = "Zooplankton_B_C_gm2_EWEMODELGRP_Wide.csv"
+Z_F_SEAS = "Zoopl_SofG_1996-2018_df_summary.csv" # this is output by long R script
+Z_F_TOWLEV = "Zooplankton_B_C_gm2_EWEMODELGRP_Wide.csv" # this is output by short one
 Z_P_PREPPED = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/4. Zooplankton/Zoop_Perryetal_2021/MODIFIED"
-
-Z_ANOM_YR_RG = (1980, 2018)
 
 # Mapping from obs column names to numeric column indices in the model output
 Z_GROUP_MAP = {
@@ -171,3 +173,26 @@ Z_GROUP_MAP = {
     'ZS3-CHA': 12,
     'ZS4-LAR': 14,
 }
+
+# USER SETTING: choose one season and plot type ('bar' or 'line')
+ZP_SEASON_CHOICE = 'Spring'  # e.g., 'Winter','Spring','Summer','Fall'
+ZP_PLOT_TYPE = 'bar'     # 'bar' or 'line'
+# USER SETTING: toggle friendly labels
+ZP_USE_FRIENDLY_LABELS = True  # set False to use cryptic codes
+ZP_FRIENDLY_MAP_ZC = {
+    'ZC1-EUP': 'Euphausiids',
+    'ZC2-AMP': 'Amphipods',
+    'ZC3-DEC': 'Decapods',
+    'ZC4-CLG': 'Lg. Calanoid Copepods',
+    'ZC5-CSM': 'Other Copepods',
+    'ZS1-JEL': 'Jellyfish',
+    'ZS2-CTH': 'Ctenophores',
+    'ZS3-CHA': 'Chaetognaths',
+    'ZS4-LAR': 'Larvaceans',
+    'ZF1-ICH': 'Ichthyoplankton',
+    'misc': 'Other',
+    'Total': 'Total'
+}
+
+ZP_ANOM_YEAR_START = 2000
+ZP_ANOM_YEAR_END   = 2018
