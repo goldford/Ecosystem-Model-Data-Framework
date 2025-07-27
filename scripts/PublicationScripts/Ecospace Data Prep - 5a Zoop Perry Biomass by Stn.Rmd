@@ -32,7 +32,7 @@ df <- read.csv(paste0(path, file))
 
 
 # DRY WEIGHT TO CARBON (see table in report)
-DW_to_C_zoop =  # default
+DW_to_C_zoop = 0.3  # default
 DW_to_C_scyphozoa = 0.07    # Ikeda, 2014b; Larson, 1987; Lüskow et al., 2021
 DW_to_C_medusae = 0.09      # Ikeda, 2014b; Larson, 1987; Lüskow et al., 2021 (guess)
 DW_to_C_ctenop = 0.13       # Ikeda, 2014b; Larson, 1987; Lüskow et al., 2021
@@ -141,7 +141,7 @@ df_summarised <- df %>%
     Tow_start_depth.m., Tow_end_depth.m., Bottom_depth.m., 
     Year, Month, Day, Time, 
     Twilight, Season,
-    ModelGroup,
+    ModelGroup
   ) %>%
   summarise(
     BCarbon_g_m2 = sum(BCarbon_g_m2, na.rm = TRUE),
