@@ -193,6 +193,6 @@ ZP_FRIENDLY_MAP_ZC = {
     'misc': 'Other',
     'Total': 'Total'
 }
-
+ZP_LOG_TRANSFORM = True
 ZP_ANOM_YEAR_START = 2000
 ZP_ANOM_YEAR_END   = 2018

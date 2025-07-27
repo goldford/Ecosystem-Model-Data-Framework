@@ -61,13 +61,10 @@ FRIENDLY_MAP = cfg.ZP_FRIENDLY_MAP_ZC
 # USER SETTING: specify anomaly year range
 ANOM_YEAR_START = cfg.ZP_ANOM_YEAR_START
 ANOM_YEAR_END = cfg.ZP_ANOM_YEAR_END
+ZP_LOG_TRANSFORM = cfg.ZP_LOG_TRANSFORM
 
 
-def compute_stats(df, obs_col, mod_col):
-    """
-    Compute a suite of performance stats, handling NaNs.
-    """
-    # Extract and mask NaNs
+def compute_stats(df, obs_col, mod_col, log_or_anom=False):
     o_series = df[obs_col]
     m_series = df[mod_col]
     mask = o_series.notna() & m_series.notna()
@@ -75,165 +72,29 @@ def compute_stats(df, obs_col, mod_col):
     m = m_series[mask].values
     N = len(o)
     if N == 0:
-        # No data to compute
         return dict(MB=np.nan, MAE=np.nan, RMSE=np.nan, NRMSE=np.nan,
                     r=np.nan, R2=np.nan, MAPE=np.nan, NSE=np.nan, WSS=np.nan)
-    # Core metrics
+
     mb   = np.nanmean(m - o)
     mae  = np.nanmean(np.abs(m - o))
     rmse = np.sqrt(np.nanmean((m - o)**2))
-    nrmse= rmse / np.nanmean(o) if np.nanmean(o) != 0 else np.nan
-    # Correlation
+
+    nrmse = rmse if log_or_anom else (rmse / np.nanmean(o) if np.nanmean(o) != 0 else np.nan)
+
     r    = np.corrcoef(m, o)[0,1] if N > 1 else np.nan
     r2   = r**2 if not np.isnan(r) else np.nan
-    # Percent error
     mape = np.nanmean(np.abs((m - o) / o)) * 100 if np.all(o != 0) else np.nan
-    # Efficiency
     denom_nse = np.nansum((o - np.nanmean(o))**2)
     nse = 1 - np.nansum((m - o)**2) / denom_nse if denom_nse != 0 else np.nan
-    # Willmott's skill score
     denom_wss = np.nansum((np.abs(m - np.nanmean(o)) + np.abs(o - np.nanmean(o)))**2)
     wss = 1 - np.nansum((m - o)**2) / denom_wss if denom_wss != 0 else np.nan
     return {
-        'N': N,
-        'MB': mb, 'MAE': mae, 'RMSE': rmse, 'NRMSE': nrmse,
+        'N': N, 'MB': mb, 'MAE': mae, 'RMSE': rmse, 'NRMSE': nrmse,
         'r': r, 'R2': r2, 'MAPE': mape, 'NSE': nse, 'WSS': wss
     }
 
 
-
 def run_zoop_eval():
-
-    # # -----------------------------------------
-    # # data prep
-    # # -----------------------------------------
-    #
-    # obs = pd.read_csv(OBS_CSV_SEAS)
-    # obs['date'] = pd.to_datetime(obs['date']) if 'date' in obs.columns else pd.to_datetime(obs[['Year','Month','Day']])
-    #
-    # mod = pd.read_csv(ECOSIM_CSV, parse_dates=['date'])
-    # mod['date'] = pd.to_datetime(mod['date'])
-    #
-    # # Prepare model columns
-    # if 'season' in mod.columns:
-    #     mod_df = mod[['date','season'] + list(map(str,GROUP_MAP.values()))]
-    # else:
-    #     mod_df = mod.rename(columns={'Season':'season'})[['date','season'] + list(map(str,GROUP_MAP.values()))]
-    # mod_df = mod_df.rename(columns={str(v): f"EWE-{k}" for k,v in GROUP_MAP.items()})
-    #
-    # # -----------------------------------------
-    # # Matching ecosim to zoop obs
-    # # -----------------------------------------
-    #
-    # # Match by nearest date
-    # obs = obs.sort_values('date')
-    # mod_df = mod_df.sort_values('date')
-    # matched = pd.merge_asof(obs, mod_df, on='date', direction='nearest', tolerance=TIME_TOL)
-    # matched = matched.dropna(subset=[f"EWE-{g}" for g in GROUP_MAP])
-    #
-    # # Save matched tables
-    # os.makedirs(OUTPUT_DIR_STATS, exist_ok=True)
-    # wide_csv = os.path.join(OUTPUT_DIR_STATS, f"ecosim_{SCENARIO}_zoop_matched_wide.csv")
-    # matched.to_csv(wide_csv, index=False)
-    # print(f"Saved wide-match: {wide_csv}")
-    #
-    # # Compute totals
-    # matched['Total'] = matched[ZC_GROUPS].sum(axis=1)
-    # matched['EWE-Total'] = matched[[f"EWE-{g}" for g in ZC_GROUPS]].sum(axis=1)
-    #
-    # # Build long format
-    # long_dfs = []
-    # for g in PLOT_GROUPS:
-    #     long_dfs.append(
-    #         pd.DataFrame({
-    #             'date': matched['date'],
-    #             'season': matched['season'],
-    #             'group': g,
-    #             'obs_biomass': matched[g],
-    #             'model_biomass': matched[f"EWE-{g}"]
-    #         })
-    #     )
-    # paired = pd.concat(long_dfs, ignore_index=True)
-    # long_csv = os.path.join(OUTPUT_DIR_STATS, f"ecosim_{SCENARIO}_zoop_matched_long.csv")
-    # paired.to_csv(long_csv, index=False)
-    # print(f"Saved long-match: {long_csv}")
-    #
-    #
-    # # -----------------------------------------
-    # # stratify by year→season before climatolog
-    # # -----------------------------------------
-    #
-    # # add calendar year
-    # paired['year'] = paired['date'].dt.year
-    #
-    # # 1) Compute mean biomass per (year, season, group)
-    # year_seas = (
-    #     paired
-    #     .groupby(['year', 'season', 'group'], as_index=False)
-    #     .agg(
-    #         obs_mean=('obs_biomass', 'mean'),
-    #         model_mean=('model_biomass', 'mean'),
-    #         n_tows=('obs_biomass', 'count')
-    #     )
-    # )
-    #
-    # # 2) Compute climatological seasonal mean across years
-    # climatology = (
-    #     year_seas
-    #     .groupby(['season', 'group'], as_index=False)
-    #     .agg(
-    #         obs_clim=('obs_mean', 'mean'),
-    #         model_clim=('model_mean', 'mean')
-    #     )
-    # )
-    #
-    # # 3) Prepare panel settings
-    # SEASONS = ['Winter', 'Spring', 'Summer', 'Fall']
-    # PLOT_GROUPS2 = sorted(climatology['group'].unique())  # ensure a consistent order
-    # NCOLS = 2
-    #
-    # # 4) Generate seasonal barplots in panels
-    # fig, axes = plt.subplots(
-    #     int(np.ceil(len(PLOT_GROUPS2) / NCOLS)),
-    #     NCOLS,
-    #     sharey=True,
-    #     figsize=(5 * NCOLS, 4 * np.ceil(len(PLOT_GROUPS2) / NCOLS))
-    # )
-    #
-    # axes = axes.flatten()
-    # x = np.arange(len(SEASONS))
-    # w = 0.35
-    #
-    # for i, (ax, g) in enumerate(zip(axes, PLOT_GROUPS2)):
-    #     d = climatology[climatology['group'] == g]
-    #     obs_vals = [
-    #         d.loc[d['season'] == s, 'obs_clim'].values[0] if s in d['season'].values else np.nan
-    #         for s in SEASONS
-    #     ]
-    #     mod_vals = [
-    #         d.loc[d['season'] == s, 'model_clim'].values[0] if s in d['season'].values else np.nan
-    #         for s in SEASONS
-    #     ]
-    #     ax.bar(x - w / 2, obs_vals, w, label='Obs')
-    #     ax.bar(x + w / 2, mod_vals, w, label='Model')
-    #     ax.set_xticks(x)
-    #     ax.set_xticklabels(SEASONS)
-    #     ax.set_title(g)
-    #     if i % NCOLS == 0:
-    #         ax.set_ylabel('Biomass (g C m⁻²)')
-    #     if i == 0:
-    #         ax.legend()
-    #
-    # # Turn off any unused panels
-    # for ax in axes[len(PLOT_GROUPS2):]:
-    #     ax.axis('off')
-    #
-    # fig.tight_layout()
-    # out = os.path.join(OUTPUT_DIR_FIGS, f"ecosim_{SCENARIO}_zoop_seasonal_barplots.png")
-    # fig.savefig(out, dpi=300)
-    # print(f"Saved seasonal plots: {out}")
-    # plt.show()
-
 
 
     # === Load Observed Seasonal Summary ===
@@ -322,58 +183,9 @@ def run_zoop_eval():
 
 
 
-    # # -------------------------------------------
-    # # Compute seasonal anomalies per year
-    # # -------------------------------------------
-    # paired = comp # quick fix
-    # paired['year'] = paired['date'].dt.year
-    # hist = paired[(paired.year >= ANOM_START) & (paired.year <= ANOM_END)]
-    # anoms = []
-    # for g in PLOT_GROUPS:
-    #     df = hist[hist.group == g].copy()
-    #     clim = df.groupby('season').agg(obs_mean=('obs_biomass', 'mean'), obs_sd=('obs_biomass', 'std'),
-    #                                     mod_mean=('model_biomass', 'mean'),
-    #                                     mod_sd=('model_biomass', 'std')).reset_index()
-    #     df = df.merge(clim, on='season')
-    #     df['obs_anom'] = (df.obs_biomass - df.obs_mean) / df.obs_sd
-    #     df['mod_anom'] = (df.model_biomass - df.mod_mean) / df.mod_sd
-    #     anoms.append(df[['year', 'season', 'group', 'obs_anom', 'mod_anom']])
-    # anom_df = pd.concat(anoms, ignore_index=True)
-    # anom_csv = os.path.join(OUTPUT_DIR_STATS, f"ecosim_{SCENARIO}_zoop_anomalies.csv")
-    # anom_df.to_csv(anom_csv, index=False)
-    # print(f"Saved anomalies: {anom_csv}")
-    #
-    # # -------------------------------------------
-    # # Plot anomaly barplots by year
-    # # -------------------------------------------
-    #
-    # fig2, axes2 = plt.subplots(int(np.ceil(len(PLOT_GROUPS) / NCOLS)), NCOLS, sharey=True,
-    #                            figsize=(5 * NCOLS, 4 * np.ceil(len(PLOT_GROUPS) / NCOLS)))
-    # axes2 = axes2.flatten()
-    # for i, (ax, g) in enumerate(zip(axes2, PLOT_GROUPS)):
-    #     # Select only numeric anomaly columns for yearly mean
-    #     sub = anom_df[anom_df.group == g][['year', 'obs_anom', 'mod_anom']]
-    #     df = sub.groupby('year', as_index=False).mean()
-    #     ax.bar(df.year - 0.2, df.obs_anom, 0.4, label='Obs')
-    #     ax.bar(df.year + 0.2, df.mod_anom, 0.4, label='Model')
-    #     ax.set_title(title_map[g])
-    #     ax.set_xticks(df.year)
-    #     ax.set_xticklabels(df.year, rotation=90)
-    #     if i % NCOLS == 0:
-    #         ax.set_ylabel('Anom')
-    #     if g == PLOT_GROUPS[0]:
-    #         ax.legend()
-    # # Turn off any unused axes
-    # for ax in axes2[len(PLOT_GROUPS):]:
-    #     ax.axis('off')
-    #
-    # fig2.tight_layout()
-    # out2 = os.path.join(OUTPUT_DIR_FIGS, f"ecosim_{SCENARIO}_zoop_anomaly_barplots.png")
-    # fig2.savefig(out2, dpi=300)
-    # print(f"Saved anomaly plots: {out2}")
-    # plt.show()
-
-    # === Anomaly Section (single-season, toggle plot type) ===
+    # -------------------------------------------
+    # seasonal anomalies per year
+    # -------------------------------------------
 
     # Prepare tow-level obs for anomalies
     obs_raw = pd.read_csv(os.path.join(cfg.Z_P_PREPPED, OBS_CSV_TOWLEV))
@@ -427,9 +239,10 @@ def run_zoop_eval():
     paired['year'] = paired['date'].dt.year
 
     # Filter to selected season
-    paired_season = paired[paired['season'] == SEASON_CHOICE]
-
-
+    paired_season = paired[paired['season'] == SEASON_CHOICE].copy()
+    if ZP_LOG_TRANSFORM:
+        # Avoid log(0) by adding a tiny constant
+        paired_season['obs_biomass'] = np.log(paired_season['obs_biomass'] + 1e-6)
 
     # Compute anomalies
     # Use the selected year range instead of default config
@@ -440,6 +253,7 @@ def run_zoop_eval():
         mean_mod=('model_biomass', 'mean'), std_mod=('model_biomass', 'std')
     )
     paired_season = paired_season.merge(clim, on='group', how='left')
+
     paired_season['obs_anom'] = (paired_season['obs_biomass'] - paired_season['mean_obs']) / paired_season['std_obs']
     paired_season['mod_anom'] = (paired_season['model_biomass'] - paired_season['mean_mod']) / paired_season['std_mod']
 
@@ -488,12 +302,15 @@ def run_zoop_eval():
     plt.savefig(os.path.join(OUTPUT_DIR_FIGS, f"zoop_anomalies_{SCENARIO}.png"), dpi=300)
 
 
-    # EVAL stats
+    # -------------------------------------------
+    # Eval stats
+    # -------------------------------------------
+
     stats_list = []
     for grp in PLOT_GROUPS:
         df_grp = paired_filtered[paired_filtered['group'] == grp]
         if len(df_grp) > 1:
-            stats = compute_stats(df_grp, 'obs_anom', 'mod_anom')
+            stats = compute_stats(df_grp, 'obs_anom', 'mod_anom', log_or_anom=ZP_LOG_TRANSFORM)
             stats['group'] = grp
             stats_list.append(stats)
 
