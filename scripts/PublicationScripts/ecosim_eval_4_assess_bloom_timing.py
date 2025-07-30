@@ -29,32 +29,33 @@ matplotlib.use('TkAgg')
 from datetime import datetime, timedelta
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import os
-import ecosim_eval_config # eval config file
+import ecosim_eval_config as cfg # eval config file
+
 
 # -------------------------------------------
 # Configuration
 # -------------------------------------------
 
-SCENARIO = ecosim_eval_config.SCENARIO
-ECOSIM_CSV_PATH = ecosim_eval_config.ECOSIM_F_PREPPED_SINGLERUN
-STATS_OUT_PATH = ecosim_eval_config.OUTPUT_DIR_EVAL
-FIGS_OUT_PATH = ecosim_eval_config.OUTPUT_DIR_FIGS
+SCENARIO = cfg.SCENARIO
+ECOSIM_CSV_PATH = cfg.ECOSIM_F_W_NUTRIENTS
+STATS_OUT_PATH = cfg.OUTPUT_DIR_EVAL
+FIGS_OUT_PATH = cfg.OUTPUT_DIR_FIGS
 
 # User-specified biomass columns for Satellite and C09
-BIOMASS_COLS_SATELLITE = ecosim_eval_config.BIOMASS_COLS_SATELLITE
-BIOMASS_COLS_C09 = ecosim_eval_config.BIOMASS_COLS_C09
+BIOMASS_COLS_SATELLITE = cfg.BIOMASS_COLS_SATELLITE
+BIOMASS_COLS_C09 = cfg.BIOMASS_COLS_C09
 
-TOTAL_BIOMASS_COL_SATELLITE = ecosim_eval_config.TOTAL_BIOMASS_COL_SATELLITE
-TOTAL_BIOMASS_COL_C09 = ecosim_eval_config.TOTAL_BIOMASS_COL_C09
+TOTAL_BIOMASS_COL_SATELLITE = cfg.TOTAL_BIOMASS_COL_SATELLITE
+TOTAL_BIOMASS_COL_C09 = cfg.TOTAL_BIOMASS_COL_C09
 
-START_FULL_BLM = ecosim_eval_config.START_FULL_BLM
-END_FULL_BLM = ecosim_eval_config.END_FULL_BLM
+START_FULL_BLM = cfg.START_FULL_BLM
+END_FULL_BLM = cfg.END_FULL_BLM
 
 # Bloom detection parameters
-THRESHOLD_FACTOR = ecosim_eval_config.THRESHOLD_FACTOR
-SUB_THRESHOLD_FACTOR = ecosim_eval_config.SUB_THRESHOLD_FACTOR
-LOG_TRANSFORM = ecosim_eval_config.LOG_TRANSFORM
-MEAN_OR_MEDIAN = ecosim_eval_config.MEAN_OR_MEDIAN
+THRESHOLD_FACTOR = cfg.THRESHOLD_FACTOR
+SUB_THRESHOLD_FACTOR = cfg.SUB_THRESHOLD_FACTOR
+LOG_TRANSFORM = cfg.LOG_TRANSFORM
+MEAN_OR_MEDIAN = cfg.MEAN_OR_MEDIAN
 
 
 # -------------------------------------------
@@ -102,21 +103,99 @@ def load_ecosim_dataset():
 # Bloom detection
 # -------------------------------------------
 
-def find_bloom_doy(df, biomass_col, threshold_factor=1.05):
-    bloom_dates = []
-    bloom_doys = []
+# def find_bloom_doy(df, biomass_col, threshold_factor=1.05):
+#     bloom_dates = []
+#     bloom_doys = []
+#
+#     for year, group in df.groupby('Year'):
+#         ts = group.copy()
+#         if LOG_TRANSFORM:
+#             ts[biomass_col] = np.log(ts[biomass_col] + 0.01)
+#
+#         base = ts[biomass_col].median() if MEAN_OR_MEDIAN == "median" else ts[biomass_col].mean()
+#         threshold = base * threshold_factor
+#
+#         bloom = ts[ts[biomass_col] > threshold]
+#         if not bloom.empty:
+#             bloom_date = bloom.iloc[0]['Date']
+#             bloom_dates.append(bloom_date)
+#             bloom_doys.append(bloom_date.timetuple().tm_yday)
+#         else:
+#             bloom_dates.append(None)
+#             bloom_doys.append(None)
+#
+#     return pd.DataFrame({
+#         'Year': df['Year'].unique(),
+#         'Bloom Date': bloom_dates,
+#         'Day of Year': bloom_doys
+#     })
+# import numpy as np
+# import pandas as pd
 
-    for year, group in df.groupby('Year'):
-        ts = group.copy()
-        if LOG_TRANSFORM:
-            ts[biomass_col] = np.log(ts[biomass_col] + 0.01)
+def find_bloom_doy(
+    df,
+    biomass_col,
+    threshold_factor=THRESHOLD_FACTOR,
+    sub_threshold_factor=SUB_THRESHOLD_FACTOR,
+    use_median=MEAN_OR_MEDIAN,
+    log_transform=LOG_TRANSFORM,
+    exclude_months=None   # e.g. [1,5,6,7,8,9,10,11,12]
+):
+    """
+    Detects the first sustained spring bloom for each year.
 
-        base = ts[biomass_col].median() if MEAN_OR_MEDIAN == "median" else ts[biomass_col].mean()
-        threshold = base * threshold_factor
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Must contain 'Date' (datetime64) and `biomass_col`.
+    biomass_col : str
+        Name of the biomass column to analyse.
+    threshold_factor : float, optional
+        Main bloom threshold = baseline * threshold_factor.
+    sub_threshold_factor : float, optional
+        Sustained‑bloom check threshold = main_thresh * sub_threshold_factor.
+    use_median : bool, optional
+        Use median (True) or mean (False) as the baseline statistic.
+    log_transform : bool, optional
+        Apply log(x+0.01) before analysis.
+    exclude_months : list[int] | None, optional
+        Calendar months (1–12) to exclude from both baseline and search.
+        Pass None to keep all months.
 
-        bloom = ts[ts[biomass_col] > threshold]
-        if not bloom.empty:
-            bloom_date = bloom.iloc[0]['Date']
+    Returns
+    -------
+    pd.DataFrame with columns ['Year', 'Bloom Date', 'Day of Year'].
+    """
+    df = df.copy()
+
+    # Optional month filtering
+    if exclude_months:
+        df = df[~df['Date'].dt.month.isin(exclude_months)]
+
+    # Optional log‑transform
+    if log_transform:
+        df[biomass_col] = np.log(df[biomass_col] + 0.01)
+
+    bloom_dates, bloom_doys = [], []
+
+    for yr, grp in df.groupby(df['Date'].dt.year, sort=True):
+        grp = grp.sort_values('Date').reset_index(drop=True)
+
+        baseline = grp[biomass_col].median() if use_median else grp[biomass_col].mean()
+        main_thresh = baseline * threshold_factor
+        sub_thresh  = main_thresh * sub_threshold_factor
+
+        bloom_date = None
+        # Walk through the year, looking ahead four steps max
+        for i in range(len(grp) - 4):
+            if grp.loc[i, biomass_col] >= main_thresh:
+                # How many of the next 4 points stay above sub‑threshold?
+                window = grp.loc[i+1:i+4, biomass_col]
+                if (window >= sub_thresh).sum() >= 2:
+                    bloom_date = grp.loc[i, 'Date']
+                    break
+
+        if bloom_date is not None:
             bloom_dates.append(bloom_date)
             bloom_doys.append(bloom_date.timetuple().tm_yday)
         else:
@@ -124,10 +203,11 @@ def find_bloom_doy(df, biomass_col, threshold_factor=1.05):
             bloom_doys.append(None)
 
     return pd.DataFrame({
-        'Year': df['Year'].unique(),
+        'Year': df['Date'].dt.year.sort_values().unique(),
         'Bloom Date': bloom_dates,
         'Day of Year': bloom_doys
     })
+
 
 #  Align years
 def align_years(df_model, df_obs):
@@ -141,7 +221,7 @@ def plot_bloom_comparison(df_model, df_obs, label_model="Ecosim", label_obs="Obs
 
     df_merged = df_model.merge(df_obs, on="Year", suffixes=("_Model", "_Obs"))
 
-    # plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(10, 5))
 
     # Plot model with error bars and line
     plt.errorbar(df_merged['Year'], df_merged['Day of Year_Model'], yerr=1.5,
@@ -159,12 +239,46 @@ def plot_bloom_comparison(df_model, df_obs, label_model="Ecosim", label_obs="Obs
 
     plt.xlabel("Year")
     plt.ylabel("Day of Year")
-    plt.title(f"Bloom Timing Comparison: {label_model} vs {label_obs}")
+    plt.title(f"Bloom Timing Comparison: {label_model} {SCENARIO} vs {label_obs}")
     plt.legend()
     plt.tight_layout()
-    plt.show()
-    plt.savefig(os.path.join(STATS_OUT_PATH, filename))
 
+    plt.savefig(os.path.join(FIGS_OUT_PATH, filename))
+    plt.show()
+    plt.close()
+
+
+def find_bloom_doy_relative_to_min(df, nutrient_col, rel=0.2):
+    """
+    For each year, find the first date when df[nutrient_col] ≤ min_value * (1 + rel).
+    rel = 0.2 means threshold = min + 20%.
+    """
+    bloom_dates = []
+    bloom_doys  = []
+
+    for year, grp in df.groupby('Year'):
+        # compute the yearly minimum
+        min_val  = grp[nutrient_col].min()
+        init_val = grp.iloc[0][nutrient_col]
+
+        drawdown_total = init_val - min_val
+        threshold = min_val + (rel * drawdown_total)
+
+        # find first time below-or-equal to that threshold
+        hit = grp[grp[nutrient_col] <= threshold]
+        if not hit.empty:
+            dt = hit.iloc[0]['Date']
+            bloom_dates.append(dt)
+            bloom_doys.append(dt.timetuple().tm_yday)
+        else:
+            bloom_dates.append(None)
+            bloom_doys.append(None)
+
+    return pd.DataFrame({
+        'Year'       : sorted(df['Year'].unique()),
+        'Bloom Date' : bloom_dates,
+        'Day of Year': bloom_doys
+    })
 
 
 # -------------------------------------------
@@ -229,6 +343,18 @@ def run_bloom_eval():
     satellite_df, C09_df = load_observation_bloom_dfs()
     ecosim_df = load_ecosim_dataset()
 
+    DRAWDOWN_FRAC = cfg.NUTRIENT_DRAWDOWN_FRAC  # e.g. 0.05
+    # INCOMPLETE - seems to work but init nutrients free cant be high
+    nutri_bloom = find_bloom_doy_relative_to_min(
+        ecosim_df,
+        nutrient_col='N_Free_Adjusted',
+        rel=DRAWDOWN_FRAC
+    )
+    # nutri_bloom.to_csv(
+    #     os.path.join(EVAL, f"ecosim_nutrient_bloom_{SCENARIO}.csv"),
+    #     index=False
+    # )
+
     # Bloom detection for Satellite biomass columns
     bloom_df_satellite = find_bloom_doy(ecosim_df, biomass_col=TOTAL_BIOMASS_COL_SATELLITE, threshold_factor=THRESHOLD_FACTOR)
     bloom_df_satellite.to_csv(os.path.join(STATS_OUT_PATH, f"ecosim_bloom_timing_satellite_{SCENARIO}.csv"), index=False)
@@ -251,13 +377,13 @@ def run_bloom_eval():
     stats_allen = evaluate_model(C09_df['Day of Year'], bloom_df_C09_aligned['Day of Year'])
     export_evaluation_stats([stats_suchy, stats_allen], STATS_OUT_PATH, SCENARIO)
 
-    print("Evaluation Statistics vs Suchy:", stats_suchy)
-    print("Evaluation Statistics vs Allen:", stats_allen)
+    print("Evaluation Statistics vs Satellite:", stats_suchy)
+    print("Evaluation Statistics vs C09:", stats_allen)
 
     # Plotting
-    plot_bloom_comparison(bloom_df_satellite_aligned, satellite_df, label_model="Ecosim", label_obs="Suchy",
+    plot_bloom_comparison(bloom_df_satellite_aligned, satellite_df, label_model="Ecosim", label_obs="Satellite",
                           filename=f"ecosim_{SCENARIO}vs_satellite.png")
-    plot_bloom_comparison(bloom_df_C09_aligned, C09_df, label_model="Ecosim", label_obs="Allen",
+    plot_bloom_comparison(bloom_df_C09_aligned, C09_df, label_model="Ecosim", label_obs="C09",
                           filename=f"ecosim_{SCENARIO}vs_C09.png")
 
 

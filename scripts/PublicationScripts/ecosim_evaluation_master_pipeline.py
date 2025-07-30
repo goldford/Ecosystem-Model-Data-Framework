@@ -36,13 +36,13 @@ def run_pipeline(run_prep=True, run_relPP=True, run_seasonal=True,
         print("=== Running Seasonal Evaluation Step ===")
         seasonal_eval.run_seasonal_eval()
 
-    if run_bloom:
-        print("=== Running Bloom Timing Evaluation Step ===")
-        bloom_eval.run_bloom_eval()
-
     if run_nutrient:
         print("=== Running Nutrientg Evaluation Step ===")
         nutrient_eval.run_nutrient_eval()
+
+    if run_bloom:
+        print("=== Running Bloom Timing Evaluation Step ===")
+        bloom_eval.run_bloom_eval()
 
     if run_zoop:
         print("=== Running Zooplankton Evaluation Step ===")

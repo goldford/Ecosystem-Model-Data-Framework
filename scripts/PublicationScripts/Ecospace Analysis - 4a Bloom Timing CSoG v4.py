@@ -565,6 +565,7 @@ def main():
         if USE_SAT_MASK_CO9:
             row_allen = None; col_allen = None
             mask = mask_ds['mask']
+
         bloom_df_allen = compute_bloom_timing(
             ds, var_name_C09, mask=mask, row=col_allen, col=row_allen,
             bloom_early=allen_df['Day of Year_Allen'].mean() - allen_df['Day of Year_Allen'].std(),

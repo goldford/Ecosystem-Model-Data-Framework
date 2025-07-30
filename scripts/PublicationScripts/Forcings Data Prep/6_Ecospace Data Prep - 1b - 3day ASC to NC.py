@@ -24,17 +24,20 @@ process_asc = True
 
 year_start = 1980
 year_end = 2018
-REGION_ID = 2  # Central SoG (this method can reduce size of NC's)
+# REGION_ID = 2  # Central SoG (this method can reduce size of NC's)
 
-variables = {
+# IS this used??
+#variables = {
     # "PAR": os.path.join(NEMO_NC_ROOT, "PAR" + f"_region{REGION_ID}.nc"),
     # "MixingZ": os.path.join(NEMO_NC_ROOT, "MixingZ" + f"_region{REGION_ID}.nc"),
     # "Wind_Stress_10m_RDRS": os.path.join(RDRS_NC_ROOT, "Wind_Stress_10m_RDRS" + f"_region{REGION_ID}.nc"),
     # "Temp_0to10m": os.path.join(NEMO_NC_ROOT, "Temp_0to10m" + f"_region{REGION_ID}.nc"),
-    "Temp_at150m": os.path.join(NEMO_NC_ROOT, "Temp_at150m" + f"_region{REGION_ID}.nc"),
+    # "Temp_at150m": os.path.join(NEMO_NC_ROOT, "Temp_at150m" + f"_region{REGION_ID}.nc"),
+    # "Temp_150toBot": os.path.join(NEMO_NC_ROOT, "Temp_150toBot" + f"_region{REGION_ID}.nc"),
+
     #"Temp_30to40m": os.path.join(NEMO_NC_ROOT, "Temp_30to40m" + f"_region{REGION_ID}.nc") # 2025-05 - the 30 to 40 source data in asc is bad - errors
 
-}
+#}
 
 skiprows = 6  # for header
 path_NEMO_ASCs_root = "C:/Users/Greig/Documents/GitHub/Ecosystem-Model-Data-Framework/data/forcing/"
@@ -48,9 +51,11 @@ subpath_NEMO_ASCs_vars = f"/ECOSPACE_in_3day_vars_{year_start}-{year_end}/ECOSPA
 subfolder_NEMO_PAR = "/PAR-VarZ-VarK"
 subfolder_NEMO_PARxMixing = "/RUN216_PARxMixing"
 subfolder_NEMO_temp0to10m = "/vartemp1_C_0-10mAvg"
-subfolder_NEMO_tempat150m = "vartemp_at150m"
+subfolder_NEMO_tempat150m = "/vartemp_at150m"
+subfolder_NEMO_temp150toBot = "/vartemp_avg150toBot"
 subfolder_NEMO_temp30to40m = "/vartemp3_C_30-40mAvg"
 subfolder_NEMO_mixing = "/varmixing_m"
+
 
 subfolders = {
     # "PAR": path_NEMO_ASCs_root + f"ECOSPACE_in_3day_PAR3_Sal4m_{year_start}-{year_end}/PAR-VarZ-VarK",
@@ -61,7 +66,8 @@ subfolders = {
     # "Temp_0to10m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/vartemp1_C_0-10mAvg",
     # "Salt_0to4m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/varsalt2_PSU_0-4m",
     # "Temp_0to4m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/vartemp2_C_0-4m",
-    "Temp_at150m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/{subfolder_NEMO_tempat150m}",
+    # "Temp_at150m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/{subfolder_NEMO_tempat150m}",
+    "Temp_150toBot": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/{subfolder_NEMO_temp150toBot}",
     # "Temp_30to40m": f"ECOSPACE_in_3day_vars_{year_start}-{year_end}/vartemp3_C_30-40mAvg"
 }
 
@@ -191,11 +197,13 @@ if process_asc:
 
         # Save the dataset to a file
         if (var != "Wind_Stress_10m_RDRS") & (var != "Wind_Speed_10m_RDRS"):
-            file_name_out = f'{var}_region{REGION_ID}.nc'
+            # file_name_out = f'{var}_region{REGION_ID}.nc'
+            file_name_out = f'{var}.nc'
             ds.to_netcdf(os.path.join(path_NEMO_NCs_root, file_name_out))
             print(f"Saved {var}.nc to {path_NEMO_NCs_root}")
         else:
-            file_name_out = f'{var}_region{REGION_ID}.nc'
+            # file_name_out = f'{var}_region{REGION_ID}.nc'
+            file_name_out = f'{var}.nc'
             ds.to_netcdf(os.path.join(path_RDRS_NCs_root, file_name_out))
             print(f"Saved {var}.nc to {path_RDRS_NCs_root}")
         print(f"finished {var}")

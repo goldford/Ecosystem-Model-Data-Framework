@@ -15,7 +15,7 @@ import pandas as pd # would rather not do imports here
 # -------------------------------------------
 # General settings
 # -------------------------------------------
-SCENARIO = "SC128"
+SCENARIO = "SC132"
 
 # ===== Paths =====
 YEAR_START_FULLRUN = 1978
@@ -44,7 +44,10 @@ START_SPINUP = '1978-01-01'
 END_SPINUP = '1995-12-31'
 START_FULL = '1996-01-01'
 END_FULL = '2018-12-31'
-GROUPS_relPP = [14, 15, 16, 17, 18, 19, 20]
+GROUPS_relPP = [1, 2, 3, 4, 5,
+                6, 7, 8, 9, 10,
+                11, 12, 13, 14, 15,
+                16, 17, 18, 19, 20]
 # must be updated when Ecopath changed!
 # (note Ecosim out time = 0 does not include Ecopath base values (it's one time-step in))
 GROUPS_ECOPATH_B = {
@@ -67,8 +70,11 @@ GROUPS_ECOPATH_B = {
     17: 2.31, # PP1
     18: 1.5,  # PP2
     19: 0.35, # PP3
-    20: 0.17
+    20: 0.17,
+    21: 4.3, #DE1
+    22: 10.1 #DE2
 }
+
 
 
 # -------------------------------------------
@@ -79,17 +85,21 @@ START_DATA_PHYT_SEAS = '2015-01-01'
 END_DATE_PHYT_SEAS = '2018-12-31'
 
 
+
 # -------------------------------------------
 # evaluation 3 - nutrients and annual pattern
 # -------------------------------------------
 
 # C_TO_N_RATIO = 106 / 16  # molar Redfield ratio
 N_FREE_AVG_INIT = 18 # see ecosim_data_prep_2_nutrients.py, depth average N, umol /L
-P_FREE_INIT = 0.55 # must be updated when Ecosim change is made!
-N_BOUND_GROUPS = [1, 2, 3, 4, 5,
-                  6, 7, 8, 9, 10,
-                  11, 12, 13, 14, 15,
-                  16, 17, 18, 19, 20]
+P_FREE_INIT = 0.78# must be updated when Ecosim change is made!
+# N_BOUND_GROUPS = [1, 2, 3, 4, 5,
+#                   6, 7, 8, 9, 10,
+#                   11, 12, 13, 14, 15,
+#                   16, 17, 18, 19, 20]
+N_BOUND_GROUPS = [17, 18, 19]
+
+OBS_AVG_TYPE = "mean" # mean, median
 
 TOT_B_INIT = 0
 for group_col in N_BOUND_GROUPS:
@@ -103,7 +113,10 @@ N_B_INIT = N_FREE_AVG_INIT *  (1 - P_FREE_INIT) / P_FREE_INIT # inferred absolut
 # (e.g., stratified spring/summer) by scaling *model-derived free nutrient* (or, equivalently,
 # model-derived nutrient drawdown) before climatology and comparison to observations
 USE_N_MULT = True # MAKE SURE FALSE IF ALSO NO LOADING FUNC APPLIED IN ECOSIM
-N_MULT_TYPE = "monthly" # seasonal, monthly
+# EWE_NUTR_LOADING_FILE = "Forcings Data Prep//Nutrient_loading_using_RDRS.csv"
+EWE_NUTR_LOADING_FILE = "..//..///data//forcing//ECOSIM_in_3day_vars_1980-2018_fromASC_202506//ECOSIM_in_NEMO_varmixing_m_stdfilter_1980-2018.csv"
+N_MULT_TYPE = "3day" # seasonal, monthly, 3day
+
 SEASONAL_N_FLUX_MULT = {
     "Winter": 1.0,
     "Spring": 0.8,
@@ -111,15 +124,25 @@ SEASONAL_N_FLUX_MULT = {
     "Fall": 0.9
 }
 
+
+# nutrient loading function values
+# Scenarios prio to 129
+# MONTHLY_N_FLUX_MULT = {
+#     1: 1.0, 2: 1.0, 3: 0.92, 4: 0.82, 5: 0.67, 6: 0.5,
+#     7: 0.42, 8: 0.45, 9: 0.74, 10: 0.94, 11: 1.0, 12: 1.0
+# }
+
+# scenario 129
 MONTHLY_N_FLUX_MULT = {
-    1: 1.0, 2: 1.0, 3: 0.92, 4: 0.82, 5: 0.67, 6: 0.5,
-    7: 0.42, 8: 0.45, 9: 0.74, 10: 0.94, 11: 1.0, 12: 1.0
+    1: 1.37, 2: 1.36, 3: 1.28, 4: 1.0, 5: 0.65, 6: 0.55,
+    7: 0.53, 8: 0.47, 9: 0.75, 10: 0.95, 11: 1.4, 12: 1.55
 }
 
-MONTHLY_N_FLUX_MULT = {
-    1: 1.0, 2: 1.0, 3: 1, 4: 1, 5: 1, 6: 1,
-    7: 1, 8: 1, 9: 1, 10: 1, 11: 1.0, 12: 1.0
-}
+
+# MONTHLY_N_FLUX_MULT = {
+#     1: 1.0, 2: 1.0, 3: 1, 4: 1, 5: 1, 6: 1,
+#     7: 1, 8: 1, 9: 1, 10: 1, 11: 1.0, 12: 1.0
+# }
 
 SEASON_MAP = {
     1:  "Winter", 2: "Winter", 12: "Winter",
@@ -128,18 +151,21 @@ SEASON_MAP = {
     9:  "Fall",   10: "Fall",   11: "Winter",
 }
 
+ECOSIM_F_W_NUTRIENTS =  f"{OUTPUT_DIR_EVAL}//ecosim_{SCENARIO}_onerun_B_dates_seasons_nutrients.csv"
 print(f"Nitrogen bound at initialisation: {N_B_INIT:.3f}")
+
 
 
 # -------------------------------------------
 # evaluation 4 - bloom timing
 # -------------------------------------------
 
+
 START_FULL_BLM = '1997-01-01' # 1996 is off because of imprecise spinup data prep (bloom is always day 20
 END_FULL_BLM = '2018-12-31'
 
 # Biomass columns for bloom detection (output from model is named by model group number)
-BIOMASS_COLS_SATELLITE = ['17', '18', '19'] # ['17']
+BIOMASS_COLS_SATELLITE = ['17', '18', '19']
 BIOMASS_COLS_C09 = ['17']
 
 # adds a col before doing eval (sum across groups above, optionally)
@@ -148,13 +174,16 @@ TOTAL_BIOMASS_COL_C09 = "Biomass_Total_C09"
 
 # Thresholds and bloom detection params
 THRESHOLD_FACTOR = 1.05
-SUB_THRESHOLD_FACTOR = 0.7
+SUB_THRESHOLD_FACTOR = 0.78
 LOG_TRANSFORM = True
 MEAN_OR_MEDIAN = "median"
+NUTRIENT_DRAWDOWN_FRAC = 0.6 # for nutrient definition of bloom
+
 
 # -------------------------------------------
 # evaluation 5 - zooplankton eval
 # -------------------------------------------
+
 
 Z_F_SEAS = "Zoopl_SofG_1996-2018_df_summary.csv" # this is output by long R script
 Z_F_TOWLEV = "Zooplankton_B_C_gm2_EWEMODELGRP_Wide.csv" # this is output by short one
