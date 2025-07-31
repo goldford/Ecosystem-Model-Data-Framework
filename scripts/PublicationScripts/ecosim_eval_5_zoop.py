@@ -59,8 +59,8 @@ PLOT_TYPE = cfg.ZP_PLOT_TYPE  # 'bar' or 'line'
 USE_FRIENDLY_LABELS = cfg.ZP_USE_FRIENDLY_LABELS  # set False to use cryptic codes
 FRIENDLY_MAP = cfg.ZP_FRIENDLY_MAP_ZC
 # USER SETTING: specify anomaly year range
-ANOM_YEAR_START = cfg.ZP_ANOM_YEAR_START
-ANOM_YEAR_END = cfg.ZP_ANOM_YEAR_END
+ZP_YEAR_START = cfg.ZP_YEAR_START
+ZP_YEAR_END = cfg.ZP_YEAR_END
 ZP_LOG_TRANSFORM = cfg.ZP_LOG_TRANSFORM
 
 
@@ -121,6 +121,8 @@ def run_zoop_eval():
     # === Load Model Output & Compute Seasonal Means ===
     mod = pd.read_csv(ECOSIM_CSV, parse_dates=['date'])
     mod['season'] = mod['season'].str.capitalize()
+    mod['year'] = mod['date'].dt.year
+    mod = mod[(mod['year'] >= ZP_YEAR_START) & (mod['year'] <= ZP_YEAR_END)]
     # Rename numeric columns to group codes
     mod = mod.rename(columns={str(v): k for k, v in GROUP_MAP.items()})
     # Compute total biomass across groups
@@ -246,8 +248,9 @@ def run_zoop_eval():
 
     # Compute anomalies
     # Use the selected year range instead of default config
-    start, end = ANOM_YEAR_START, ANOM_YEAR_END
-    hist = paired_season[(paired_season['year'] >= start) & (paired_season['year'] <= end)]
+    start, end = ZP_YEAR_START, ZP_YEAR_END
+    paired_season = paired_season[(paired_season['year'] >= start) & (paired_season['year'] <= end)]
+    hist = paired_season.copy()
     clim = hist.groupby(['group'], as_index=False).agg(
         mean_obs=('obs_biomass', 'mean'), std_obs=('obs_biomass', 'std'),
         mean_mod=('model_biomass', 'mean'), std_mod=('model_biomass', 'std')
@@ -259,7 +262,7 @@ def run_zoop_eval():
 
     # Aggregate annual anomaly for that season, restricting to selected range
     paired_filtered = paired_season[
-        (paired_season['year'] >= ANOM_YEAR_START) & (paired_season['year'] <= ANOM_YEAR_END)]
+        (paired_season['year'] >= ZP_YEAR_START) & (paired_season['year'] <= ZP_YEAR_END)]
     annual = paired_filtered.groupby(['year', 'group'], as_index=False).agg(
         obs_anom=('obs_anom', 'mean'),
         model_anom=('mod_anom', 'mean')
