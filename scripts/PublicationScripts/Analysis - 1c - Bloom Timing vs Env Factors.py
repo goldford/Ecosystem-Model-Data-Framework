@@ -32,6 +32,8 @@ import pandas as pd
 import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use("TkAgg")
 from datetime import datetime, timedelta
 import matplotlib.dates as mdates
 
@@ -47,11 +49,11 @@ BLOOM_SOURCE = "suchy" # suchy or C09
 REGION_ID = 2  # Central SoG (this method can reduce size of NC's)
 
 variables = {
-    # "PAR": os.path.join(NEMO_NC_ROOT, "PAR" + f"_region{REGION_ID}.nc"),
+    "PAR": os.path.join(NEMO_NC_ROOT, "PAR" + f"_region{REGION_ID}.nc"),
     # "MixingZ": os.path.join(NEMO_NC_ROOT, "MixingZ" + f"_region{REGION_ID}.nc"),
-    # "Wind_Stress_10m_RDRS": os.path.join(RDRS_NC_ROOT, "Wind_Stress_10m_RDRS" + f"_region{REGION_ID}.nc"),
+    "Wind_Stress_10m_RDRS": os.path.join(RDRS_NC_ROOT, "Wind_Stress_10m_RDRS" + f"_region{REGION_ID}.nc"),
     "Temp_0to10m": os.path.join(NEMO_NC_ROOT, "Temp_0to10m" + f"_region{REGION_ID}.nc"),
-    "Temp_30to40m": os.path.join(NEMO_NC_ROOT, "Temp_30to40m" + f"_region{REGION_ID}.nc")
+    #"Temp_30to40m": os.path.join(NEMO_NC_ROOT, "Temp_30to40m" + f"_region{REGION_ID}.nc")
 }
 
 skiprows = 6 # for ASC header
@@ -129,7 +131,7 @@ for year_idx, bloom_date in enumerate(bloom_dates):
     axes[-1].set_xlabel("Day of Year", fontsize=10)
     fig.suptitle(f"{year} Forcings with Bloom Overlay", fontsize=14)
     # fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-    # plt.savefig(os.path.join(FIG_OUT_PATH, f"forcing_by_year_{year}_vs_{BLOOM_SOURCE}.png"), dpi=300)
+    plt.savefig(os.path.join(FIG_OUT_PATH, f"forcing_by_year_{year}_vs_{BLOOM_SOURCE}.png"), dpi=300)
     plt.close(fig)
 
 print("DONE")

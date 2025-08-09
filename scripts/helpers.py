@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib import patches
 import xarray as xr
 import warnings
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # basemap is currently not compatible with Python 3.10+ as far as I can tell
@@ -18,6 +19,7 @@ import pandas as pd
 
 def is_leap_year(year):
     return (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+
 def buildSortableString(number, nZeros):
     newstring = str(number)
     while (len(newstring) < nZeros) :

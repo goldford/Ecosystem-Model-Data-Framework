@@ -1,10 +1,3 @@
-import os
-import numpy as np
-from collections import defaultdict
-from helpers import getDataFrame, buildSortableString
-from GO_helpers import saveASCFile
-import pandas as pd
-
 """
 Convert forcings to climatol and anomalies
 by: G Oldford, 2025
@@ -18,29 +11,38 @@ Inputs:
 - Ecospace ASC files
 
 Notes:
-Had to accomodate Ecospace limitation (does not accept 
+Ecospace limitation does not accept 
 negative values by rescaling so normalized anomaly 
 scaling centered around the climatological mean (value = 1), 
 bounded between 0 and 2.
 """
 
+import os
+import numpy as np
+from collections import defaultdict
+from helpers import getDataFrame, buildSortableString
+from GO_helpers import saveASCFile
+import pandas as pd
+
 # ----------------------------
 # CONFIGURATION
 # ----------------------------
+DO_ANOMALIES = False
 start_year = 1980
 end_year = 2018
 nsteps = 120  # 3-day time steps per year
 grid_shape = (151, 93)  # Dimensions of trimmed ASC grids
 
 # Input variable
-var_key = "vartemp_avg150toBot"
+var_key = "PAR-VarZ-VarK" #vartemp1_C_0-10mAvg" "vartemp_avg150toBot"
 sigdig = 3  # Decimal places to round
-num_digits_ecospace_asc_month = 3
+num_digits_ecospace_asc_month = 2
 ASCheader = "ncols        93\nnrows        151 \nxllcorner    -123.80739\nyllcorner    48.29471 \ncellsize     0.013497347 \nNODATA_value  0.0"
 
 # Paths
 forcing_root = "C:/Users/Greig/Documents/GitHub/Ecosystem-Model-Data-Framework/data/forcing"
-asc_dir = f"{forcing_root}/ECOSPACE_in_3day_vars_1980-2018/{var_key}/"
+asc_dir = f"{forcing_root}/ECOSPACE_in_3day_PAR3_Sal4m_1980-2018/{var_key}/"
+# asc_dir = f"{forcing_root}/ECOSPACE_in_3day_vars_1980-2018/{var_key}/"
 clim_output_npz = f"{forcing_root}/climatologies/{var_key}_climatology_3day_mean.npz"
 clim_output_asc = f"{forcing_root}/climatologies/{var_key}_rescaledclima_3day.asc"
 anomaly_out_dir = f"{forcing_root}/ECOSPACE_in_3day_vars_1980-2018/{var_key}/anomalies"
@@ -129,6 +131,50 @@ for t in range(1, nsteps + 1):
 os.makedirs(os.path.dirname(clim_output_npz), exist_ok=True)
 np.savez(clim_output_npz, clim_mean=clim_mean)
 print(f"Saved climatological mean to {clim_output_npz}")
+
+# ----------------------------
+# Export 12 monthly ASC climas
+# ----------------------------
+# === Month to timestep index mapping ===
+month_blocks = {
+    "Jan": range(0, 10),
+    "Feb": range(10, 20),
+    "Mar": range(20, 30),
+    "Apr": range(30, 40),
+    "May": range(40, 50),
+    "Jun": range(50, 60),
+    "Jul": range(60, 70),
+    "Aug": range(70, 80),
+    "Sep": range(80, 90),
+    "Oct": range(90, 100),
+    "Nov": range(100, 111),  # 11 blocks for Nov
+    "Dec": range(111, 120),
+}
+
+# === Load climatology if not in memory ===
+clim = np.load(clim_output_npz)["clim_mean"]  # shape: [120, 151, 93]
+
+# === Output path and ASC header ===
+monthly_out_dir = f"{forcing_root}/climatologies/monthly_means"
+os.makedirs(monthly_out_dir, exist_ok=True)
+
+for month, indices in month_blocks.items():
+    monthly_mean = np.nanmean(clim[list(indices), :, :], axis=0)
+
+    # Optional: round and re-mask if needed
+    monthly_mean = np.round(monthly_mean, sigdig)
+    monthly_mean[np.isnan(monthly_mean)] = 0.0  # or retain NaN for masked cells
+
+    out_path = os.path.join(monthly_out_dir, f"{var_key}_monthly_mean_{month}.asc")
+    np.savetxt(out_path, monthly_mean, fmt='%0.3f', delimiter=" ", comments='', header=ASCheader)
+    print(f"Saved {month} to {out_path}")
+
+
+
+if not DO_ANOMALIES:
+    exit()
+
+exit()
 
 # ----------------------------
 # LOAD CLIMATOLOGY AND MASKS

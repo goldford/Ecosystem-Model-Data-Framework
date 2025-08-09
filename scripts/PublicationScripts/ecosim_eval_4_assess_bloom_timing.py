@@ -65,21 +65,57 @@ MEAN_OR_MEDIAN = cfg.MEAN_OR_MEDIAN
 def load_observation_bloom_dfs():
     doy_satellite = [100, 68, 50, 83, 115, 115, 100, 100, 92, 88, 92, 92, 55, 77]
     years_satellite = list(range(2003, 2017))
+    bloom_el_sat =  ["avg", "avg", "early", "avg",
+                     "late", "late", "avg", "avg",
+                     "avg", "avg", "avg", "avg",
+                     "early", "avg"]
     satellite_df = pd.DataFrame({
         'Year': years_satellite,
-        'Day of Year': doy_satellite
+        'Day of Year': doy_satellite,
+        'Bloom Early Late': bloom_el_sat
     })
+
     doy_C09 = [94, 78, 81, 82, 87, 76, 75, 87, 99, 76,
                81, 78, 77, 55, 86, 86, 67, 87, 77, 104,
                66, 70, 92, 86, 81, 62, 88, 100, 90, 97,
                104, 103, 98, 88, 86, 77, 88, 104, 77]
     years_C09 = list(range(1980, 2019))
+
+    mean_C09 = np.mean(doy_C09)
+    std_C09 = np.std(doy_C09)
+    labels_C09 = classify_bloom_by_std(doy_C09, mean_C09, std_C09)
+
     C09_df = pd.DataFrame({
         'Year': years_C09,
-        'Day of Year': doy_C09
+        'Day of Year': doy_C09,
+        'Bloom Early Late': labels_C09
     })
 
     return satellite_df, C09_df
+
+
+def classify_bloom_by_std(doys, mean_val, std_val):
+    results = []
+    for doy in doys:
+        if doy <= (mean_val - std_val):
+            results.append("early")
+        elif doy >= (mean_val + std_val):
+            results.append("late")
+        elif doy <= (mean_val + std_val - 1) and doy >= (mean_val - std_val + 1):
+            results.append("avg")
+        else:
+            results.append("cusp")
+    # exploring 'cusp' method
+    # for doy in doys:
+    #     if doy + 4 <= (mean_val - std_val):
+    #         results.append("early")
+    #     elif doy - 4 >= (mean_val + std_val):
+    #         results.append("late")
+    #     elif doy + 4 <= (mean_val + std_val - 1) and doy - 4 >= (mean_val - std_val + 1):
+    #         results.append("avg")
+    #     else:
+    #         results.append("cusp")
+    return results
 
 
 # -------------------------------------------
@@ -209,6 +245,31 @@ def find_bloom_doy(
     })
 
 
+def classify_bloom_timing(bloom_df,
+                          bloom_early=68,
+                          bloom_late=108,
+                          margin=1.5):
+    """
+    Takes the bloom_df (with a 'bloom_doy' column) and returns
+    that same DataFrame with an extra 'bloom_timing' column
+    in {early, avg, late, cusp, None}.
+    """
+    def _classify(doy):
+        if pd.isna(doy):
+            return None
+        if doy + margin <= bloom_early:
+            return "early"
+        if doy - margin >= bloom_late:
+            return "late"
+        if (doy - margin >= bloom_early) and (doy + margin <= bloom_late):
+            return "avg"
+        return "cusp"
+
+    df2 = bloom_df.copy()
+    df2['Bloom Early Late'] = df2['Day of Year'].apply(_classify)
+    return df2
+
+
 #  Align years
 def align_years(df_model, df_obs):
     return df_model[df_model['Year'].isin(df_obs['Year'])]
@@ -225,17 +286,30 @@ def plot_bloom_comparison(df_model, df_obs, label_model="Ecosim", label_obs="Obs
 
     # Plot model with error bars and line
     plt.errorbar(df_merged['Year'], df_merged['Day of Year_Model'], yerr=1.5,
-                 fmt='o', color='black', label=label_model,
+                 fmt='o', color='blue', label=label_model,
                  markersize=3, capsize=3)
-    plt.plot(df_merged['Year'], df_merged['Day of Year_Model'], '-', color='black',
+    plt.plot(df_merged['Year'], df_merged['Day of Year_Model'], '-', color='blue',
              markersize=0)
 
     # Plot observations with error bars and line
     plt.errorbar(df_merged['Year'], df_merged['Day of Year_Obs'], yerr=4,
-                 fmt='s', color='blue', label=label_obs,
+                 fmt='s', color='darkorange', label=label_obs,
                  markersize=3, capsize=3)
-    plt.plot(df_merged['Year'], df_merged['Day of Year_Obs'], '-', color='blue',
+    plt.plot(df_merged['Year'], df_merged['Day of Year_Obs'], '-', color='darkorange',
              markersize=0)
+
+    mean = np.nanmean(df_merged['Day of Year_Obs'])
+    std = np.nanstd(df_merged['Day of Year_Obs'])
+
+    print(label_obs)
+    print(f"late bloom DoY: {mean+std}")
+    print(f"average bloom DoY {mean}")
+    print(f"early bloom DoY: {mean-std}")
+    plt.axhline(y=mean+std, linestyle='--', color='grey', label='') # late threshold
+    plt.axhline(y=mean, linestyle='-', color='grey', label='')      # average
+    plt.axhline(y=mean-std, linestyle='--', color='grey', label='') # early threshold
+
+    plt.grid(True)
 
     plt.xlabel("Year")
     plt.ylabel("Day of Year")
@@ -335,10 +409,58 @@ def export_evaluation_stats(stats_list, out_path, scenario):
     print("Exported bloom timing stats to: " + outfile)
 
 
+def evaluate_bloom_categories(df_obs,
+                              df_mod,
+                              col_obs='Bloom Early Late',
+                              col_mod='Bloom Early Late'):
+    df_obs = standardize_columns(df_obs)
+
+    for col in df_obs.columns:
+        if "Bloom Early Late" in col and col != "Bloom Early Late":
+            df_obs = df_obs.rename(columns={col: "Bloom Early Late"})
+            break  # Stop after the first match
+
+    df = df_obs.merge(df_mod, on='Year', suffixes=('_obs', '_mod'))
+    agree_count = (df[f'{col_obs}_obs'] == df[f'{col_mod}_mod']).sum()
+    total = len(df)
+    return agree_count, total
+
+
+def standardize_columns(df):
+    for col in df.columns:
+        if "Year" in col and col != "Year" and col != "Day of Year":
+            df = df.rename(columns={col: "Year"})
+            break  # Stop after the first match
+    for col in df.columns:
+        if "Day of Year" in col and col != "Year":
+            df = df.rename(columns={col: "Day of Year_Obs"})
+            break  # Stop after the first match
+    return df
+
+
+def evaluate_overlap_by_timing(df_obs, df_mod, obs_col='Day of Year', mod_col='Day of Year'):
+
+    df_obs = standardize_columns(df_obs)
+    for col in df_obs.columns: #standardise
+        if "Day of Year" in col and col != "Day of Year":
+            df_obs = df_obs.rename(columns={col: "Day of Year"})
+            break  # Stop after the first match
+
+
+    df = df_obs.merge(df_mod, on='Year', suffixes=('_obs', '_mod'))
+    # Define bounds
+    obs_low = df[f'{obs_col}_obs'] - 4
+    obs_high = df[f'{obs_col}_obs'] + 4
+    mod_low = df[f'{mod_col}_mod'] - 1.5
+    mod_high = df[f'{mod_col}_mod'] + 1.5
+    overlap = (mod_high >= obs_low) & (mod_low <= obs_high)
+    return overlap.sum(), len(overlap)
+
+
+
 # -------------------------------------------
 # Main script
 # -------------------------------------------
-
 def run_bloom_eval():
     satellite_df, C09_df = load_observation_bloom_dfs()
     ecosim_df = load_ecosim_dataset()
@@ -357,10 +479,18 @@ def run_bloom_eval():
 
     # Bloom detection for Satellite biomass columns
     bloom_df_satellite = find_bloom_doy(ecosim_df, biomass_col=TOTAL_BIOMASS_COL_SATELLITE, threshold_factor=THRESHOLD_FACTOR)
+    bloom_df_satellite = classify_bloom_timing(bloom_df_satellite,
+                                               bloom_early=68,
+                                               bloom_late=108,
+                                               margin=1.5)
     bloom_df_satellite.to_csv(os.path.join(STATS_OUT_PATH, f"ecosim_bloom_timing_satellite_{SCENARIO}.csv"), index=False)
 
     # Bloom detection for C09 biomass columns
     bloom_df_C09 = find_bloom_doy(ecosim_df, biomass_col=TOTAL_BIOMASS_COL_C09, threshold_factor=THRESHOLD_FACTOR)
+    bloom_df_satellite = classify_bloom_timing(bloom_df_satellite,
+                                               bloom_early=C09_df['Day of Year'].mean() - C09_df['Day of Year'].std(),
+                                               bloom_late=C09_df['Day of Year'].mean() + C09_df['Day of Year'].std(),
+                                               margin=1.5)
     bloom_df_C09.to_csv(os.path.join(STATS_OUT_PATH, f"ecosim_bloom_timing_C09_{SCENARIO}.csv"), index=False)
 
     # Align model to observation years
@@ -373,18 +503,75 @@ def run_bloom_eval():
                     (C09_df['Year'] <= pd.to_datetime(END_FULL_BLM).year)]
 
     # Evaluation
-    stats_suchy = evaluate_model(satellite_df['Day of Year'], bloom_df_satellite_aligned['Day of Year'])
-    stats_allen = evaluate_model(C09_df['Day of Year'], bloom_df_C09_aligned['Day of Year'])
-    export_evaluation_stats([stats_suchy, stats_allen], STATS_OUT_PATH, SCENARIO)
+    stats_sat = evaluate_model(satellite_df['Day of Year'], bloom_df_satellite_aligned['Day of Year'])
+    stats_C09 = evaluate_model(C09_df['Day of Year'], bloom_df_C09_aligned['Day of Year'])
+    export_evaluation_stats([stats_sat, stats_C09], STATS_OUT_PATH, SCENARIO)
 
-    print("Evaluation Statistics vs Satellite:", stats_suchy)
-    print("Evaluation Statistics vs C09:", stats_allen)
+    print("Evaluation Statistics vs Satellite:", stats_sat)
+    print("Evaluation Statistics vs C09:", stats_C09)
 
     # Plotting
     plot_bloom_comparison(bloom_df_satellite_aligned, satellite_df, label_model="Ecosim", label_obs="Satellite",
                           filename=f"ecosim_{SCENARIO}vs_satellite.png")
     plot_bloom_comparison(bloom_df_C09_aligned, C09_df, label_model="Ecosim", label_obs="C09",
                           filename=f"ecosim_{SCENARIO}vs_C09.png")
+
+
+    # ---------------------------------------------------------------
+    # categorical comparison
+    # ---------------------------------------------------------------
+    # Additional categorical comparisons
+    agree_cat_sat, total_cat_sat = evaluate_bloom_categories(satellite_df, bloom_df_satellite_aligned,
+                                                             col_obs='Bloom Early Late')
+    agree_cat_C09, total_cat_C09 = evaluate_bloom_categories(C09_df, bloom_df_C09_aligned,
+                                                                 col_obs='Bloom Early Late')
+    print("\nCategorical Agreement:")
+    print(f"Satellite: {agree_cat_sat}/{total_cat_sat} years agree in category")
+    print(f"C09: {agree_cat_C09}/{total_cat_C09} years agree in category")
+
+    cat_stats = [
+        {
+            "Label": "Satellite",
+            "Type": "Categorical Agreement",
+            "Count": agree_cat_sat,
+            "Total": total_cat_sat,
+            "Proportion": agree_cat_sat / total_cat_sat if total_cat_sat > 0 else np.nan
+        },
+        {
+            "Label": "C09",
+            "Type": "Categorical Agreement",
+            "Count": agree_cat_C09,
+            "Total": total_cat_C09,
+            "Proportion": agree_cat_C09 / total_cat_C09 if total_cat_C09 > 0 else np.nan
+        }
+    ]
+
+    # Overlap by timing comparison
+    overlap_sat, n_sat = evaluate_overlap_by_timing(satellite_df, bloom_df_satellite_aligned)
+    overlap_C09, n_C09 = evaluate_overlap_by_timing(C09_df, bloom_df_C09_aligned,
+                                                        obs_col='Day of Year')
+
+    cat_stats.extend([
+        {
+            "Label": "Satellite",
+            "Type": "Timing Window Overlap",
+            "Count": overlap_sat,
+            "Total": n_sat,
+            "Proportion": overlap_sat / n_sat if n_sat > 0 else np.nan
+        },
+        {
+            "Label": "C09",
+            "Type": "Timing Window Overlap",
+            "Count": overlap_C09,
+            "Total": n_C09,
+            "Proportion": overlap_C09 / n_C09 if n_C09 > 0 else np.nan
+        }
+    ])
+
+    cat_stats_df = pd.DataFrame(cat_stats)
+    cat_stats_csv_path = os.path.join(STATS_OUT_PATH, f"ecosim_bloom_timing_agreement_{SCENARIO}.csv")
+    cat_stats_df.to_csv(cat_stats_csv_path, index=False)
+    print(f"Saved categorical/timing agreement stats to {cat_stats_csv_path}")
 
 
 if __name__ == "__main__":

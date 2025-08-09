@@ -1,0 +1,5 @@
+Label,Type,Count,Total,Proportion
+Suchy,Categorical Agreement,7,14,0.5
+Allen,Categorical Agreement,18,39,0.46153846153846156
+Suchy,Timing Window Overlap,5,14,0.35714285714285715
+Allen,Timing Window Overlap,11,39,0.28205128205128205

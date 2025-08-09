@@ -1,0 +1,63 @@
+"""
+Script:   Master evaluation pipeline for ecospacec outputs analysis
+By: G Oldford, 2025
+Purpose:
+   - orchestrates running of evaluation by calling functions etc in other scripts
+Input:
+  - config file
+  - calls several eval scripts
+Output:
+  - log files
+  - results of others scripts
+"""
+
+
+import ecospace_eval_1a_ASC_to_NC as data_prep
+import ecospace_eval_2a_mcewan_phyto_seas as phyto_seas
+import ecospace_eval_2b_nemcek_phyto_match as phyto_match_1
+import ecospace_eval_2c_nemcek_vs_ecospace as phyto_eval_1
+import ecospace_eval_3_QU39_match as phyto_match_2
+import ecospace_eval_3b_QU39_vs_ecospace as phyto_eval_2
+import ecospace_eval_4a_bloomt_CSoG as bt_eval_1
+
+
+
+def run_ecospace_pipeline(run_prep=True,
+                          run_seas_phyto=True,
+                          run_match_phyto1=True,
+                          run_eval_phyto1=True,
+                          run_match_phyto2=True,
+                          run_eval_phyto2=True,
+                          run_eval_bt1=True):
+    if run_prep:
+        print("=== Running Data Prep Step ===")
+        data_prep.run_ecospace_prep()
+
+    if run_seas_phyto:
+        print("=== Running Seas Phyto (McEwan) ===")
+        phyto_seas.run_eval_2d_phyto()
+
+    if run_match_phyto1:
+        print("=== Running Phyto Match 1 (Nemcek) ===")
+        phyto_match_1.run_eval_2a_nemcek_match()
+
+    if run_eval_phyto1:
+        print("=== Running Phyto Eval 1 (Nemcek) ===")
+        phyto_eval_1.run_eval_2b_nemcek_eval()
+
+    if run_match_phyto2:
+        print("=== Running Phyto Match 2 (QU39) ===")
+        phyto_match_2.run_qu39_match()
+
+    if run_eval_phyto2:
+        print("=== Running Phyto Eval 2 (QU39) ===")
+        phyto_eval_2.run_qu39_eval()
+
+    if run_eval_bt1:
+        print("=== Running BT Eval 1 (CSOG) ===")
+        bt_eval_1.run_bt_eval()
+
+
+if __name__ == "__main__":
+    run_ecospace_pipeline()
+

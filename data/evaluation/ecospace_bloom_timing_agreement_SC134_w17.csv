@@ -1,0 +1,5 @@
+Label,Type,Count,Total,Proportion
+sat,Categorical Agreement,11,14,0.7857142857142857
+C09,Categorical Agreement,23,39,0.5897435897435898
+sat,Timing Window Overlap,1,14,0.07142857142857142
+C09,Timing Window Overlap,25,39,0.6410256410256411

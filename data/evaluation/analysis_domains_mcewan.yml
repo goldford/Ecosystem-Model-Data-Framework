@@ -11,7 +11,7 @@ depth:
 
 # coords from QGIS, approximation from McEwan et al 2023 (supp Fig 1)
 polygon_coords:
-    SSoG: # 
+    CSoG: # 
         - [49.3612, -124.2656] #1
         - [49.5636, -124.0329] #2
         - [49.4672, -123.9252] #3

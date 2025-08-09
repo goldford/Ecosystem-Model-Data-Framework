@@ -15,7 +15,7 @@ import pandas as pd # would rather not do imports here
 # -------------------------------------------
 # General settings
 # -------------------------------------------
-SCENARIO = "SC132"
+SCENARIO = "SC134"
 
 # ===== Paths =====
 YEAR_START_FULLRUN = 1978
@@ -24,7 +24,7 @@ TIMESTEP_DAYS = 3
 MAX_TIMESTEPS = 120 # per year (will lump >120 with 120 if 3-day)
 
 # Base directories
-ECOPATH_F_NM = "ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v14_BigPC"
+ECOPATH_F_NM = "ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v15_BigPC"
 # ECOPATH_F_NM = "ECOSPACE_LTL_Carb_3day_ewe6_7_19295_v13_Jun30CopyVCCW_Laptop"
 ECOSIM_F_RAW_SINGLERUN = "biomass_monthly.csv"
 ECOSIM_F_RAW_HEADERN = 14
@@ -48,33 +48,34 @@ GROUPS_relPP = [1, 2, 3, 4, 5,
                 6, 7, 8, 9, 10,
                 11, 12, 13, 14, 15,
                 16, 17, 18, 19, 20]
+
 # must be updated when Ecopath changed!
 # (note Ecosim out time = 0 does not include Ecopath base values (it's one time-step in))
+# added same PP mults
 GROUPS_ECOPATH_B = {
-    1: 0.0046,
-    2: 0.00018,
-    3: 0.28,
-    4: 0.03,
-    5: 0.6,
-    6: 0.52,
-    7: 0.09,
-    8: 0.64,
-    9: 0.5,
-    10: 0.003,
-    11: 0.03,
-    12: 0.26,
-    13: 0.04,
-    14: 1.1,
-    15: 0.87,
-    16: 0.46,
-    17: 2.31, # PP1
-    18: 1.5,  # PP2
-    19: 0.35, # PP3
-    20: 0.17,
-    21: 4.3, #DE1
-    22: 10.1 #DE2
+    1: 0.0046,  # NK1-COH
+    2: 0.00018, # NK2-CHI
+    3: 0.28,    # NK3-FOR
+    4: 0.03,    # ZF1-ICT
+    5: 0.6,     # ZC1-EUP
+    6: 0.52,    # ZC2-AMP
+    7: 0.09,    # ZC3-DEC
+    8: 0.64,    # ZC4-CLG
+    9: 0.5,     # ZC5-CSM
+    10: 0.003,  # ZS1-JEL
+    11: 0.03,   # ZS2-CTG
+    12: 0.26,   # ZS3-CHA
+    13: 0.04,   # ZS4-LAR
+    14: 1.1,    # PZ1-CIL
+    15: 0.87,   # PZ2-DIN
+    16: 0.46,   # PZ3-HNF
+    17: 2.31, #* 2.5,   # PP1-DIA
+    18: 1.5, #* 1.6,    # PP2-NAN
+    19: 0.35, #* 1.5,   # PP3-PIC
+    20: 0.17,   # BA1-BAC
+    21: 4.3,    # DE2-DOC
+    22: 10.1    # DE1-POC
 }
-
 
 
 # -------------------------------------------
@@ -85,19 +86,18 @@ START_DATA_PHYT_SEAS = '2015-01-01'
 END_DATE_PHYT_SEAS = '2018-12-31'
 
 
-
 # -------------------------------------------
 # evaluation 3 - nutrients and annual pattern
 # -------------------------------------------
 
 # C_TO_N_RATIO = 106 / 16  # molar Redfield ratio
-N_FREE_AVG_INIT = 18 # see ecosim_data_prep_2_nutrients.py, depth average N, umol /L
+N_FREE_AVG_INIT = 18 # see ecosim_data_prep_2_nutrients.py, depth average 18 N, umol /L
 P_FREE_INIT = 0.78# must be updated when Ecosim change is made!
-# N_BOUND_GROUPS = [1, 2, 3, 4, 5,
-#                   6, 7, 8, 9, 10,
-#                   11, 12, 13, 14, 15,
-#                   16, 17, 18, 19, 20]
-N_BOUND_GROUPS = [17, 18, 19]
+N_BOUND_GROUPS = [1, 2, 3, 4, 5,
+                  6, 7, 8, 9, 10,
+                  11, 12, 13, 14, 15,
+                  16, 17, 18, 19, 20]
+# N_BOUND_GROUPS = [17, 18, 19]
 
 OBS_AVG_TYPE = "mean" # mean, median
 
@@ -160,8 +160,7 @@ print(f"Nitrogen bound at initialisation: {N_B_INIT:.3f}")
 # evaluation 4 - bloom timing
 # -------------------------------------------
 
-
-START_FULL_BLM = '1997-01-01' # 1996 is off because of imprecise spinup data prep (bloom is always day 20
+START_FULL_BLM = '1980-01-01' # 1996 is off because of imprecise spinup data prep (bloom is always day 20
 END_FULL_BLM = '2018-12-31'
 
 # Biomass columns for bloom detection (output from model is named by model group number)
@@ -184,9 +183,8 @@ NUTRIENT_DRAWDOWN_FRAC = 0.6 # for nutrient definition of bloom
 # evaluation 5 - zooplankton eval
 # -------------------------------------------
 
-
 Z_F_SEAS = "Zoopl_SofG_1996-2018_df_summary.csv" # this is output by long R script
-Z_F_TOWLEV = "Zooplankton_B_C_gm2_EWEMODELGRP_Wide.csv" # this is output by short one
+Z_F_TOWLEV = "Zooplankton_B_C_gm2_EWEMODELGRP_Wide_NEMO3daymatch.csv" # this is output by short one
 Z_P_PREPPED = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/4. Zooplankton/Zoop_Perryetal_2021/MODIFIED"
 
 # Mapping from obs column names to numeric column indices in the model output
@@ -209,6 +207,7 @@ ZP_PLOT_TYPE = 'bar'     # 'bar' or 'line'
 # USER SETTING: toggle friendly labels
 ZP_USE_FRIENDLY_LABELS = True  # set False to use cryptic codes
 ZP_FRIENDLY_MAP_ZC = {
+    'ZF1-ICT': 'Ichthyo',
     'ZC1-EUP': 'Euphausiids',
     'ZC2-AMP': 'Amphipods',
     'ZC3-DEC': 'Decapods',
@@ -225,3 +224,8 @@ ZP_FRIENDLY_MAP_ZC = {
 ZP_LOG_TRANSFORM = True
 ZP_YEAR_START = 2000
 ZP_YEAR_END   = 2018
+
+ZP_FULLRN_START = 1980
+ZP_FULLRN_END = 2018
+
+ZP_SHOW_CNTS = True

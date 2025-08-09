@@ -162,7 +162,7 @@ def run_seasonal_eval():
         # Positions for model and obs within the season
         x_pos.append(pos - pair_spacing / 2)  # model
         x_pos.append(pos + pair_spacing / 2)  # obs
-        x_labels.extend([f"Model-{season}", f"Obs-{season}"])
+        x_labels.extend([f"Mod.-{season}", f"Obs.-{season}"])
 
         # Heights
         for group in groups:
@@ -183,7 +183,7 @@ def run_seasonal_eval():
         pos += group_spacing
 
     # === Plot ===
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(5, 4))
 
     # Initialize bottoms
     bottom_model = [0] * len(seasons)
@@ -204,7 +204,18 @@ def run_seasonal_eval():
 
     # === Final plot formatting ===
     ax.set_xticks(x_pos)
-    ax.set_xticklabels(x_labels, rotation=45, ha='right')
+    ax.set_xticklabels(['Mod.' if i % 2 == 0 else 'Obs.'  # even → model, odd → obs
+                        for i in range(len(x_pos))],
+                       rotation=0, ha='center')
+
+    # ---- add one centred season label per pair ----
+    season_y_offset = -0.08  # tweak until it looks right
+    for i, season in enumerate(seasons):
+        mid_x = (x_pos[2 * i] + x_pos[2 * i + 1]) / 2  # midpoint of model/obs bars
+        ax.text(mid_x, season_y_offset, season,
+                ha='center', va='top',
+                transform=ax.get_xaxis_transform())
+
     ax.set_ylabel('Biomass (g C m$^{-2}$)')
     ax.set_title(f'Model vs McEwan Seasonal Phytoplankton Biomass ({SCENARIO})')
 
@@ -220,7 +231,8 @@ def run_seasonal_eval():
 
     plt.tight_layout()
     plt.show()
-    plt.savefig(os.path.join(OUTPUT_FIG_PATH, f"ecosim_{SCENARIO}_phyto_seasonal_mcewan.png"))
+    fig.savefig(os.path.join(OUTPUT_FIG_PATH, f"ecosim_{SCENARIO}_phyto_seasonal_mcewan.png"),
+                dpi=300)
 
 
 if __name__ == "__main__":

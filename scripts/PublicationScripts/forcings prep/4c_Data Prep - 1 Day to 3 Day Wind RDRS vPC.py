@@ -60,8 +60,9 @@ plume_dir = "C://Users//Greig//Documents//GitHub//Ecosystem-Model-Data-Framework
 ecospacegrid_dir = plume_dir
 
 WRITE_ECOSPACE = False
-WRITE_ECOSIM = True
-DO_CLIMATOLOGY = False
+WRITE_ECOSIM = False
+DO_CLIMATOLOGY = True
+USE_MEDIAN_STRSS = True
 startyear = 1980
 endyear = 2018
 timestep = "3day"
@@ -262,7 +263,10 @@ if DO_CLIMATOLOGY:
 
     # Stack all and compute mean across time
     clim_speed = np.mean(np.ma.concatenate(all_speed_blocks, axis=0), axis=0)
-    clim_stress = np.mean(np.ma.concatenate(all_stress_blocks, axis=0), axis=0)
+    if USE_MEDIAN_STRSS:
+        clim_stress = np.nanmedian(np.ma.concatenate(all_stress_blocks, axis=0), axis=0)
+    else:
+        clim_stress = np.nanmean(np.ma.concatenate(all_stress_blocks, axis=0), axis=0)
 
     # Save ASC files
     for var, name, fmt, subdir in [
