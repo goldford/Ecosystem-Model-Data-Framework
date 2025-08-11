@@ -51,7 +51,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import ecospace_eval_config as cfg
 
-
+SHOW_PLTS = cfg.QU39_SHOW_PLTS
 MODEL_RUN = cfg.ECOSPACE_SC
 INCLUDE_SSC = cfg.QU39_INCLUDE_SSC # IS THIS HOOKED UP?
 pathfile_QU39_SSC_Ecospace = cfg.QU39_SSC_ECOSPACE_PF
@@ -544,7 +544,7 @@ def plot_monthly_boxplot(
     # Labels and legend
     plt.title(f'Anomaly from Means Rel to Std Dev by Month for {plot_label} {MODEL_RUN}')
     plt.xlabel('Month')
-    plt.ylabel('Normalized Anomaly')
+    plt.ylabel('Anomaly (z-score)')
     plt.xticks(months, [calendar.month_abbr[m] for m in months])
     handles = [plt.Line2D([0], [0], color=color_map[f], lw=4) for f in field_codes]
     plt.legend(handles, source_names, loc='upper right')
@@ -555,7 +555,8 @@ def plot_monthly_boxplot(
         plt.savefig(output_file)
         print(f"[Saved] {output_file}")
 
-    plt.show()
+    if SHOW_PLTS:
+        plt.show()
 
 
 def plot_log_histogram(df, field, group_filter, group_column, title, output_file):
@@ -585,7 +586,9 @@ def plot_log_histogram(df, field, group_filter, group_column, title, output_file
     plt.tight_layout()
     plt.savefig(output_file)
     print(f"[Saved] {output_file}")
-    plt.show()
+
+    if SHOW_PLTS:
+        plt.show()
 
 
 def plot_monthly_sample_counts(df, group_filter, group_column, output_file):
@@ -613,7 +616,9 @@ def plot_monthly_sample_counts(df, group_filter, group_column, output_file):
     plt.tight_layout()
     plt.savefig(output_file)
     print(f"[Saved] {output_file}")
-    plt.show()
+
+    if SHOW_PLTS:
+        plt.show()
 
 
 def plot_combined_panel(dfs, field_codes_list, taxon_names, taxon_labels, labels, source_names, color_map, output_file):
@@ -660,7 +665,9 @@ def plot_combined_panel(dfs, field_codes_list, taxon_names, taxon_labels, labels
     fig.tight_layout()
     fig.savefig(output_file)
     print(f"[Saved] Panel to: {output_file}")
-    plt.show()
+
+    if SHOW_PLTS:
+        plt.show()
 
 
 def run_qu39_eval() -> None:
@@ -731,7 +738,7 @@ def run_qu39_eval() -> None:
     )
 
     if generate_panel:
-        panel_output_file = os.path.join(figs_out_p, f'{MODEL_RUN}_Monthly_Boxplot_Panel.png')
+        panel_output_file = os.path.join(figs_out_p, f'Ecospace_{MODEL_RUN}_Monthly_QU39_Boxplot_Panel.png')
         plot_combined_panel(
             dfs=[df_dia, df_nan, df_pic, df_dino],
             field_codes_list=[

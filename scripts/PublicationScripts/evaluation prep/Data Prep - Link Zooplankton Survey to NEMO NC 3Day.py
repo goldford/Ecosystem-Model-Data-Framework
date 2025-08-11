@@ -1,17 +1,19 @@
-# Script: Ecospace Data Prep - Match Environmental Variables to Zooplankton Observations
-# Author: G. Oldford
-# Created: July 2025
-#
-# Purpose:
-#   Match environmental variables (e.g., Temp_0to10m) from NetCDF outputs to zooplankton observation data.
-#
-# Inputs:
-#   - Environmental NetCDF file (single variable), e.g., Temp_0to10m.nc
-#      (note these were created using shortcut script 6 (1b) in forcings data prep from ASC to NC!
-#   - Zooplankton observation CSV, e.g., Zooplankton_B_C_gm2_EWEMODELGRP_Wide.csv
-#
-# Outputs:
-#   - CSV file combining zooplankton observations with matched environmental variable.
+'''
+ Script: Ecospace Data Prep - Match Environmental Variables to Zooplankton Observations
+Author: G. Oldford
+Created: July 2025
+
+Purpose:
+  Match environmental variables (e.g., Temp_0to10m) from NetCDF outputs to zooplankton observation data.
+
+Inputs:
+  - Environmental NetCDF file (single variable), e.g., Temp_0to10m.nc
+     (note these were created using shortcut script 6 (1b) in forcings data prep from ASC to NC!
+  - Zooplankton observation CSV, e.g., Zooplankton_B_C_gm2_EWEMODELGRP_Wide.csv
+
+Outputs:
+  - CSV file combining zooplankton observations with matched environmental variable.
+'''
 
 import os
 import numpy as np

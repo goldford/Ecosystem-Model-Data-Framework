@@ -52,6 +52,8 @@ SEASONS_ORDER = ["Winter", "Spring", "Summer"]
 GROUP_MAP = cfg.MW_GROUP_MAP
 GROUP_COLORS = cfg.MW_GROUP_COLORS
 
+SHOW_PLTS = cfg.MW_SHOW_PLTS
+
 # Domains (region keys must match polygons in your YAML)
 DOMAIN_FP = cfg.MW_DOMAIN_FP
 DOMAINS = cfg.MW_DOMAINS # CSoG, SSoG
@@ -236,7 +238,8 @@ def plot_stacked_side_by_side(seasonal_stats_df: pd.DataFrame, domain_label: str
     ax.grid(True, axis='y', linestyle=':', alpha=0.5)
 
     plt.tight_layout()
-    plt.show()
+    if SHOW_PLTS:
+        plt.show()
     os.makedirs(os.path.dirname(out_png), exist_ok=True)
     fig.savefig(out_png, dpi=300)
 

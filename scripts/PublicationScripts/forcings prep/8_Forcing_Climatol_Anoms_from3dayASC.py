@@ -34,15 +34,21 @@ nsteps = 120  # 3-day time steps per year
 grid_shape = (151, 93)  # Dimensions of trimmed ASC grids
 
 # Input variable
-var_key = "PAR-VarZ-VarK" #vartemp1_C_0-10mAvg" "vartemp_avg150toBot"
+var_key = "RDRS_windstress10m_" #vartemp1_C_0-10mAvg" "vartemp_avg150toBot" "RDRS_windstress_10m" "PAR-VarZ-VarK"
+
+# in paths
+# forcing_root = "C:/Users/Greig/Documents/GitHub/Ecosystem-Model-Data-Framework/data/forcing" # forcing other than wind
+forcing_root = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/RDRS forcings/Wind_RDRS/Ecospace" # wind
+
+# asc_dir = f"{forcing_root}/ECOSPACE_in_3day_PAR3_Sal4m_1980-2018/{var_key}/"
+asc_dir = f"{forcing_root}/stress_/" # wind
+# asc_dir = f"{forcing_root}/ECOSPACE_in_3day_vars_1980-2018/{var_key}/"
+
 sigdig = 3  # Decimal places to round
 num_digits_ecospace_asc_month = 2
 ASCheader = "ncols        93\nnrows        151 \nxllcorner    -123.80739\nyllcorner    48.29471 \ncellsize     0.013497347 \nNODATA_value  0.0"
 
-# Paths
-forcing_root = "C:/Users/Greig/Documents/GitHub/Ecosystem-Model-Data-Framework/data/forcing"
-asc_dir = f"{forcing_root}/ECOSPACE_in_3day_PAR3_Sal4m_1980-2018/{var_key}/"
-# asc_dir = f"{forcing_root}/ECOSPACE_in_3day_vars_1980-2018/{var_key}/"
+# out paths
 clim_output_npz = f"{forcing_root}/climatologies/{var_key}_climatology_3day_mean.npz"
 clim_output_asc = f"{forcing_root}/climatologies/{var_key}_rescaledclima_3day.asc"
 anomaly_out_dir = f"{forcing_root}/ECOSPACE_in_3day_vars_1980-2018/{var_key}/anomalies"

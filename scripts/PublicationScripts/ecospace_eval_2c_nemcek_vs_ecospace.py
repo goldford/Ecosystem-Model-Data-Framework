@@ -62,6 +62,7 @@ EPSILON = cfg.NM_EPSILON       # Small constant to avoid log(0)
 DO_EXPLOR_PLOTS = cfg.NM_DO_EXPLOR_PLOTS # exploratory histograms, data summary
 APPLY_NEMCEK_SEASON = cfg.NM_APPLY_NEMCEK_SEASON
 
+SHOW_PLTS = cfg.NM_SHOW_PLTS
 
 # Helper: plot bar chart for counts by category
 def plot_sample_counts(df_grouped, category, title, filename):
@@ -82,7 +83,8 @@ def plot_sample_counts(df_grouped, category, title, filename):
     ax.set_xticks(x + bar_width * (len(sdomains) - 1) / 2)
     ax.set_xticklabels(categories)
     plt.tight_layout()
-    plt.show()
+    if SHOW_PLTS:
+        plt.show()
     fig.savefig(filename)
 
 # nemcek et al (2023) define a more thoughtful 'season'
@@ -191,7 +193,9 @@ def plot_seasonal_abs_stacked(df_simplified, out_png):
 
     plt.tight_layout()
     plt.savefig(out_png, dpi=300)
-    plt.show()
+
+    if SHOW_PLTS:
+        plt.show()
 
 def run_eval_2b_nemcek_eval() -> None:
 
@@ -289,7 +293,9 @@ def run_eval_2b_nemcek_eval() -> None:
         ax.set_xticklabels(station_order, rotation=90)
         ax.legend(title='Season')
         plt.tight_layout()
-        plt.show()
+
+        if SHOW_PLTS:
+            plt.show()
 
 
     # -------------------------------
@@ -616,7 +622,7 @@ def run_eval_2b_nemcek_eval() -> None:
             if row == 0:
                 ax.set_title(group, fontsize=11)
             if col == 0:
-                ax.set_ylabel('Mean Standardised Anomaly', fontsize=10)
+                ax.set_ylabel('Anomaly (z-score)', fontsize=10)
                 ax.text(-0.4, 0.5, sdomain, transform=ax.transAxes, fontsize=10, rotation=0,
                         verticalalignment='center', horizontalalignment='right')
             else:
@@ -631,7 +637,9 @@ def run_eval_2b_nemcek_eval() -> None:
 
     fig.legend(colors.keys(), loc='lower center', ncol=3, bbox_to_anchor=(0.5, 0.01))
     plt.tight_layout(rect=[0, 0.05, 1, 1])
-    plt.show()
+
+    if SHOW_PLTS:
+        plt.show()
 
     # save
     fig.savefig(f'..//..//figs//{ECOSPACE_CODE}_Nemcek_SSC_Ecospace_zscore_panelled.png', bbox_inches='tight')

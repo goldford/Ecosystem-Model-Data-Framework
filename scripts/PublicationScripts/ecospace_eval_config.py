@@ -17,8 +17,8 @@ from typing import Dict, List
 # -------------------------------------------
 # General settings
 # -------------------------------------------
-ECOSPACE_SC = "SC134_30"
-ECOSPACE_SC_FULL = "SC134_30"
+ECOSPACE_SC = "SC138_w2"
+ECOSPACE_SC_FULL = "SC138_w2"
 ECOPATH_F_NM = "ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v15_BigPC"
 ECOSPACE_RAW_DIR = f"C://Users//Greig//Documents//EwE output//{ECOPATH_F_NM}//Ecospace_{ECOSPACE_SC_FULL}//asc//"
 
@@ -47,6 +47,7 @@ EVALOUT_P = "C://Users//Greig/Documents//github//Ecosystem-Model-Data-Framework/
 # Prep 2 - mcewan seasonal eval
 # -------------------------------------------
 
+MW_SHOW_PLTS = False # causes halt of pipeline - optional
 MW_SEASON_DEF: Dict[str, List[int]] = {
     "Winter": [11,12, 1, 2],
     "Spring": [3, 4, 5],
@@ -90,9 +91,12 @@ MW_END_DATE   = '2018-12-31'
 
 
 
+
 # -------------------------------------------
 # Prep 2 - nemcek dataset eval
 # -------------------------------------------
+
+NM_SHOW_PLTS = False # causes halt of pipeline - optional
 
 SSC_MO_F = "SalishSeaCast_biology_2008.nc"
 SSC_GRD_F = "ubcSSnBathymetryV21-08_a29d_efc9_4047.nc"
@@ -122,6 +126,7 @@ NM_APPLY_NEMCEK_SEASON = False
 # Prep 3 - qu39 dataset eval
 # -------------------------------------------
 
+QU39_SHOW_PLTS = False # causes halt of pipeline - optional
 QU39_DO_ECOSPACE_MATCHING = True       # Perform Ecospace matching
 QU39_DOWNLOAD_SSC = False              # Download SSC ERDDAP files
 QU39_MATCH_SSC = True                  # Match existing SSC files
@@ -188,7 +193,8 @@ BT_SUB_THRESHOLD_FACTOR = 0.7
 BT_CREATE_MASKS = False  # Set to True to regenerate masks
 BT_USE_SAT_MASK_CO9 = False
 BT_USEC09_MASK_FOR_SAT = False
-BT_MASK_REGNM = "SGC3" # recall SGC2 is more accurate to map in suchy pub, but in 2005 clouds mask northern portion, affecting accuracy so SGC3 trims north
+
+BT_MASK_REGNM = "SGC3" # SGC2 is more accurate to map in suchy pub, but in 2005 clouds mask northern portion, affecting accuracy so SGC3 trims north
 BT_DO_NUTRIENTS = False # another script does this now (#9?)
 # OVERRIDE_REDFIELD = True # added by GO to help eval 2025-06-03
 
