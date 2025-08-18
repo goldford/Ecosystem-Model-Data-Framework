@@ -61,19 +61,24 @@ VARIABLES_TO_ANALYZE_SAT = cfg.BT_VARS_TO_ANALYZE_SAT
 VARIABLES_TO_ANALYZE_C09 = cfg.BT_VARS_TO_ANALYZE_C09
 
 ANNUAL_AVG_METHOD_SAT = cfg.BT_ANNUAL_AVG_METHOD_SAT # should average bloom compared against be from all years, or just one year
-ANNUAL_AVG_METHOD_C09 = cfg.BT_ANNUAL_AVG_METHOD_C09 # annual or all
+ANNUAL_AVG_METHOD_C09 = cfg.BT_ANNUAL_AVG_METHOD_C09 # annual or all (hard coded to be annual for Pctmax method)
+
 
 # use mask c09 instead of pnt?
 USE_SAT_MASK_CO9 = cfg.BT_USE_SAT_MASK_CO9
-
 EXCLUDE_DEC_JAN_SAT = cfg.BT_EXCLUDE_DEC_JAN_SAT
+
+C09_LOG_TRNSFRM = cfg.BT_LOG_TRANSFORM_C09
+C09_USE_PCT_MAX = cfg.BT_USE_PCT_MAX_C09
+C09_PCT_MAX = cfg.BT_PCT_MAX_C09
+C09_PCT_MAX_WINDOW_DAYS = cfg.BT_PCT_MAX_WINDOW_DAYS_C09
 EXCLUDE_DEC_JAN_C09 = cfg.BT_EXCLUDE_DEC_JAN_C09
 
 # Bloom detection method
-LOG_TRANSFORM = cfg.BT_LOG_TRANSFORM
-MEAN_OR_MEDIAN = cfg.BT_MEAN_OR_MEDIAN
-THRESHOLD_FACTOR = cfg.BT_THRESHOLD_FACTOR
-SUB_THRESHOLD_FACTOR = cfg.BT_SUB_THRESHOLD_FACTOR
+LOG_TRANSFORM = cfg.BT_LOG_TRANSFORM_SAT
+MEAN_OR_MEDIAN = cfg.BT_MEAN_OR_MEDIAN_SAT
+THRESHOLD_FACTOR = cfg.BT_THRESHOLD_FACTOR_SAT
+SUB_THRESHOLD_FACTOR = cfg.BT_SUB_THRESHOLD_FACTOR_SAT
 
 MIN_Y_TICK = cfg.BT_MIN_Y_TICK
 CREATE_MASKS = cfg.BT_CREATE_MASKS # Set to True to regenerate masks
@@ -202,11 +207,62 @@ def load_ecospace_dataset():
     return xr.open_dataset(path)
 
 
-def compute_bloom_timing(ds, var_name, mask=None, row=None, col=None,
+def find_bloom_doy_pctmax(df, biomass_col,
+                          window_days=6,
+                          pct_of_max=0.95,
+                          exclude_months=None):
+    """
+    Bloom timing = first date where time-smoothed biomass >= pct_of_max * yearly max
+    of that smoothed series. Uses a time-based rolling window, so it works for daily,
+    3-day, or slightly irregular time steps.
+    Returns: lists (bloom_dates, bloom_doys)
+    """
+    work = df.copy()
+    if exclude_months:
+        work = work[~work['Date'].dt.month.isin(exclude_months)]
+
+    if C09_LOG_TRNSFRM:
+        work[biomass_col] = np.log(work[biomass_col] + 0.01)
+
+    bloom_dates, bloom_doys = [], []
+
+    for yr, grp in work.groupby('Year', sort=True):
+        if grp.empty:
+            bloom_dates.append(pd.NaT); bloom_doys.append(np.nan); continue
+
+        grp = grp.sort_values('Date').reset_index(drop=True)
+        ts = grp.set_index('Date')[biomass_col].sort_index()
+
+        # time-based rolling mean (e.g., '6D')
+        smoothed = ts.rolling(f'{int(window_days)}D', min_periods=1).mean()
+        max_val  = smoothed.max()
+
+        if pd.isna(max_val) or max_val <= 0:
+            bloom_dates.append(pd.NaT); bloom_doys.append(np.nan); continue
+
+        thresh = pct_of_max * max_val
+        hits = smoothed.index[smoothed >= thresh]
+
+        if len(hits) > 0:
+            first_dt = pd.Timestamp(hits[0])
+            bloom_dates.append(first_dt)
+            bloom_doys.append(first_dt.dayofyear)
+        else:
+            bloom_dates.append(pd.NaT)
+            bloom_doys.append(np.nan)
+
+    return bloom_dates, bloom_doys
+
+
+def compute_bloom_timing(ds, var_name, mask=None,
+                         row=None, col=None,
                          bloom_early=68, bloom_late=108,
                          yr_strt=1980, yr_end=2018,
                          exclude_dec_jan=False,
-                         avg_method="annual"):
+                         avg_method="annual",
+                         method="threshold",
+                         window_days=6,
+                         pct_of_max=0.95):
 
     years = range(yr_strt, yr_end + 1)
     values, timestamps = [], []
@@ -236,10 +292,9 @@ def compute_bloom_timing(ds, var_name, mask=None, row=None, col=None,
 
         if LOG_TRANSFORM:
             yearly_var = np.log(yearly_var + 0.01)
-        else:
-            yearly_var = yearly_ds[var_name]
-            if LOG_TRANSFORM:
-                yearly_var = np.log(yearly_var + 0.01)
+        # else:
+        #     yearly_var = yearly_ds[var_name]
+
 
         for ts in yearly_ds.time:
             val = yearly_var.sel(time=ts)
@@ -253,16 +308,40 @@ def compute_bloom_timing(ds, var_name, mask=None, row=None, col=None,
         'Value': values
     })
 
-    bloom_dates, bloom_doys, bloom_categories = find_bloom_doy(
-        df, 'Value',
-        thrshld_fctr=THRESHOLD_FACTOR,
-        sub_thrshld_fctr=SUB_THRESHOLD_FACTOR,
-        average_from=avg_method,
-        mean_or_median=MEAN_OR_MEDIAN,
-        exclude_juntojan=exclude_dec_jan,
-        bloom_early=bloom_early,
-        bloom_late=bloom_late
-    )
+    if method == "pct_max":
+        # map your exclude_dec_jan flag to months if desired
+        excl_mo = [1, 12] if exclude_dec_jan else None
+
+        bloom_dates, bloom_doys = find_bloom_doy_pctmax(
+            df, 'Value',
+            window_days=window_days,
+            pct_of_max=pct_of_max,
+            exclude_months=[7, 8, 9, 10, 11, 12]  # Jan–June spring bloom
+        )
+
+        # Derive categories from early/late thresholds for downstream consistency
+        bloom_categories = []
+        for doy in bloom_doys:
+            if np.isnan(doy):
+                bloom_categories.append("na")
+            elif doy <= bloom_early:
+                bloom_categories.append("early")
+            elif doy >= bloom_late:
+                bloom_categories.append("late")
+            else:
+                bloom_categories.append("avg")
+
+    else:
+        bloom_dates, bloom_doys, bloom_categories = find_bloom_doy(
+            df, 'Value',
+            thrshld_fctr=THRESHOLD_FACTOR,
+            sub_thrshld_fctr=SUB_THRESHOLD_FACTOR,
+            average_from=avg_method,
+            mean_or_median=MEAN_OR_MEDIAN,
+            exclude_juntojan=exclude_dec_jan,
+            bloom_early=bloom_early,
+            bloom_late=bloom_late
+        )
 
     return pd.DataFrame({
         'Year': years,
@@ -588,13 +667,21 @@ def run_bt_eval() -> None:
             row_C09 = None; col_C09 = None
             mask = mask_ds['mask']
 
+        # Choose method for C09
+        method = "pct_max" if C09_USE_PCT_MAX else "threshold"
+
         bloom_df_C09 = compute_bloom_timing(
-            ds, var_name_C09, mask=mask, row=row_C09, col=col_C09,
+            ds, var_name_C09,
+            mask=mask,
+            row=row_C09, col=col_C09,
             bloom_early=C09_df['Day of Year_C09'].mean() - C09_df['Day of Year_C09'].std(),
             bloom_late=C09_df['Day of Year_C09'].mean() + C09_df['Day of Year_C09'].std(),
             yr_strt=1980, yr_end=2018,
             exclude_dec_jan=EXCLUDE_DEC_JAN_C09,
-            avg_method=ANNUAL_AVG_METHOD_C09
+            avg_method=ANNUAL_AVG_METHOD_C09,
+            method=method,
+            window_days=C09_PCT_MAX_WINDOW_DAYS,
+            pct_of_max=C09_PCT_MAX
         )
         bloom_df_C09.to_csv(bloom_csv_path_C09, index=False)
         print(f"Saved computed bloom timing for C09 1D to {bloom_csv_path_C09}")

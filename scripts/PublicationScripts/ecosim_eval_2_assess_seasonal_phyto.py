@@ -82,7 +82,9 @@ def run_seasonal_eval():
     seasonal_stats_list = []
 
     for season in ['Winter', 'Spring', 'Summer']:
+
         season_df = df[df['season'] == season]
+
         model_means = season_df[[str(v) for v in group_map.values()]].mean()
         model_means.index = [k for k,v in group_map.items()]
         obs_means = pd.Series({g: obs_data[g][season] for g in group_map.keys()})

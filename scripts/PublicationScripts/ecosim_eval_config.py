@@ -15,7 +15,9 @@ import pandas as pd # would rather not do imports here
 # -------------------------------------------
 # General settings
 # -------------------------------------------
-SCENARIO = "SC134"
+
+SCENARIO = "SC150_alt"
+ECOPATH_F_NM = "ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v16_BigPC_CW"
 
 # ===== Paths =====
 YEAR_START_FULLRUN = 1978
@@ -23,8 +25,7 @@ YEAR_END_FULLRUN = 2018
 TIMESTEP_DAYS = 3
 MAX_TIMESTEPS = 120 # per year (will lump >120 with 120 if 3-day)
 
-# Base directories
-ECOPATH_F_NM = "ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v15_BigPC"
+
 # ECOPATH_F_NM = "ECOSPACE_LTL_Carb_3day_ewe6_7_19295_v13_Jun30CopyVCCW_Laptop"
 ECOSIM_F_RAW_SINGLERUN = "biomass_monthly.csv"
 ECOSIM_F_RAW_HEADERN = 14
@@ -34,6 +35,7 @@ OUTPUT_DIR_FIGS = "..//..//figs//"
 ECOSIM_F_PREPPED_SINGLERUN = f"{OUTPUT_DIR_EVAL}//ecosim_{SCENARIO}_onerun_B_dates_seasons.csv"
 NUTRIENTS_F_PREPPED = f"{OUTPUT_DIR_EVAL}//nutrients_ios_csop_combined_sampled.csv"
 
+MATCH_MCEWAN_SEAS = False # lumps Feb in with Winter, lumps June in with Spring
 
 # -------------------------------------------
 # evaluation 1 - rel PP multiplier calc
@@ -172,11 +174,19 @@ TOTAL_BIOMASS_COL_SATELLITE = "Biomass_Total_Satellite"
 TOTAL_BIOMASS_COL_C09 = "Biomass_Total_C09"
 
 # Thresholds and bloom detection params
-THRESHOLD_FACTOR = 1.05
-SUB_THRESHOLD_FACTOR = 0.78
-LOG_TRANSFORM = True
-MEAN_OR_MEDIAN = "median"
-NUTRIENT_DRAWDOWN_FRAC = 0.6 # for nutrient definition of bloom
+C09_USE_PCT_MAX = False # alt is to use the Sat methods see below
+C09_PCT_MAX = 0.9
+C09_LOG_TRNSFRM = False
+C09_PCT_MAX_WINDOW_DAYS = 6
+C09_USE_ANNUALORALL = "annual" # a future swithc; for threshold, use just that year's data to determine bloom?
+C09_MEAN_OR_MEDIAN = "NOT SET UP" # a future switch (uses mean for now, or logmean)
+
+SAT_LOG_TRNSFRM = True
+SAT_THRESHOLD_FACTOR = 1.05
+SAT_SUB_THRESHOLD_FACTOR = 0.7
+SAT_MEAN_OR_MEDIAN = "median"
+SAT_USE_ANNUALORALL = "annual" # for threshold, use just that year's data to determine bloom?
+NUTRIENT_DRAWDOWN_FRAC = 0.6 # experimental - for nutrient definition of bloom (unused)
 
 
 # -------------------------------------------

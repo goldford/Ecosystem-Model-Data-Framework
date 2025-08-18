@@ -22,7 +22,7 @@ import ecospace_eval_4a_bloomt_CSoG as bt_eval_1
 
 
 
-def run_ecospace_pipeline(run_prep=True,
+def run_ecospace_pipeline(run_prep=False,
                           run_seas_phyto=True,
                           run_match_phyto1=True,
                           run_eval_phyto1=True,

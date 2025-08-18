@@ -9,30 +9,41 @@ Purpose:
 # Import pandas
 import pandas as pd
 from datetime import datetime, timedelta
-import ecosim_eval_config
+import ecosim_eval_config as cfg
 
 # Config vars from master config
-SCENARIO = ecosim_eval_config.SCENARIO
-FILE_PATH = ecosim_eval_config.ECOSIM_RAW_DIR
-OUTPUT_EXPORT_FILE = ecosim_eval_config.ECOSIM_F_PREPPED_SINGLERUN
-TIMESTEP_DAYS = ecosim_eval_config.TIMESTEP_DAYS # 3 days (not flexible right now)
-HEADER_N = ecosim_eval_config.ECOSIM_F_RAW_HEADERN
-MAX_TIMESTEPS = ecosim_eval_config.MAX_TIMESTEPS # per year (will lump >120 with 120)
-YEAR_START = ecosim_eval_config.YEAR_START_FULLRUN
-YEAR_END = ecosim_eval_config.YEAR_END_FULLRUN
+SCENARIO = cfg.SCENARIO
+FILE_PATH = cfg.ECOSIM_RAW_DIR
+OUTPUT_EXPORT_FILE = cfg.ECOSIM_F_PREPPED_SINGLERUN
+TIMESTEP_DAYS = cfg.TIMESTEP_DAYS # 3 days (not flexible right now)
+HEADER_N = cfg.ECOSIM_F_RAW_HEADERN
+MAX_TIMESTEPS = cfg.MAX_TIMESTEPS # per year (will lump >120 with 120)
+YEAR_START = cfg.YEAR_START_FULLRUN
+YEAR_END = cfg.YEAR_END_FULLRUN
+MATCH_MCEWAN_SEAS = cfg.MATCH_MCEWAN_SEAS
 
 # === ADD SEASON COLUMN ===
 # matches McEwan
 def get_season(date):
     m = date.month
-    if m in [11, 12, 1, 2]:
-        return 'Winter'
-    elif m in [3, 4, 5]:
-        return 'Spring'
-    elif m in [6, 7, 8]:
-        return 'Summer'
+    if MATCH_MCEWAN_SEAS:
+        if m in [11, 12, 1, 2]:
+            return 'Winter'
+        elif m in [3, 4, 5]:
+            return 'Spring'
+        elif m in [6, 7, 8]:
+            return 'Summer'
+        else:
+            return 'Fall'
     else:
-        return 'Fall'
+        if m in [12]:
+            return 'Winter'
+        elif m in [3]:
+            return 'Spring'
+        elif m in [8]:
+            return 'Summer'
+        else:
+            return 'Fall'
 
 
 # Function to calculate date with year rollover

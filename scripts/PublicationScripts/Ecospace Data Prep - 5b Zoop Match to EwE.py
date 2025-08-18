@@ -1,19 +1,21 @@
-# ============================================================================================
-# Script:    Ecospace Data Prep - Match Zooplankton Obs to Ecospace Outputs
-# Author:    G. Oldford (based on prior Nemcek match script)
-# Created:   May 2025
-#
-# Purpose:
-#    Match zooplankton observations from survey CSV to Ecospace model outputs
-#
-# Inputs:
-#    - Ecospace output NetCDF file (e.g., Scv88_1-All_Groups_20250506_1978-2018.nc)
-#    - Zooplankton observation CSV (e.g., Zooplankton_B_C_gm2_EWEMODELGRP_Wide.csv)
-#    - Ecospace grid cell mapping (Ecospace_grid_20210208_rowscols.csv)
-#
-# Outputs:
-#    - CSV file combining zooplankton observations with matched Ecospace model values
-# ============================================================================================
+'''
+============================================================================================
+Script:    Ecospace Data Prep - Match Zooplankton Obs to Ecospace Outputs
+Author:    G. Oldford (based on prior Nemcek match script)
+Created:   May 2025
+
+Purpose:
+   Match zooplankton observations from survey CSV to Ecospace model outputs
+
+Inputs:
+   - Ecospace output NetCDF file (e.g., Scv88_1-All_Groups_20250506_1978-2018.nc)
+   - Zooplankton observation CSV (e.g., Zooplankton_B_C_gm2_EWEMODELGRP_Wide.csv)
+   - Ecospace grid cell mapping (Ecospace_grid_20210208_rowscols.csv)
+
+Outputs:
+   - CSV file combining zooplankton observations with matched Ecospace model values
+============================================================================================
+'''
 
 import os
 import numpy as np

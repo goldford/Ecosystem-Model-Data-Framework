@@ -52,10 +52,18 @@ START_FULL_BLM = cfg.START_FULL_BLM
 END_FULL_BLM = cfg.END_FULL_BLM
 
 # Bloom detection parameters
-THRESHOLD_FACTOR = cfg.THRESHOLD_FACTOR
-SUB_THRESHOLD_FACTOR = cfg.SUB_THRESHOLD_FACTOR
-LOG_TRANSFORM = cfg.LOG_TRANSFORM
-MEAN_OR_MEDIAN = cfg.MEAN_OR_MEDIAN
+THRESHOLD_FACTOR = cfg.SAT_THRESHOLD_FACTOR
+SUB_THRESHOLD_FACTOR = cfg.SAT_SUB_THRESHOLD_FACTOR
+SAT_LOG_TRNSFRM = cfg.SAT_LOG_TRNSFRM
+MEAN_OR_MEDIAN = cfg.SAT_MEAN_OR_MEDIAN
+SAT_USE_ANNUALORALL = cfg.SAT_USE_ANNUALORALL
+
+C09_LOG_TRNSFRM = cfg.C09_LOG_TRNSFRM
+C09_USE_PCT_MAX = cfg.C09_USE_PCT_MAX
+C09_PCT_MAX = cfg.C09_PCT_MAX
+C09_PCT_MAX_WINDOW_DAYS = cfg.C09_PCT_MAX_WINDOW_DAYS
+C09_USE_ANNUALORALL = cfg.C09_USE_ANNUALORALL
+
 
 
 # -------------------------------------------
@@ -174,7 +182,8 @@ def find_bloom_doy(
     threshold_factor=THRESHOLD_FACTOR,
     sub_threshold_factor=SUB_THRESHOLD_FACTOR,
     use_median=MEAN_OR_MEDIAN,
-    log_transform=LOG_TRANSFORM,
+    log_transform=False,
+    use_annualorall="annual",
     exclude_months=None   # e.g. [1,5,6,7,8,9,10,11,12]
 ):
     """
@@ -274,6 +283,76 @@ def classify_bloom_timing(bloom_df,
 def align_years(df_model, df_obs):
     return df_model[df_model['Year'].isin(df_obs['Year'])]
 
+def find_bloom_doy_pctmax(
+    df,
+    biomass_col,
+    window=6,                 # days
+    pct_of_max=0.95,
+    log_transform=False,
+    use_annualorall= "annual",
+    exclude_months=None       # e.g., [1, 12] to ignore Dec–Jan
+):
+    """
+    Bloom timing = first date where the time-smoothed biomass reaches
+    >= pct_of_max * (yearly maximum of that smoothed series).
+
+    Notes
+    -----
+    * Uses a *time-based* rolling window ('6D') so it works for
+      daily, 3-day, or irregular time steps.
+    * Returns a DataFrame with ['Year', 'Bloom Date', 'Day of Year'].
+    """
+    out_rows = []
+
+    # Optional month filtering (applies to both baseline and search)
+    work = df.copy()
+    if exclude_months:
+        work = work[~work['Date'].dt.month.isin(exclude_months)]
+
+    # Optional log transform
+    if log_transform:
+        work[biomass_col] = np.log(work[biomass_col] + 0.01)
+
+    # in case use all years for determining threshold (not typical approach)
+    # work2 = work.copy()
+    # work2 = work2.sort_values('Date').reset_index(drop=True)
+    # ts_all = work2.set_index('Date')[biomass_col].sort_index()
+    # smoothed_all = ts_all.rolling(f'{window}D', min_periods=1).mean()
+
+    for yr, grp in work.groupby('Year', sort=True):
+        if grp.empty:
+            out_rows.append((yr, pd.NaT, np.nan))
+            continue
+
+        # Sort and use time-based rolling mean
+        grp = grp.sort_values('Date').reset_index(drop=True)
+        ts = grp.set_index('Date')[biomass_col].sort_index()
+
+        # '6D' makes this robust to non-daily sampling
+        # if use_annualorall == "annual":
+        smoothed = ts.rolling(f'{window}D', min_periods=1).mean()
+        # else:
+        #     smoothed = smoothed_all.copy()
+
+        max_val = smoothed.max()
+        if pd.isna(max_val) or max_val <= 0:
+            out_rows.append((yr, pd.NaT, np.nan))
+            continue
+
+        thresh = pct_of_max * max_val
+
+        # First date at/above threshold
+        hit_idx = smoothed.index[smoothed >= thresh]
+        if len(hit_idx) > 0:
+            first_dt = pd.Timestamp(hit_idx[0])
+            out_rows.append((yr, first_dt, first_dt.dayofyear))
+        else:
+            out_rows.append((yr, pd.NaT, np.nan))
+
+    return pd.DataFrame(out_rows, columns=['Year', 'Bloom Date', 'Day of Year'])
+
+
+
 # ------------------------------------------
 # -
 #  Plotting
@@ -282,7 +361,7 @@ def plot_bloom_comparison(df_model, df_obs, label_model="Ecosim", label_obs="Obs
 
     df_merged = df_model.merge(df_obs, on="Year", suffixes=("_Model", "_Obs"))
 
-    plt.figure(figsize=(10, 5))
+    fig, ax = plt.subplots(figsize=(10, 5))
 
     # Plot model with error bars and line
     plt.errorbar(df_merged['Year'], df_merged['Day of Year_Model'], yerr=1.5,
@@ -310,7 +389,8 @@ def plot_bloom_comparison(df_model, df_obs, label_model="Ecosim", label_obs="Obs
     plt.axhline(y=mean-std, linestyle='--', color='grey', label='') # early threshold
 
     plt.grid(True)
-
+    # ax.set_ylim([MIN_Y_TICK, df_merged[["Day of Year_Model", "Day of Year_Obs"]].max().max() + 10])
+    ax.set_ylim(30,140)
     plt.xlabel("Year")
     plt.ylabel("Day of Year")
     plt.title(f"Bloom Timing Comparison: {label_model} {SCENARIO} vs {label_obs}")
@@ -321,7 +401,7 @@ def plot_bloom_comparison(df_model, df_obs, label_model="Ecosim", label_obs="Obs
     plt.show()
     plt.close()
 
-
+# NOT DONE
 def find_bloom_doy_relative_to_min(df, nutrient_col, rel=0.2):
     """
     For each year, find the first date when df[nutrient_col] ≤ min_value * (1 + rel).
@@ -373,7 +453,7 @@ def willmott1981(obs, mod):
         return max(0, 1 - num / den)
 
 
-def evaluate_model(obs, mod):
+def evaluate_model(obs, mod, label):
     obs = np.asarray(obs)
     mod = np.asarray(mod)
     valid = ~np.isnan(obs) & ~np.isnan(mod)
@@ -391,6 +471,7 @@ def evaluate_model(obs, mod):
     std_mod = np.std(mod_valid)
 
     return {
+        "Label": label,
         "MSE": round(mse, 3),
         "RMSE": round(rmse, 3),
         "MAE": round(mae, 3),
@@ -467,18 +548,22 @@ def run_bloom_eval():
 
     DRAWDOWN_FRAC = cfg.NUTRIENT_DRAWDOWN_FRAC  # e.g. 0.05
     # INCOMPLETE - seems to work but init nutrients free cant be high
-    nutri_bloom = find_bloom_doy_relative_to_min(
-        ecosim_df,
-        nutrient_col='N_Free_Adjusted',
-        rel=DRAWDOWN_FRAC
-    )
+    # nutri_bloom = find_bloom_doy_relative_to_min(
+    #     ecosim_df,
+    #     nutrient_col='N_Free_Adjusted',
+    #     rel=DRAWDOWN_FRAC
+    # )
     # nutri_bloom.to_csv(
     #     os.path.join(EVAL, f"ecosim_nutrient_bloom_{SCENARIO}.csv"),
     #     index=False
     # )
 
     # Bloom detection for Satellite biomass columns
-    bloom_df_satellite = find_bloom_doy(ecosim_df, biomass_col=TOTAL_BIOMASS_COL_SATELLITE, threshold_factor=THRESHOLD_FACTOR)
+    bloom_df_satellite = find_bloom_doy(ecosim_df,
+                                        biomass_col=TOTAL_BIOMASS_COL_SATELLITE,
+                                        threshold_factor=THRESHOLD_FACTOR,
+                                        log_transform=SAT_LOG_TRNSFRM,
+                                        use_annualorall=SAT_USE_ANNUALORALL)
     bloom_df_satellite = classify_bloom_timing(bloom_df_satellite,
                                                bloom_early=68,
                                                bloom_late=108,
@@ -486,11 +571,28 @@ def run_bloom_eval():
     bloom_df_satellite.to_csv(os.path.join(STATS_OUT_PATH, f"ecosim_bloom_timing_satellite_{SCENARIO}.csv"), index=False)
 
     # Bloom detection for C09 biomass columns
-    bloom_df_C09 = find_bloom_doy(ecosim_df, biomass_col=TOTAL_BIOMASS_COL_C09, threshold_factor=THRESHOLD_FACTOR)
-    bloom_df_satellite = classify_bloom_timing(bloom_df_satellite,
+    if C09_USE_PCT_MAX: # alt approach added by GO 2025-08-12
+        bloom_df_C09 = find_bloom_doy_pctmax(
+            ecosim_df,
+            biomass_col=TOTAL_BIOMASS_COL_C09,
+            window=C09_PCT_MAX_WINDOW_DAYS,
+            pct_of_max=C09_PCT_MAX,
+            log_transform=C09_LOG_TRNSFRM,
+            use_annualorall=C09_USE_ANNUALORALL,
+            exclude_months=None
+        )
+    else:
+        bloom_df_C09 = find_bloom_doy(ecosim_df,
+                                      biomass_col=TOTAL_BIOMASS_COL_C09,
+                                      threshold_factor=THRESHOLD_FACTOR,
+                                      log_transform=C09_LOG_TRNSFRM,
+                                      use_annualorall=C09_USE_ANNUALORALL)
+
+    bloom_df_C09 = classify_bloom_timing(bloom_df_C09,
                                                bloom_early=C09_df['Day of Year'].mean() - C09_df['Day of Year'].std(),
                                                bloom_late=C09_df['Day of Year'].mean() + C09_df['Day of Year'].std(),
                                                margin=1.5)
+
     bloom_df_C09.to_csv(os.path.join(STATS_OUT_PATH, f"ecosim_bloom_timing_C09_{SCENARIO}.csv"), index=False)
 
     # Align model to observation years
@@ -503,8 +605,8 @@ def run_bloom_eval():
                     (C09_df['Year'] <= pd.to_datetime(END_FULL_BLM).year)]
 
     # Evaluation
-    stats_sat = evaluate_model(satellite_df['Day of Year'], bloom_df_satellite_aligned['Day of Year'])
-    stats_C09 = evaluate_model(C09_df['Day of Year'], bloom_df_C09_aligned['Day of Year'])
+    stats_sat = evaluate_model(satellite_df['Day of Year'], bloom_df_satellite_aligned['Day of Year'], "sat")
+    stats_C09 = evaluate_model(C09_df['Day of Year'], bloom_df_C09_aligned['Day of Year'], "C09")
     export_evaluation_stats([stats_sat, stats_C09], STATS_OUT_PATH, SCENARIO)
 
     print("Evaluation Statistics vs Satellite:", stats_sat)
