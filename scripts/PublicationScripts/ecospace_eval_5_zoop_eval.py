@@ -62,18 +62,19 @@ class Eval5Config:
     # PATHS
     NC_PATH_OUT: str = cfg.NC_PATH_OUT
     EVALOUT_P: str = cfg.EVALOUT_P
-    BASEMAP_P: str = cfg.DOMAIN_P
+    BASEMAP_P: str = cfg.ECOSPACE_MAP_P
 
     # Zoop & mapping input files (set these in cfg or keep defaults here)
-    ZOOP_CSV: str = getattr(cfg, "ZP_OBS_WIDE_CSV", "Zooplankton_B_C_gm2_EWEMODELGRP_Wide.csv")
+    ZOOP_P: str = getattr(cfg, "Z_P_PREPPED", "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/4. Zooplankton/Zoop_Perryetal_2021/MODIFIED")
+    ZOOP_CSV: str = getattr(cfg, "Z_F_TOWLEV", "Zooplankton_B_C_gm2_EWEMODELGRP_Wide.csv")
     GRID_MAP_CSV: str = getattr(cfg, "ECOSPACE_GRID_RC_CSV", "Ecospace_grid_20210208_rowscols.csv")
 
     # Optional external series
     NPGO_CSV: str = getattr(cfg, "NPGO_CSV", "npgo.csv")
 
     # YEARS
-    START_YEAR: int = getattr(cfg, "BT_START_YEAR", 1980)
-    END_YEAR: int = getattr(cfg, "BT_END_YEAR", 2018)
+    START_YEAR: int = getattr(cfg, "ZP_START_YEAR", 1980)
+    END_YEAR: int = getattr(cfg, "ZP_END_YEAR", 2018)
 
     # GROUPS (consistent w/ 5b/5c/5d)
     ZOOP_GROUPS: List[str] = field(default_factory=lambda: ["ZC1-EUP", "ZC2-AMP", "ZC3-DEC", "ZC4-CLG", "ZC5-CSM",
@@ -99,18 +100,33 @@ def _load_ecospace_times(nc_path: str) -> Tuple[Dict, np.ndarray]:
     with nc.Dataset(nc_path, 'r') as ds:
         time_var = ds.variables['time']
         units = time_var.units
-        calendar = time_var.calendar if 'calendar' in time_var.ncattrs() else 'standard'
+        calendar = getattr(time_var, 'calendar', 'standard')
+
+        # Get times (may be Python datetimes or cftime objects)
         times = nc.num2date(time_var[:], units=units, calendar=calendar)
+
+        # Coerce cftime -> Python datetime when possible
+        def to_py_datetime(t):
+            # cftime objects have year/month/day/hour/minute/second attributes
+            if hasattr(t, 'year') and not isinstance(t, datetime):
+                # Handle fractional seconds if present
+                sec = float(getattr(t, 'second', 0))
+                micro = int(round((sec - int(sec)) * 1_000_000))
+                return datetime(t.year, t.month, t.day, getattr(t, 'hour', 0),
+                                getattr(t, 'minute', 0), int(sec), micro)
+            return t  # already a datetime
+
+        times = np.array([to_py_datetime(t) for t in np.asarray(times).ravel()])
+
         return {
             "Dimensions": {dim: len(ds.dimensions[dim]) for dim in ds.dimensions},
             "Variables": list(ds.variables.keys())
-        }, np.array(times)
-
+        }, times
 
 def match_zoop_to_ecospace(cfg5: Eval5Config) -> str:
     """Produce matched CSV if needed; return path to file."""
     ecospace_nc = os.path.join(cfg5.NC_PATH_OUT, cfg5.ecospace_nc_name)
-    zoop_csv = os.path.join(cfg.EVAL_DATA_IN_P if hasattr(cfg, "EVAL_DATA_IN_P") else cfg5.EVALOUT_P, cfg5.ZOOP_CSV)
+    zoop_csv = os.path.join(cfg5.ZOOP_P, cfg5.ZOOP_CSV)
     grid_csv = os.path.join(cfg5.BASEMAP_P, cfg5.GRID_MAP_CSV)
 
     out_csv = os.path.join(cfg5.EVALOUT_P, f"Zooplankton_matched_to_model_out_{cfg5.ecospace_code}.csv")

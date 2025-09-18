@@ -17,8 +17,8 @@ from typing import Dict, List
 # -------------------------------------------
 # General settings
 # -------------------------------------------
-ECOSPACE_SC = "SC141_1"
-ECOSPACE_SC_FULL = "SC141_1"
+ECOSPACE_SC = "SC134_29"
+ECOSPACE_SC_FULL = "SC134_29"
 ECOPATH_F_NM = "ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v16_BigPC"
 ECOSPACE_RAW_DIR = f"C://Users//Greig//Documents//EwE output//{ECOPATH_F_NM}//Ecospace_{ECOSPACE_SC_FULL}//asc//"
 
@@ -90,8 +90,6 @@ MW_OBS_MCEWAN = {
 MW_SPATIAL_REDUCTION = "mean"
 MW_START_DATE = '2015-01-01'
 MW_END_DATE   = '2018-12-31'
-
-
 
 
 # -------------------------------------------
@@ -170,7 +168,7 @@ QU39_DO_HIST = False
 BT_DOMAIN_CONFIG_PATH = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation"
 BT_DOMAIN_FILE = "analysis_domains_suchy.yml"
 BT_SAT_MASK_PF = r'../../data/evaluation/suchy_ecospace_mask.nc'
-BT_RECOMPUTE_BLOOM_TIMING_SAT = True  # Set to True to force recomputation as needed, saves time
+BT_RECOMPUTE_BLOOM_TIMING_SAT = False  # Set to True to force recomputation as needed, saves time
 BT_RECOMPUTE_BLOOM_TIMING_C09 = True
 BT_START_YEAR = 1980 # analysis years (exclude spinup?)
 BT_END_YEAR = 2018
@@ -183,7 +181,7 @@ BT_CSV_ALLEN_PF = f"..//..//data//evaluation//ecospace_bloom_timing_CSoG_{ECOSPA
 # VARIABLES_TO_ANALYZE_SAT = ["PP1-DIA"] #for 88_2 - pp1-dai only, annual, keep janfeb
 BT_VARS_TO_ANALYZE_SAT = ["PP1-DIA", "PP2-NAN", "PP3-PIC"]
 BT_ANNUAL_AVG_METHOD_SAT = "annual" # should average bloom compared against be from all years, or just one year
-BT_VARS_TO_ANALYZE_C09 = ["PP1-DIA"]
+BT_VARS_TO_ANALYZE_C09 = ["PP1-DIA", "PP2-NAN", "PP3-PIC"]
 BT_ANNUAL_AVG_METHOD_C09 = "annual" # annual or all (this is always annual for C09 PCT MAX method)
 
 # Bloom detection method
@@ -192,17 +190,17 @@ BT_MEAN_OR_MEDIAN_SAT = "median"
 BT_THRESHOLD_FACTOR_SAT = 1.05
 BT_SUB_THRESHOLD_FACTOR_SAT = 0.7
 
-BT_LOG_TRANSFORM_C09 = False
+BT_LOG_TRANSFORM_C09 = True
 BT_USE_PCT_MAX_C09 = False # new method added 2025-9-12 GO
 BT_PCT_MAX_C09 = 0.9
 BT_PCT_MAX_WINDOW_DAYS_C09 = 6
 
 # use mask c09 instead of pnt?
 BT_CREATE_MASKS = True  # Set to True to regenerate masks
-BT_USE_SAT_MASK_CO9 = False
+BT_MASK_REGNM = "SGC3" # SGC2 is more accurate to map in suchy pub, but in 2005 clouds mask northern portion, affecting accuracy so SGC3 trims north
+BT_USE_SAT_MASK_CO9 = True
 BT_USEC09_MASK_FOR_SAT = False
 
-BT_MASK_REGNM = "SGC3" # SGC2 is more accurate to map in suchy pub, but in 2005 clouds mask northern portion, affecting accuracy so SGC3 trims north
 BT_DO_NUTRIENTS = False # another script does this now (#9?)
 # OVERRIDE_REDFIELD = True # added by GO to help eval 2025-06-03
 
@@ -220,7 +218,34 @@ Z_F_SEAS = "Zoopl_SofG_1996-2018_df_summary.csv" # this is output by long R scri
 Z_F_TOWLEV = "Zooplankton_B_C_gm2_EWEMODELGRP_Wide_NEMO3daymatch.csv" # this is output by short one
 Z_P_PREPPED = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/4. Zooplankton/Zoop_Perryetal_2021/MODIFIED"
 
+# USER SETTING: choose one season and plot type ('bar' or 'line')
+ZP_SEASON_CHOICE = 'Spring'  # e.g., 'Winter','Spring','Summer','Fall'
+ZP_PLOT_TYPE = 'bar'     # 'bar' or 'line'
+# USER SETTING: toggle friendly labels
+ZP_USE_FRIENDLY_LABELS = True  # set False to use cryptic codes
+ZP_FRIENDLY_MAP_ZC = {
+    'ZF1-ICT': 'Ichthyo',
+    'ZC1-EUP': 'Euphausiids',
+    'ZC2-AMP': 'Amphipods',
+    'ZC3-DEC': 'Decapods',
+    'ZC4-CLG': 'Lg. Calanoid Copepods',
+    'ZC5-CSM': 'Other Copepods',
+    'ZS1-JEL': 'Jellyfish',
+    'ZS2-CTH': 'Ctenophores',
+    'ZS3-CHA': 'Chaetognaths',
+    'ZS4-LAR': 'Larvaceans',
+    'ZF1-ICH': 'Ichthyoplankton',
+    'misc': 'Other',
+    'Total': 'Total'
+}
+ZP_LOG_TRANSFORM = True
+ZP_YEAR_START = 2000
+ZP_YEAR_END   = 2018
 
+ZP_FULLRN_START = 1980
+ZP_FULLRN_END = 2018
+
+ZP_SHOW_CNTS = True
 
 
 # -------------------------------------------

@@ -167,7 +167,7 @@ def run_nutrient_eval():
 
 
     # clima
-    grouped_model = mdf.groupby("biweekly")
+    m, m = mdf.groupby("biweekly")
     mean_model = grouped_model[field_mdf].mean()
     q10_model = grouped_model[field_mdf].quantile(0.1)
     q90_model = grouped_model[field_mdf].quantile(0.9)

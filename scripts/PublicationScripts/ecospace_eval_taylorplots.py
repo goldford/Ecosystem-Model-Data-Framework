@@ -152,6 +152,9 @@ def plot_model_points(ax, refstd, model_stats):
     model_stats = sorted(model_stats, key=lambda x: x['source_label'])
     for entry in model_stats:
         theta = np.arccos(entry['corrcoef'])
+        if entry['corrcoef'] >= 0.85:
+            print(entry['label'])
+            print(entry['corrcoef'])
         std = entry['model_stddev'] / entry['obs_stddev']  # Normalize
         ax.plot(theta, std, marker=entry['marker'], color=entry['color'],
                 markeredgecolor=entry['edgecolor'], markersize=8,
