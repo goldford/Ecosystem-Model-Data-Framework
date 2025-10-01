@@ -896,8 +896,15 @@ def find_bloom_doy(df, df_field,
 
 
 # GO2021-12-22 fmt= has big effect on ASC file size, added argument for this
-def saveASCFile(filename, data, bottomleft_row_ewe, upperleft_row_ewe, upperleft_col_ewe, sigdigfmt, ASCheader,
-                dfPlumeMask=None, dfLandMask=None):
+def saveASCFile(filename, data,
+                bottomleft_row_ewe,
+                upperleft_row_ewe,
+                upperleft_col_ewe,
+                sigdigfmt,
+                ASCheader,
+                dfPlumeMask=None,
+                dfLandMask=None):
+
     # Greig's bounds clipping from "Basemap Converter (Py3).ipynb"
     # I don't know why this works but it does... -JB
     # (due to how indexing is done in ASC vs NC -GO)
