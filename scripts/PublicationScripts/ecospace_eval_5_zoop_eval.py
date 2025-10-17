@@ -1,14 +1,13 @@
 """
 Ecospace Zooplankton Evaluation — Combined 5b/5c/5d (aligned to 4a pattern)
-by: G. Oldford + ChatGPT helper, 2025-08-11
+by: G. Oldford
 
-What this does
+Process
 --------------
 1) Match zooplankton observations to Ecospace outputs (former 5b)
 2) Visualize & compute stats (former 5c)
 3) Make anomaly comparisons incl. NPGO overlays (former 5d)
 
-How to use
 ----------
 - Configure paths and options in `ecospace_eval_config.py` (mirrors 4a style)
 - Then either:
@@ -23,9 +22,10 @@ Outputs
 
 Notes
 -----
-- Keeps logic and naming close to your 4a script for consistency
+- Keeps logic and naming close to  4a script for consistency
 - Uses cfg.* for paths, run switches, years, scenario codes, etc.
 """
+
 
 from __future__ import annotations
 import os
@@ -62,6 +62,7 @@ class Eval5Config:
     # PATHS
     NC_PATH_OUT: str = cfg.NC_PATH_OUT
     EVALOUT_P: str = cfg.EVALOUT_P
+    FIGSOUT_P: str = cfg.FIGS_P
     BASEMAP_P: str = cfg.ECOSPACE_MAP_P
 
     # Zoop & mapping input files (set these in cfg or keep defaults here)
@@ -271,14 +272,18 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
     skill_df.to_csv(out_skill, index=False)
     print(f"[5c] Saved skill stats: {out_skill}")
 
-    # Optional figures (kept concise)
+    # figures
     if cfg5.MAKE_VIZ:
         # Total scatter by Region
         fig, ax = plt.subplots(figsize=(6,6))
         sns.scatterplot(x=df_station['log10_TOT'], y=df_station['log10_EWE-TOT'], hue=df_station['Region'], alpha=0.7, ax=ax)
         ax.plot([-3,3],[-3,3],'k--',lw=1); ax.set_xlim(-3,3); ax.set_ylim(-3,3)
         ax.set_xlabel("log10(Observed + 1e-6)"); ax.set_ylabel("log10(Modelled + 1e-6)"); ax.set_title("Total Biomass by Station (log10)")
-        plt.tight_layout(); plt.show()
+        plt.tight_layout();
+        out_plt = os.path.join(cfg5.FIGSOUT_P, f"ecospace_{cfg5.ecospace_code}_scatter_modobs_total.png")
+        plt.savefig(out_plt)
+        plt.show()
+        plt.close()
 
         # Per-group seasonal boxplots (log scale)
         for group in obs_cols + ['TOT']:
@@ -288,7 +293,12 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
             dfp['Season'] = pd.Categorical(dfp['Season'], categories=cfg5.SEASON_ORDER, ordered=True)
             plt.figure(figsize=(8,6)); sns.boxplot(data=dfp, x='Season', y='Biomass', hue='Source')
             plt.yscale('log'); plt.ylabel('Log-Biomass (g C m⁻²)'); plt.xlabel('Season'); plt.title(f'Seasonal Biomass — {group}')
-            plt.tight_layout(); plt.show()
+            plt.tight_layout();
+            out_plt = os.path.join(cfg5.FIGSOUT_P, f"ecospace_{cfg5.ecospace_code}_seasB_modobs_{group}.png")
+            plt.savefig(out_plt)
+            plt.show()
+            plt.close()
+
 
     return out_skill
 
@@ -388,7 +398,7 @@ def anomaly_comparisons(cfg5: Eval5Config, groups: Optional[List[str]] = None, i
             axs[i][j].legend(loc='lower left')
             axs[i][j].text(0.05, 0.95, f'{letters[i]} {g} - {source}', transform=axs[i][j].transAxes, fontsize=12, va='top')
 
-    out_panel = os.path.join(cfg5.EVALOUT_P, f"{cfg5.ecospace_code}_anom_panel_Zoop_vs_Model_with_NPGO.png")
+    out_panel = os.path.join(cfg5.FIGSOUT_P, f"{cfg5.ecospace_code}_anom_panel_Zoop_vs_Model_with_NPGO.png")
     plt.tight_layout(); plt.savefig(out_panel); plt.show()
     print(f"[5d] Saved panel fig: {out_panel}")
 
@@ -406,7 +416,7 @@ def anomaly_comparisons(cfg5: Eval5Config, groups: Optional[List[str]] = None, i
         axs[1].axhline(0, color='grey', linestyle='--'); axs[1].set_ylabel('Modelled Anomaly'); axs[1].set_title('(b) Total Zooplankton - Model'); axs[1].legend(loc='lower left'); axs[1].set_xlabel('Year')
         axs[1].set_xlim(left=cfg5.START_YEAR)
         plt.tight_layout()
-        out_total = os.path.join(cfg5.EVALOUT_P, f"{cfg5.ecospace_code}_anom_TOTAL_stacked_Model_vs_Obs.png")
+        out_total = os.path.join(cfg5.FIGSOUT_P, f"{cfg5.ecospace_code}_anom_TOTAL_stacked_Model_vs_Obs.png")
         plt.savefig(out_total); plt.show()
         print(f"[5d] Saved total fig: {out_total}")
 

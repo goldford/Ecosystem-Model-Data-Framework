@@ -1,5 +1,5 @@
 # Taylor plot generator script
-# Assumes stats for two models are already computed and provided in a structured form
+# Assumes stats already computed and provided in a structured form
 
 import numpy as np
 import matplotlib
@@ -17,14 +17,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from mpl_toolkits.axisartist import floating_axes as FA
 from mpl_toolkits.axisartist.grid_finder import FixedLocator, DictFormatter
-from mpl_toolkits.axisartist import Subplot
-from mpl_toolkits.axisartist import angle_helper
-from mpl_toolkits.axisartist import floating_axes
-from mpl_toolkits.axisartist import grid_finder as GF
-from mpl_toolkits.axes_grid1 import host_subplot
-import mpl_toolkits.axisartist as AA
-from mpl_toolkits.axisartist.grid_finder import MaxNLocator
-from mpl_toolkits.axisartist import SubplotHost
 from matplotlib.projections.polar import PolarAxes # for older matplotlib
 # from matplotlib.projections import PolarAxes # for newer matplotlib
 from mpl_toolkits.axisartist import GridHelperCurveLinear
@@ -36,7 +28,7 @@ import ecospace_eval_config as cfg
 # Provide the path to where stats CSVs are located
 STATS_PATH = Path(cfg.EVALOUT_P)
 PLOT_OUT_PATH = Path(cfg.FIGS_P)
-FORMAT = "ecospace"   # options: "ecospace" or "ecosim"
+MODEL_TYPE = "ecospace"   # options: "ecospace" or "ecosim"
 
 # Define patterns & extractors per format
 FILE_PATTERNS = {
@@ -48,8 +40,8 @@ SCENARIO_RE = {
     "ecosim":   re.compile(cfg.TY_STATS_F_SIM_FMT),
 }
 
-pattern = FILE_PATTERNS[FORMAT]
-rx = SCENARIO_RE[FORMAT]
+pattern = FILE_PATTERNS[MODEL_TYPE]
+rx = SCENARIO_RE[MODEL_TYPE]
 
 # Find all matching files
 stats_files = glob.glob(os.path.join(STATS_PATH, pattern))
@@ -76,7 +68,7 @@ for scen, o in OVERRIDES.items():
 # Main loop now reads discovered files instead of formatting names
 model_stats = []
 for scenario in SCENARIOS:
-    if FORMAT == "ecospace":
+    if MODEL_TYPE == "ecospace":
         stats_file = os.path.join(STATS_PATH, f"ecospace_bloom_timing_stats_{scenario}.csv")
     else:
         stats_file = os.path.join(STATS_PATH, f"ecosim_bloom_eval_stats_{scenario}.csv")
@@ -152,10 +144,14 @@ def plot_model_points(ax, refstd, model_stats):
     model_stats = sorted(model_stats, key=lambda x: x['source_label'])
     for entry in model_stats:
         theta = np.arccos(entry['corrcoef'])
-        if entry['corrcoef'] >= 0.85:
+        std = entry['model_stddev'] / entry['obs_stddev']  # Normalize
+        if entry['corrcoef'] >= 0.7:
             print(entry['label'])
             print(entry['corrcoef'])
-        std = entry['model_stddev'] / entry['obs_stddev']  # Normalize
+            if std >= 0.8:
+                print(std)
+
+
         ax.plot(theta, std, marker=entry['marker'], color=entry['color'],
                 markeredgecolor=entry['edgecolor'], markersize=8,
                 linestyle='None',
@@ -182,7 +178,7 @@ def main():
 
     model_stats = []
     for scenario in SCENARIOS:
-        if FORMAT == "ecospace":
+        if MODEL_TYPE == "ecospace":
             stats_file = os.path.join(STATS_PATH, f"ecospace_bloom_timing_stats_{scenario}.csv")
         else:
             stats_file = os.path.join(STATS_PATH, f"ecosim_bloom_eval_stats_{scenario}.csv")
@@ -202,7 +198,7 @@ def main():
             ref_config = REFERENCE_CONFIGS[source]
             print(MODEL_CONFIGS[scenario]['label'])
             print(source)
-            print(row['r'])
+            # print(row['r'])
             model_stats.append({
                 'model_stddev': row['model stddev'],
                 'obs_stddev': row['obs stddev'],
@@ -216,7 +212,7 @@ def main():
 
     plot_model_points(ax, refstd, model_stats)
     plt.tight_layout()
-    plt.savefig(os.path.join(PLOT_OUT_PATH, "ecospace_taylor_diagram_BloomTiming.png"), dpi=300)
+    plt.savefig(os.path.join(PLOT_OUT_PATH, f"{MODEL_TYPE}_taylor_diagram_BloomTiming.png"), dpi=300)
     print("fig saved")
     plt.show()
 

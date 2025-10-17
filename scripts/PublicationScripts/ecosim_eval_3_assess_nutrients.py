@@ -112,6 +112,7 @@ def run_nutrient_eval():
     mdf["Total_Biomass_C"] = mdf[N_BOUND_GROUPS_STR].sum(axis=1)
     mdf["Total_Biomass_N"] = mdf["Total_Biomass_C"]  * N_B_INIT / B_INIT_TOT
     mdf["N_Free"] = N_B_INIT + N_FREE_AVG_INIT - mdf["Total_Biomass_N"]
+
     mdf["N_Free_Adjusted"] = mdf["N_Free"] * mdf["multiplier"] # in case of a seasonal or monthly ecosim 'nutrient loading'
 
     if USE_N_MULT:
@@ -167,10 +168,10 @@ def run_nutrient_eval():
 
 
     # clima
-    m, m = mdf.groupby("biweekly")
-    mean_model = grouped_model[field_mdf].mean()
-    q10_model = grouped_model[field_mdf].quantile(0.1)
-    q90_model = grouped_model[field_mdf].quantile(0.9)
+    mod = mdf.groupby("biweekly")
+    mean_model = mod[field_mdf].mean()
+    q10_model = mod[field_mdf].quantile(0.1)
+    q90_model = mod[field_mdf].quantile(0.9)
 
     # ----------------------------------------------
     # Plotting

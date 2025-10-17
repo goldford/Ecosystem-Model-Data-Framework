@@ -17,8 +17,8 @@ from typing import Dict, List
 # -------------------------------------------
 # General settings
 # -------------------------------------------
-ECOSPACE_SC = "SC134_29"
-ECOSPACE_SC_FULL = "SC134_29"
+ECOSPACE_SC = "SC201"
+ECOSPACE_SC_FULL = "SC201"
 ECOPATH_F_NM = "ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v16_BigPC"
 ECOSPACE_RAW_DIR = f"C://Users//Greig//Documents//EwE output//{ECOPATH_F_NM}//Ecospace_{ECOSPACE_SC_FULL}//asc//"
 
@@ -43,6 +43,7 @@ DO_NC_CROSSCHECK = False # can be memory intesnive to crosscheck NC with ASC aft
 EWE_ROWS = 151
 EWE_COLS = 93
 SKIPROWS = 6 # header
+
 
 
 # -------------------------------------------
@@ -92,6 +93,7 @@ MW_START_DATE = '2015-01-01'
 MW_END_DATE   = '2018-12-31'
 
 
+
 # -------------------------------------------
 # Prep 2 - nemcek dataset eval
 # -------------------------------------------
@@ -120,6 +122,7 @@ NM_LOG_TRANSFORM_MODEL = False  # Apply log transform to model values only for a
 NM_EPSILON = 1e-4        # Small constant to avoid log(0)
 NM_DO_EXPLOR_PLOTS = False # exploratory histograms, data summary
 NM_APPLY_NEMCEK_SEASON = False
+
 
 
 # -------------------------------------------
@@ -162,6 +165,7 @@ QU39_FILL_VALUE = -999
 QU39_DO_HIST = False
 
 
+
 # -------------------------------------------
 # Prep 4 - B Timing
 # -------------------------------------------
@@ -174,14 +178,14 @@ BT_START_YEAR = 1980 # analysis years (exclude spinup?)
 BT_END_YEAR = 2018
 
 BT_CSV_SUCHY_PF = f"..//..//data//evaluation//ecospace_bloom_timing_SSoG_{ECOSPACE_SC}.csv"
-BT_CSV_ALLEN_PF = f"..//..//data//evaluation//ecospace_bloom_timing_CSoG_{ECOSPACE_SC}.csv"
+BT_CSV_ALLEN_PF = f"..//..//data//evaluation//ecospace_bloom_timing_C09_{ECOSPACE_SC}.csv"
 
 # if multiple vars listed here, it will sum across them when computing anomalies, bloom timing etc!
 #OK with run 96 this is first time model fit has been okay with all pp groups
 # VARIABLES_TO_ANALYZE_SAT = ["PP1-DIA"] #for 88_2 - pp1-dai only, annual, keep janfeb
 BT_VARS_TO_ANALYZE_SAT = ["PP1-DIA", "PP2-NAN", "PP3-PIC"]
 BT_ANNUAL_AVG_METHOD_SAT = "annual" # should average bloom compared against be from all years, or just one year
-BT_VARS_TO_ANALYZE_C09 = ["PP1-DIA", "PP2-NAN", "PP3-PIC"]
+BT_VARS_TO_ANALYZE_C09 = ["PP1-DIA"]
 BT_ANNUAL_AVG_METHOD_C09 = "annual" # annual or all (this is always annual for C09 PCT MAX method)
 
 # Bloom detection method
@@ -208,6 +212,7 @@ BT_EXCLUDE_DEC_JAN_SAT = False # not hooked up ?
 BT_EXCLUDE_DEC_JAN_C09 = False
 
 BT_MIN_Y_TICK = 38
+
 
 
 # -------------------------------------------
@@ -249,7 +254,74 @@ ZP_SHOW_CNTS = True
 
 
 # -------------------------------------------
-# evaluation 6 - taylor plots
+# evaluation 6 - nutrient plots
+# -------------------------------------------
+NU_F_PREPPED = f"{EVALOUT_P}//nutrients_ios_csop_combined_sampled.csv"
+
+NU_FREE_AVG_INIT = 18 # see ecosim_data_prep_2_nutrients.py, depth average 18 N, umol /L
+NU_P_FREE_INIT = 0.78 # must be updated when ecosim changes
+#C_TO_N_RATIO = 106 / 16  # molar Redfield ratio
+NU_PLT_YR_ST = 1980
+NU_PLT_YR_EN = 2018
+
+NU_BOUND_GROUPS = [1, 2, 3, 4, 5,
+                  6, 7, 8, 9, 10,
+                  11, 12, 13, 14, 15,
+                  16, 17, 18, 19, 20]
+# N_BOUND_GROUPS = [17, 18, 19]
+# must update when Ecopath changes
+NU_GROUPS_ECOPATH_B = {
+    1: 0.0046,  # NK1-COH
+    2: 0.00018, # NK2-CHI
+    3: 0.28,    # NK3-FOR
+    4: 0.03,    # ZF1-ICT
+    5: 0.6,     # ZC1-EUP
+    6: 0.52,    # ZC2-AMP
+    7: 0.09,    # ZC3-DEC
+    8: 0.64,    # ZC4-CLG
+    9: 0.5,     # ZC5-CSM
+    10: 0.003,  # ZS1-JEL
+    11: 0.03,   # ZS2-CTG
+    12: 0.26,   # ZS3-CHA
+    13: 0.04,   # ZS4-LAR
+    14: 1.1,    # PZ1-CIL
+    15: 0.87,   # PZ2-DIN
+    16: 0.46,   # PZ3-HNF
+    17: 2.31, #* 2.5,   # PP1-DIA
+    18: 1.5, #* 1.6,    # PP2-NAN
+    19: 0.35, #* 1.5,   # PP3-PIC
+    20: 0.17,   # BA1-BAC
+    21: 4.3,    # DE2-DOC
+    22: 10.1    # DE1-POC
+}
+
+NU_INCLUDE_GRPS = [
+    "NK1-COH", "NK2-CHI", "NK3-FOR",
+    "ZF1-ICT", "ZC1-EUP", "ZC2-AMP",
+    "ZC3-DEC", "ZC4-CLG", "ZC5-CSM",
+    "ZS1-JEL", "ZS2-CTH", "ZS3-CHA",
+    "ZS4-LAR", "PZ1-CIL", "PZ2-DIN",
+    "PZ3-HNF", "PP1-DIA", "PP2-NAN",
+    "PP3-PIC", "BA1-BAC",
+    "DE1-POC", "DE2-DOC"
+]
+
+NU_PLT_GRPS = [
+    "PP1-DIA", "PP2-NAN", "PP3-PIC"
+]
+
+NU_OBS_AVG_TYPE = "mean" # mean, median
+
+TOT_B_INIT = 0
+for group_col in NU_BOUND_GROUPS:
+    INIT_B = NU_GROUPS_ECOPATH_B[group_col]
+    TOT_B_INIT += INIT_B
+
+N_B_INIT = NU_FREE_AVG_INIT *  (1 - NU_P_FREE_INIT) / NU_P_FREE_INIT # inferred absolute amount bound in biomass in nitrogen units (see text)
+
+
+# -------------------------------------------
+# evaluation 7 - taylor plots
 # -------------------------------------------
 TY_STATS_FPAT_SPC_FMT = "ecospace_bloom_timing_stats_*.csv"
 TY_STATS_FPAT_SIM_FMT = "ecosim_bloom_eval_stats_*.csv"
