@@ -1,6 +1,6 @@
 """
 Analyzing Nutrients from Ecospace Outputs
-by: G Oldford, 2023-2025
+by: G Oldford 2025
 ----------------------------------------------------------
 Visualises nutrient pattern from Ecospace
 
@@ -43,7 +43,8 @@ ALL_BIOMASS_VARS = [
     "PP3-PIC", "BAC-BA1"
 ]
 
-INCLUDE_ONLY = ["PP1-DIA", "PP2-NAN", "PP3-PIC", "PZ1-CIL", "PZ2-DIN"]
+INCLUDE_ONLY = ["PP1-DIA", "PP2-NAN", "PP3-PIC",
+                "PZ1-CIL", "PZ2-DIN"]
 PROP_PP_MIXO = [1, 1, 1, 0.25, 0.25]  # Proportion of each group that is autotrophic
 
 # ====== Load Data ======

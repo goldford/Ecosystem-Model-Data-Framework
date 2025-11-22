@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib import patches
 import xarray as xr
 import warnings
+from datetime import datetime
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -354,7 +355,12 @@ def load_yaml(yamlfile):
     return yamldata
 
 # Function to find the closest date
+# def find_closest_date(model_times, target_date):
+#     return min(model_times, key=lambda x: abs(x - target_date))
+
 def find_closest_date(model_times, target_date):
+    if isinstance(target_date, str):
+        target_date = datetime.fromisoformat(target_date)  # e.g., "2012-05-17"
     return min(model_times, key=lambda x: abs(x - target_date))
 
 # Function to find the closest depth

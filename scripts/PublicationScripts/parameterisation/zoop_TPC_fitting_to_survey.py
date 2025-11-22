@@ -47,7 +47,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 
 ###############################################################################
-# CONFIGURATION – edit to match your dataset
+# CONFIGURATION – edit to match dataset
 ###############################################################################
 CSV_PATH: pathlib.Path = pathlib.Path("C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/4. Zooplankton/Zoop_Perryetal_2021/MODIFIED/Zooplankton_B_C_gm2_EWEMODELGRP_Wide_NEMO3daymatch.csv")  # input file
 ENV_COLUMN: str = "Temp_0to10m"      # Temp_150toBot, Temp_0to10m, Temp_30to40m default single‑depth run

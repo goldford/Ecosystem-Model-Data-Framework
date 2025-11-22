@@ -1,6 +1,6 @@
 """
 Script:   Master evaluation pipeline for ecospacec outputs analysis
-By: G Oldford, 2025
+Created by: G Oldford, 2025
 Purpose:
    - orchestrates running of evaluation by calling functions etc in other scripts
 Input:
@@ -19,16 +19,20 @@ import ecospace_eval_2c_nemcek_vs_ecospace as phyto_eval_1
 import ecospace_eval_3_QU39_match as phyto_match_2
 import ecospace_eval_3b_QU39_vs_ecospace as phyto_eval_2
 import ecospace_eval_4a_bloomt_CSoG as bt_eval_1
+import ecospace_eval_6_nutrients as nu_eval
+import ecospace_eval_5_zoop_eval as zp_eval
 
 
 
 def run_ecospace_pipeline(run_prep=False,
-                          run_seas_phyto=True,
-                          run_match_phyto1=True,
-                          run_eval_phyto1=True,
-                          run_match_phyto2=True,
-                          run_eval_phyto2=True,
-                          run_eval_bt1=True):
+                          run_seas_phyto=False,
+                          run_match_phyto1=False,
+                          run_eval_phyto1=False,
+                          run_match_phyto2=False,
+                          run_eval_phyto2=False,
+                          run_eval_bt1=True,
+                          run_nutr=False,
+                          run_zp_eval=False):
     if run_prep:
         print("=== Running Data Prep Step ===")
         data_prep.run_ecospace_prep()
@@ -42,7 +46,8 @@ def run_ecospace_pipeline(run_prep=False,
         phyto_match_1.run_eval_2a_nemcek_match()
 
     if run_eval_phyto1:
-        print("=== Running Phyto Eval 1 (Nemcek) ===")
+        print("=== Running Phyto Eval 1 (Nemcek)"
+              " ===")
         phyto_eval_1.run_eval_2b_nemcek_eval()
 
     if run_match_phyto2:
@@ -57,6 +62,13 @@ def run_ecospace_pipeline(run_prep=False,
         print("=== Running BT Eval 1 (CSOG) ===")
         bt_eval_1.run_bt_eval()
 
+    if run_nutr:
+        print("=== Running nutrient eval ===")
+        # nu_eval.
+
+    if run_zp_eval:
+        print("=== Running zoop eval ===")
+        zp_eval.run_zoop_eval()
 
 if __name__ == "__main__":
     run_ecospace_pipeline()
