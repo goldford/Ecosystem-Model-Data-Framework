@@ -85,6 +85,8 @@ CREATE_MASKS = cfg.BT_CREATE_MASKS # Set to True to regenerate masks
 DO_NUTRIENTS = cfg.BT_DO_NUTRIENTS # script 9 visualises nutrients now
 
 USEC09_MASK_FOR_SAT = cfg.BT_USEC09_MASK_FOR_SAT
+C09_ROW = cfg.BT_C09_ROW
+C09_COL = cfg.BT_C09_COL
 
 
 # ================================
@@ -643,6 +645,8 @@ def run_bt_eval() -> None:
     # Load Ecospace model outputs
     ds = load_ecospace_dataset()
 
+    row_C09, col_C09 = C09_ROW, C09_COL
+
     # Generate masks if required
     if CREATE_MASKS:
         generate_2d_mask(ds, os.path.join(DOMAIN_CONFIG_PATH, DOMAIN_FILE))
@@ -658,8 +662,6 @@ def run_bt_eval() -> None:
     var_name_C09 = VARIABLES_TO_ANALYZE_C09
 
     if RECOMPUTE_BLOOM_TIMING_C09:
-        # Hardcoded C09 1D location
-        col_C09, row_C09 = 52, 100
         mask = None
 
         # override option to use satellite 2d mask

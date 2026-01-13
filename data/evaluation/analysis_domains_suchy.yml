@@ -11,6 +11,12 @@ depth:
 
 # coords from QGIS, approximation from Suchy et al., 2022
 polygon_coords:
+    SGC4: # an approximate 3 km sq box with c09 location at centre, added 2026-01-02
+        - [49.2021913, -123.5172867] #1
+        - [49.2021913, -123.4760527] #2
+        - [49.1752419, -123.5172867] #3
+        - [49.1752419, -123.4760527] #4 
+
     SGC3: # trimmed northern bit which is masked by clouds in 2005 (removed 4,5,6,7 in SG2)
         - [49.34612, -123.28874] #1
         - [49.3825, -123.50197] #2

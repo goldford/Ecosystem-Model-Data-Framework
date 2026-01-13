@@ -16,8 +16,8 @@ import pandas as pd # would rather not do imports here
 # General settings
 # -------------------------------------------
 
-SCENARIO = "SC150_alt"
-ECOPATH_F_NM = "ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v16_BigPC_CW"
+SCENARIO = "SC202"
+ECOPATH_F_NM = "LTL_Carb_3day_ewe6_7_19295_v17_BigPC_ECOSPACEPARAMZ"
 
 # ===== Paths =====
 YEAR_START_FULLRUN = 1978
@@ -208,7 +208,7 @@ Z_GROUP_MAP = {
     'ZS1-JEL': 10,
     'ZS2-CTH': 11,
     'ZS3-CHA': 12,
-    'ZS4-LAR': 14,
+    'ZS4-LAR': 13,
 }
 
 # USER SETTING: choose one season and plot type ('bar' or 'line')
@@ -239,3 +239,33 @@ ZP_FULLRN_START = 1980
 ZP_FULLRN_END = 2018
 
 ZP_SHOW_CNTS = True
+
+# -----------------------------------------------------------------------------
+# Tow filtering & anomaly stuff
+
+#  context:
+# - Ecosim anomalies are computed from the *paired tow table* (obs matched to model).
+# - If we filter which tows are eligible (e.g., “deep/complete tows only”), we are
+#   also changing the climatology used for z-scoring (mean/std) and the sample counts.
+#
+#  Other consideration
+# - Sampling is temporally uneven (many more tows in recent years). If we pool all
+#   tows to compute the climatology, then years with more tows (often recent years)
+#   have more influence on the mean/std. That will tend to pull recent anomalies
+#   closer to 0 by construction.
+#
+# These options allow us to:
+# (A) Turn the tow filter ON/OFF so Ecosim can match Ecospace’s “include all matched tows”
+# (B) Choose whether the climatology is tow-weighted vs year-weighted
+# -----------------------------------------------------------------------------
+
+# Tow eligibility filter applied BEFORE matching (only affects Ecosim workflow).
+# "deep_or_complete": keep tows with (tow_prop >= min_prop) OR (start_depth >= min_start_depth_m)
+# "none": keep all tows (closest to Ecospace workflow)
+ZP_TOW_FILTER_MODE = "none"   # {"deep_or_complete", "none"}
+ZP_TOW_MIN_PROP = 0.7
+ZP_TOW_MIN_START_DEPTH_M = 150.0
+
+# "tows": pool all tows in the season+year window (years with more tows weigh more)
+# "yearly_mean": compute per-year means first; climatology is across years (each year weighs equally)
+ZP_ANOM_CLIM_MODE = "tows"               # {"tows", "yearly_mean"}

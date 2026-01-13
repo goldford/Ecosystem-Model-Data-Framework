@@ -706,7 +706,7 @@ def run_qu39_eval() -> None:
         df_dia, ['log_PP1-DIA', 'log_ssc-DIA', 'logQU39'], 'Bacillariophyceae', 'class',
         'Diatoms', ['Ecospace', 'SMELT', 'QU39'],
         {'log_PP1-DIA': 'blue', 'log_ssc-DIA': 'pink', 'logQU39': 'orange'},
-        output_file=os.path.join(figs_out_p, MODEL_RUN + '_Diatoms_Monthly_QU39_vs_Ecospace_vs_SSC_2016_2018.png'),
+        output_file=os.path.join(figs_out_p, 'ecospace_' + MODEL_RUN + '_Diatoms_Monthly_QU39_vs_SSC_2016_2018.png'),
         include_ssc=True, label_position='(a)'
     )
 
@@ -715,7 +715,7 @@ def run_qu39_eval() -> None:
         df_nan, ['log_PP2-NAN', 'log_ssc-FLA', 'logQU39'], 'Nanophytoplankton', 'class',
         'Nanophytoplankton', ['Ecospace', 'SMELT', 'QU39'],
         {'log_PP2-NAN': 'blue', 'log_ssc-FLA': 'pink', 'logQU39': 'orange'},
-        output_file=os.path.join(figs_out_p, 'Nanophytoplankton_' + MODEL_RUN + '_Monthly_QU39_vs_Ecospace_vs_SSC_2016_2018.png'),
+        output_file=os.path.join(figs_out_p, 'ecospace_' + MODEL_RUN + '_Nanophytoplankton_Monthly_QU39_vs_Ecospace_vs_SSC_2016_2018.png'),
         include_ssc=True, label_position='(b)'
     )
 
@@ -724,7 +724,7 @@ def run_qu39_eval() -> None:
         df_pic, ['log_PP3-PIC', 'logQU39'], 'Pyramimonadophyceae', 'class',
         'Picoplankton', ['Ecospace', 'QU39'],
         {'log_PP3-PIC': 'blue', 'logQU39': 'orange'},
-        output_file=os.path.join(figs_out_p, 'Picoplankton_' + MODEL_RUN + '_Monthly_QU39_vs_Ecospace_2016_2018.png'),
+        output_file=os.path.join(figs_out_p, 'ecospace_' + MODEL_RUN + '_Picoplankton_Monthly_QU39_vs_Ecospace_2016_2018.png'),
         include_ssc=False, label_position='(c)'
     )
 
@@ -733,12 +733,12 @@ def run_qu39_eval() -> None:
         df_dino, ['log_PZ2-DIN', 'logQU39'], 'Dinophyceae', 'class',
         'Dinoflagellates', ['Ecospace', 'QU39'],
         {'log_PZ2-DIN': 'blue', 'logQU39': 'orange'},
-        output_file=os.path.join(figs_out_p, 'Dinoflagellates_' + MODEL_RUN + '_Monthly_QU39_vs_Ecospace_2016_2018.png'),
+        output_file=os.path.join(figs_out_p, 'ecospace_' + MODEL_RUN + '_Dinoflagellates_Monthly_QU39_vs_Ecospace_2016_2018.png'),
         include_ssc=False, label_position='(d)'
     )
 
     if generate_panel:
-        panel_output_file = os.path.join(figs_out_p, f'Ecospace_{MODEL_RUN}_Monthly_QU39_Boxplot_Panel.png')
+        panel_output_file = os.path.join(figs_out_p, f'ecospace_{MODEL_RUN}_Monthly_QU39_Boxplot_Panel.png')
         plot_combined_panel(
             dfs=[df_dia, df_nan, df_pic, df_dino],
             field_codes_list=[
@@ -841,7 +841,7 @@ def run_qu39_eval() -> None:
     print('stats generated!')
     print(stats_df)
 
-    stats_outfile = os.path.join(stats_out_p, f"{MODEL_RUN}_QU39_ModelStats_ObsVsModel.csv")
+    stats_outfile = os.path.join(stats_out_p, f"ecospace_{MODEL_RUN}_QU39_ModelStats_ObsVsModel.csv")
     stats_df.to_csv(stats_outfile, index=False)
     print(f"[Saved] Model statistics written to: {stats_outfile}")
     print('DONE')

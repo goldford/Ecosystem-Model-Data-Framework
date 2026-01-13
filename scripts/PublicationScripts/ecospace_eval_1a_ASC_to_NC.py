@@ -201,6 +201,9 @@ def run_ecospace_prep() -> None:
            "PP3-PIC": ECOSPACE_RAW_DIR + "EcospaceMapBiomass-PP3-PIC-{}.asc", #time step format eg: 00620,
 
            "BA1-BAC": ECOSPACE_RAW_DIR + "EcospaceMapBiomass-BA1-BAC-{}.asc",
+
+           # detritus isn't written out by Ecospace!
+
           }
 
 

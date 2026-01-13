@@ -163,7 +163,9 @@ for ax, season in zip(axes, seasons):
     ax.legend()
 plt.gca().invert_yaxis()
 plt.tight_layout()
+plt.savefig(os.path.join(OUTPUT_PATH_FIGS, 'seasonal_nitrogen_over_depths.png'))
 plt.show()
+
 
 # -------------------------------
 # Generate bi-weekly averaged nitrogen time series
