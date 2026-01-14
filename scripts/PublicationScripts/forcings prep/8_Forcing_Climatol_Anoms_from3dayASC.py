@@ -1,6 +1,6 @@
 """
 Convert forcings to climatol and anomalies
-by: G Oldford, 2025
+by: G Oldford, 2025-2026
 ----------------------------------------------------------
 Simply takes the 3-day ASC files prepped previously 
 and first computes cell-wise average from all years for 
@@ -34,15 +34,16 @@ nsteps = 120  # 3-day time steps per year
 grid_shape = (151, 93)  # Dimensions of trimmed ASC grids
 
 # Input variable
-var_key = "RDRS_windstress10m_" #vartemp1_C_0-10mAvg" "vartemp_avg150toBot" "RDRS_windstress_10m" "PAR-VarZ-VarK"
+var_key = "XLD_normalised" #"RDRS_windstress10m_" #vartemp1_C_0-10mAvg" "vartemp_avg150toBot" "RDRS_windstress_10m" "PAR-VarZ-VarK"
 
 # in paths
-# forcing_root = "C:/Users/Greig/Documents/GitHub/Ecosystem-Model-Data-Framework/data/forcing" # forcing other than wind
-forcing_root = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/RDRS forcings/Wind_RDRS/Ecospace" # wind
+forcing_root = "C:/Users/Greig/Documents/GitHub/Ecosystem-Model-Data-Framework/data/forcing" # forcing other than wind
+# forcing_root = "C:/Users/Greig/Sync/PSF/EwE/Georgia Strait 2021/LTL_model/LTL_MODELS/RDRS forcings/Wind_RDRS/Ecospace" # wind
 
 # asc_dir = f"{forcing_root}/ECOSPACE_in_3day_PAR3_Sal4m_1980-2018/{var_key}/"
-asc_dir = f"{forcing_root}/stress_/" # wind
+# asc_dir = f"{forcing_root}/stress_/" # wind
 # asc_dir = f"{forcing_root}/ECOSPACE_in_3day_vars_1980-2018/{var_key}/"
+asc_dir = f"{forcing_root}/ECOSPACE_in_3day_nutrld_fromASC_202601/"
 
 sigdig = 3  # Decimal places to round
 num_digits_ecospace_asc_month = 2
