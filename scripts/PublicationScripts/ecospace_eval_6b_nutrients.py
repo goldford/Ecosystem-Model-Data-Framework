@@ -27,7 +27,7 @@ If detrital pools (DOM/POM) are not exported by Ecospace, they cannot be include
 N_bound(t). For now this script defaults to using only non-detrital groups exported
 in the matched table.
 
-If detrital columns exist in your NetCDF / matched table later (e.g., DE1-POC / DE2-DOC),
+If detrital columns exist in NetCDF / matched table later (e.g., DE1-POC / DE2-DOC),
 add them to the conversion map and they will automatically be included.
 
 """
@@ -39,10 +39,13 @@ from typing import Dict, Iterable, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-import matplotlib
-import matplotlib.pyplot as plt
-matplotlib.use("TkAgg")
 import ecospace_eval_config as cfg
+import matplotlib
+# Use a non-interactive backend unless explicitly showing plots
+if not bool(getattr(cfg, 'NU_SHOW_PLOT', False)):
+    matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
 
 
 # -----------------------------------------------------------------------------
@@ -53,11 +56,34 @@ SCENARIO = cfg.ECOSPACE_SC
 OUTPUT_DIR_EVAL = cfg.EVALOUT_P
 OUTPUT_DIR_FIGS = cfg.FIGS_P
 
+# for compensating for how ecospace does not include detrital outputs
+# but I want to consider POC to contain nutrients that are 'bound' (vs unbound DOC)
+# this requires exporting POC direct from EwE Ecospace run output window (1D)
+NU_INCLUDE_POC_DIAG = bool(getattr(cfg, "NU_INCLUDE_POC_DIAG", False))
+NU_POC_RELATIVE_CSV = getattr(cfg, "NU_POC_RELATIVE_CSV", None)
+ES_GROUPS_ECOPATH_B = getattr(cfg, "ES_GROUPS_ECOPATH_B", {}) or {}
+NU_POC_BASELINE_GC_M2 = ES_GROUPS_ECOPATH_B.get("DE1-POC", None)
+NU_POC_REL_COL = getattr(cfg, "NU_POC_REL_COL", "DE1-POC")
+NU_POC_DIAG_COL_SUBSTR = str(getattr(cfg, "NU_POC_DIAG_COL_SUBSTR", "DE1-POC"))
+
+NU_USE_FLUX_MULT = bool(getattr(cfg, "NU_USE_FLUX_MULT", False))
+NU_FLUX_MULT_COL = str(getattr(cfg, "NU_FLUX_MULT_COL", "N_FLUX_MULT"))
+NU_FLUX_MULT_FILL = getattr(cfg, "NU_FLUX_MULT_FILL", None)
+NU_FLUX_APPLY_MODE = str(getattr(cfg, "NU_FLUX_APPLY_MODE", "scale_free")).lower()
+
+
 # Produced by ecospace_eval_6a_nutrientsmatched.py
 PAIRED_BIWEEK_CSV = os.path.join(
     OUTPUT_DIR_EVAL,
     f"ecospace_{SCENARIO}_nutrients_biweek_model_matched.csv",
 )
+
+BOX_BIWEEK_CSV = os.path.join(
+    OUTPUT_DIR_EVAL,
+    f"ecospace_{SCENARIO}_nutrients_biweek_model_box.csv",
+)
+
+NU_PLOT_MODEL_SERIES = list(getattr(cfg, "NU_MODEL_SERIES", ["matched"]))
 
 # Optional year filter
 NU_PLT_YR_ST = getattr(cfg, "NU_PLT_YR_ST", None)
@@ -74,15 +100,19 @@ C_TO_N_POM = float(getattr(cfg, "NU_C_TO_N_POM", 0.07))
 
 # Optional explicit overrides per group name, e.g.:
 # NU_GROUP_C_TO_N = {"BA1-BAC": 0.20}
-NU_GROUP_C_TO_N: Dict[str, float] = dict(getattr(cfg, "NU_GROUP_C_TO_N", {}))
+# Merge per-group overrides from either name (some configs use NU_C_TO_N_BY_GROUP)
+NU_GROUP_C_TO_N: Dict[str, float] = {
+    **dict(getattr(cfg, 'NU_C_TO_N_BY_GROUP', {}) or {}),
+    **dict(getattr(cfg, 'NU_GROUP_C_TO_N', {}) or {}),
+}
 
 # Candidate detrital column names if they exist
 DOM_COL_CANDIDATES = list(getattr(cfg, "NU_DOM_COLS", ["DE2-DOC", "DE1-DOC", "DE1-DOM", "DE2-DOM"]))
 POM_COL_CANDIDATES = list(getattr(cfg, "NU_POM_COLS", ["DE1-POC", "DE2-POC", "DE1-POM", "DE2-POM"]))
 
 # ---- Initial inventory terms (g N m-2) ----
-# Prefer explicit values if you add them to ecospace_eval_config.py.
-# (If you only have a concentration in umol/L, convert to an areal inventory in gN/m2 first.)
+# Prefer explicit values if aadded them to ecospace_eval_config.py.
+# (If only have a concentration in umol/L, convert to an areal inventory in gN/m2 first.)
 NU_FREE_INIT_GNM2 = float(getattr(cfg, "NU_FREE_INIT_GNM2", 3.5))
 
 # If provided, use directly. Otherwise compute from cfg.ES_GROUPS_ECOPATH_B.
@@ -100,6 +130,11 @@ NU_BIWEEK_MAX = int(getattr(cfg, "NU_BIWEEK_MAX", 26))
 # - False: allow model-only rows into model climatology and obs-only rows into obs climatology
 NU_REQUIRE_BOTH_FOR_AGG = bool(getattr(cfg, "NU_REQUIRE_BOTH_FOR_AGG", True))
 
+# Debug toggles
+NU_DEBUG_POC = bool(getattr(cfg, 'NU_DEBUG_POC', False))
+NU_DEBUG_SAVE_DF = bool(getattr(cfg, 'NU_DEBUG_SAVE_DF', False))
+NU_DEBUG_SAVE_MAX_ROWS = int(getattr(cfg, 'NU_DEBUG_SAVE_MAX_ROWS', 2000))
+
 
 # Which model groups to treat as biomass pools contributing to N_bound(t).
 # If not set, we use the intersection of matched-table columns with:
@@ -113,6 +148,84 @@ NU_INCLUDE_DETRITUS_IF_AVAILABLE = bool(getattr(cfg, "NU_INCLUDE_DETRITUS_IF_AVA
 # -----------------------------------------------------------------------------
 # Helpers
 # -----------------------------------------------------------------------------
+
+def _load_series_table(series: str) -> pd.DataFrame:
+    if series == "matched":
+        return _load_paired_table(PAIRED_BIWEEK_CSV)
+    if series == "box":
+        return _load_paired_table(BOX_BIWEEK_CSV)
+    raise ValueError(f"Unknown model series {series!r}. Use 'matched' or 'box'.")
+
+
+def _ensure_obs_col(df: pd.DataFrame, obs_col: str) -> pd.DataFrame:
+    # Box tables often have no obs column; we need it present so _aggregate_year_biweek() can run.
+    if obs_col in df.columns:
+        return df
+    d = df.copy()
+    d[obs_col] = np.nan
+    return d
+
+
+def _load_series_table(series: str) -> pd.DataFrame:
+    if series == "matched":
+        return _load_paired_table(PAIRED_BIWEEK_CSV)
+    if series == "box":
+        return _load_paired_table(BOX_BIWEEK_CSV)
+    raise ValueError(f"Unknown model series {series!r}. Use 'matched' or 'box'.")
+
+
+def _ensure_obs_col(df: pd.DataFrame, obs_col: str) -> pd.DataFrame:
+    # Box tables often have no obs column; we need it present so _aggregate_year_biweek() can run.
+    if obs_col in df.columns:
+        return df
+    d = df.copy()
+    d[obs_col] = np.nan
+    return d
+
+def _load_diag_relative_series_poc(csv_path: str, *, rel_col: str = "DE1-POC") -> pd.Series:
+    """
+    Parse Ecospace Diagnostics 'Relative Biomass' CSV and return a Series indexed by model step (int)
+    containing the relative anomaly for DE1-POC.
+
+    Assumptions:
+      - First row after header contains labels like '22: DE1-POC'
+      - Column 'Pane' contains integer model step (0,1,2,...) but includes a non-numeric sentinel at end
+      - Values are normalized to 0 at t=0 and represent fractional change relative to baseline:
+            rel(t) = B(t)/B0 - 1
+        so B(t) = B0 * (1 + rel(t))
+    """
+    df = pd.read_csv(csv_path, header=0)
+
+    # Row 0 holds the "Data" labels like "22: DE1-POC"
+    label_row = df.iloc[0].astype(str)
+
+    # Find the column that corresponds to rel_col (e.g., "DE1-POC")
+    target_idx = None
+    for j, lab in enumerate(label_row):
+        if rel_col in lab:
+            target_idx = j
+            break
+    if target_idx is None:
+        raise ValueError(
+            f"Could not find rel_col={rel_col!r} in the label row of {csv_path}. "
+            f"Example labels: {list(label_row.values)[:8]}"
+        )
+
+    # Keep rows after the label row
+    d = df.iloc[1:].copy()
+
+    # Clean 'Pane' (model step); drop sentinel/non-numeric rows
+    d["Pane_num"] = pd.to_numeric(d["Pane"], errors="coerce")
+    d = d.dropna(subset=["Pane_num"])
+    d = d[d["Pane_num"] < 1e9]  # drop the huge float sentinel
+    d["step"] = d["Pane_num"].astype(int)
+
+    # Extract the series values
+    ser = pd.to_numeric(d.iloc[:, target_idx], errors="coerce")
+    ser.index = d["step"].values
+    ser.name = "poc_rel"
+
+    return ser
 
 
 def _ensure_dir(path: str) -> None:
@@ -228,7 +341,7 @@ def _compute_bound_init_gN_m2(group_cols: list[str], c2n: Dict[str, float]) -> f
                 missing.append(g)
 
         # If detrital columns are in group_cols but not in ES_GROUPS_ECOPATH_B, we ignore them here
-        # unless you provide NU_BOUND_INIT_GNM2 explicitly.
+        # unless NU_BOUND_INIT_GNM2 provided explicitly.
         if missing:
             print(
                 "[6b] NOTE: Some group columns are not in cfg.ES_GROUPS_ECOPATH_B and were ignored "
@@ -268,7 +381,8 @@ def _load_paired_table(csv_path: str) -> pd.DataFrame:
     return df
 
 
-def _aggregate_year_biweek(df: pd.DataFrame, obs_col: str, model_col: str) -> pd.DataFrame:
+def _aggregate_year_biweek(df: pd.DataFrame, obs_col: str, model_col: str, *, require_both: Optional[bool] = None) -> pd.DataFrame:
+
     """Collapse from (year, biweekly, cell) to (year, biweekly).
 
     If NU_REQUIRE_BOTH_FOR_AGG=True, rows missing either obs or model are dropped.
@@ -277,6 +391,8 @@ def _aggregate_year_biweek(df: pd.DataFrame, obs_col: str, model_col: str) -> pd
     Output always contains columns:
       year, biweekly, avg_obs, avg_model, n_cells_obs, n_cells_model
     """
+    if require_both is None:
+        require_both = NU_REQUIRE_BOTH_FOR_AGG
 
     if OBS_AVG_TYPE not in {"mean", "median"}:
         raise ValueError(f"OBS_AVG_TYPE must be 'mean' or 'median', got: {OBS_AVG_TYPE}")
@@ -288,7 +404,7 @@ def _aggregate_year_biweek(df: pd.DataFrame, obs_col: str, model_col: str) -> pd
 
     d = df.copy()
 
-    if NU_REQUIRE_BOTH_FOR_AGG:
+    if require_both:
         d = d.dropna(subset=[obs_col, model_col], how="any")
 
         out = (
@@ -417,6 +533,94 @@ def _plot_overlay(clima: pd.DataFrame, *, scenario: str) -> str:
 
     return out_png
 
+def _plot_overlay_multi(
+    obs_clima: pd.DataFrame,
+    model_climas: dict[str, pd.DataFrame],
+    *,
+    out_png: str,
+    scenario: str
+) -> None:
+    # --- Normalize indices (so month ticks behave the same) ---
+    if obs_clima is not None and not obs_clima.empty:
+        obs_clima = obs_clima.copy()
+        obs_clima.index = obs_clima.index.astype(int)
+
+    plt.figure(figsize=(10, 5))
+
+    # ---- Obs (same logic as _plot_overlay) ----
+    if obs_clima is not None and not obs_clima.empty:
+        x = obs_clima.index.to_numpy()
+
+        o_fill = np.isfinite(obs_clima["obs_q10"].to_numpy()) & np.isfinite(obs_clima["obs_q90"].to_numpy())
+        o_line = np.isfinite(obs_clima["obs_center"].to_numpy())
+
+        if o_fill.any():
+            plt.fill_between(
+                x,
+                obs_clima["obs_q10"].to_numpy(),
+                obs_clima["obs_q90"].to_numpy(),
+                where=o_fill,
+                interpolate=True,
+                alpha=0.2,
+                label="Obs 10–90%",
+            )
+        if o_line.any():
+            plt.plot(x[o_line], obs_clima["obs_center"].to_numpy()[o_line], label="Obs center")
+
+    # ---- Models (each series gets center + band with finite masks) ----
+    for label, cl in model_climas.items():
+        if cl is None or cl.empty:
+            print(f"[plot] {label}: empty climatology")
+            continue
+
+        cl = cl.copy()
+        cl.index = cl.index.astype(int)
+        x = cl.index.to_numpy()
+
+        m_fill = np.isfinite(cl["model_q10"].to_numpy()) & np.isfinite(cl["model_q90"].to_numpy())
+        m_line = np.isfinite(cl["model_center"].to_numpy())
+
+        print(f"[plot] {label}: model_center finite bins = {int(m_line.sum())} / {len(m_line)}")
+
+        if m_fill.any():
+            # keep band out of legend to reduce clutter, or comment out `label=None`
+            plt.fill_between(
+                x,
+                cl["model_q10"].to_numpy(),
+                cl["model_q90"].to_numpy(),
+                where=m_fill,
+                interpolate=True,
+                alpha=0.2,
+                label=f"{label} 10–90%",
+            )
+        if m_line.any():
+            plt.plot(x[m_line], cl["model_center"].to_numpy()[m_line], label=f"{label} center")
+
+    # ---- Month ticks (copied from _plot_overlay) ----
+    month_start_doy = [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335]
+    month_ticks = [((d - 1) // 14 + 1) for d in month_start_doy]
+    month_labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+    ax = plt.gca()
+    ax.set_xticks(month_ticks)
+    ax.set_xticklabels(month_labels)
+
+    ax.set_xlim(1, max(NU_BIWEEK_MAX, max(month_ticks)))
+    ax.set_xlabel("Month")
+
+    plt.ylabel("N (g N m$^{-2}$)")
+    plt.title(f"Biweekly nutrient climatology (obs vs inferred model free N) – Ecospace {scenario}")
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+
+    _ensure_dir(os.path.dirname(out_png))
+    plt.savefig(out_png, dpi=200)
+
+    if NU_SHOW_PLOT:
+        plt.show()
+    plt.close()
+
 
 # -----------------------------------------------------------------------------
 # Main
@@ -426,56 +630,126 @@ def _plot_overlay(clima: pd.DataFrame, *, scenario: str) -> str:
 def run_nutrient_overlay() -> None:
     """Pipeline entrypoint (keeps the same name used by ecospace_evaluation_master_pipeline.py)."""
 
-    df = _load_paired_table(PAIRED_BIWEEK_CSV)
+    # --- Always load matched once to define obs_col + group_cols consistently ---
+    df_matched = _load_series_table("matched")
+    obs_col = _pick_obs_gN_col(df_matched)
 
-    obs_col = _pick_obs_gN_col(df)
-    group_cols = _infer_group_cols(df)
+    group_cols = _infer_group_cols(df_matched)
     c2n = _build_c_to_n_map(group_cols)
-
     bound_init = _compute_bound_init_gN_m2(group_cols, c2n)
 
-    # Compute time-varying bound N and inferred free N
-    df = df.copy()
-    df["model_N_bound_gN_m2"] = _compute_bound_N(df, group_cols, c2n)
-    df["model_N_free_gN_m2"] = NU_FREE_INIT_GNM2 + bound_init - df["model_N_bound_gN_m2"]
+    # --- Optional: add POC detritus baseline bound-N (diagnostics series) ---
+    poc_bound_init = 0.0
+    if NU_INCLUDE_POC_DIAG:
+        b0 = dict(getattr(cfg, "ES_GROUPS_ECOPATH_B", {}) or {})
+        if "DE1-POC" not in b0:
+            raise ValueError("Missing 'DE1-POC' in cfg.ES_GROUPS_ECOPATH_B (baseline gC/m2).")
+        B0_poc_gc = float(b0["DE1-POC"])
 
-    # Guard against tiny negatives from rounding
-    df.loc[df["model_N_free_gN_m2"] < 0, "model_N_free_gN_m2"] = 0.0
+        # This is where NU_C_TO_N_POM matters
+        c2n_poc = float(NU_GROUP_C_TO_N.get("DE1-POC", C_TO_N_POM))
 
-    print("[6b] Using obs column:", obs_col)
-    print("[6b] Number of biomass pools contributing to bound N:", len(group_cols))
-    print("[6b] C->N factors: living=", C_TO_N_LIVING, "DOM=", C_TO_N_DOM, "POM=", C_TO_N_POM)
-    print("[6b] N_free_init (gN/m2)=", NU_FREE_INIT_GNM2)
-    print("[6b] N_bound_init (gN/m2)=", bound_init)
+        poc_bound_init = B0_poc_gc * c2n_poc
+        bound_init = float(bound_init + poc_bound_init)
 
-    # Quick diagnostics for missing bins
-    if "model_time" in df.columns:
-        n_no_time = int(df["model_time"].isna().sum())
-        print(f"[6b] Rows with no matched model_time: {n_no_time:,}")
-    n_nan_bound = int(df["model_N_bound_gN_m2"].isna().sum())
-    print(f"[6b] Rows with model_N_bound NaN (all group cols NaN): {n_nan_bound:,}")
+    def compute_clima_for_df(df_in: pd.DataFrame) -> pd.DataFrame:
+        df = _ensure_obs_col(df_in, obs_col).copy()
+
+        # Compute time-varying bound N and inferred free N (same logic already use)
+        df["model_N_bound_gN_m2"] = _compute_bound_N(df, group_cols, c2n)
+
+        # --- Optional: add POC detritus bound-N time series from diagnostics (non-spatial) ---
+        if NU_INCLUDE_POC_DIAG:
+            if not NU_POC_RELATIVE_CSV or not os.path.exists(NU_POC_RELATIVE_CSV):
+                raise FileNotFoundError(f"NU_POC_RELATIVE_CSV not found: {NU_POC_RELATIVE_CSV}")
+
+            b0 = dict(getattr(cfg, "ES_GROUPS_ECOPATH_B", {}) or {})
+            B0_poc_gc = float(b0["DE1-POC"])
+            c2n_poc = float(NU_GROUP_C_TO_N.get("DE1-POC", C_TO_N_POM))
+
+            rel = _load_diag_relative_series_poc(NU_POC_RELATIVE_CSV, rel_col=NU_POC_REL_COL)
+
+            # Best alignment: use model_t_idx if present (from 6a); otherwise fall back to model_time mapping
+            if "model_t_idx" in df.columns:
+                step = pd.to_numeric(df["model_t_idx"], errors="coerce")
+            else:
+                mt = pd.to_datetime(df["model_time"], errors="coerce")
+                uniq = pd.Series(mt.dropna().unique()).sort_values()
+                step_map = pd.Series(range(len(uniq)), index=uniq.values)
+                step = mt.map(step_map)
+
+            # rel is normalized to 0 at baseline: B = B0*(1+rel)
+            rel_on_rows = step.map(rel).astype(float).fillna(0.0)
+            B_poc_gc = B0_poc_gc * (1.0 + rel_on_rows)
+            df["model_POC_N_bound_gN_m2"] = B_poc_gc * c2n_poc
+
+            if NU_DEBUG_POC:
+                frac_nan = float(df['model_POC_N_bound_gN_m2'].isna().mean())
+                print(f"[POC] c2n={c2n_poc:.4g} B0={B0_poc_gc:.4g} gC/m2; rel index max={int(rel.index.max()) if len(rel.index) else -1}; rows NaN frac={frac_nan:.3f}")
+                print(f"[POC] N_bound range: {float(df['model_POC_N_bound_gN_m2'].min()):.4g} to {float(df['model_POC_N_bound_gN_m2'].max()):.4g} gN/m2")
+                cols = [c for c in ['year','biweekly','model_t_idx','model_time','model_POC_N_bound_gN_m2'] if c in df.columns]
+                print('[POC] head:', df[cols].head(3).to_dict(orient='records'))
+
+            if NU_DEBUG_SAVE_DF:
+                out_dbg = os.path.join(OUTPUT_DIR_EVAL, f"ecospace_{SCENARIO}_nutrients_debug_poc.csv")
+                keep = [c for c in ['year','biweekly','ewe_row','ewe_col','model_t_idx','model_time',obs_col,'model_N_bound_gN_m2','model_POC_N_bound_gN_m2','model_N_free_gN_m2'] if c in df.columns]
+                df.head(NU_DEBUG_SAVE_MAX_ROWS)[keep].to_csv(out_dbg, index=False)
+                print('[POC] wrote debug CSV ->', out_dbg)
 
 
-    # Collapse from (year, biweekly, cell) to (year, biweekly)
-    year_biweek = _aggregate_year_biweek(df, obs_col=obs_col, model_col="model_N_free_gN_m2")
+            # Add into total bound N (this is the key step you’re missing)
+            df["model_N_bound_gN_m2"] = df["model_N_bound_gN_m2"] + df["model_POC_N_bound_gN_m2"]
 
-    # Save year-biweekly series (debug)
-    _ensure_dir(OUTPUT_DIR_EVAL)
-    out_series_csv = os.path.join(OUTPUT_DIR_EVAL, f"ecospace_{SCENARIO}_nutrients_year_biweekly_freeNredo.csv")
-    year_biweek.to_csv(out_series_csv, index=False)
+        # If the POC diagnostic path inf ull file, keep that here as well.
+        # (file includes a branch that adds df["model_POC_N_bound_gN_m2"] when NU_INCLUDE_POC_DIAG is True.) :contentReference[oaicite:4]{index=4}
 
-    # Climatology
-    clima = _compute_climatology(year_biweek)
+        df["model_N_free_gN_m2"] = NU_FREE_INIT_GNM2 + bound_init - df["model_N_bound_gN_m2"]
+        df.loc[df["model_N_free_gN_m2"] < 0, "model_N_free_gN_m2"] = 0.0
 
-    out_clima_csv = os.path.join(OUTPUT_DIR_EVAL, f"ecospace_{SCENARIO}_nutrients_climatology_biweekly_freeNredo.csv")
-    clima.reset_index().to_csv(out_clima_csv, index=False)
+        model_col_used = "model_N_free_gN_m2"
 
-    out_png = _plot_overlay(clima, scenario=SCENARIO)
+        # Optional flux scaling
+        if NU_USE_FLUX_MULT and (NU_FLUX_MULT_COL in df.columns):
+            mult = pd.to_numeric(df[NU_FLUX_MULT_COL], errors="coerce")
+            if NU_FLUX_MULT_FILL is not None:
+                mult = mult.fillna(float(NU_FLUX_MULT_FILL))
+            df["model_N_flux_mult"] = mult
 
-    print(f"Loaded paired table: {PAIRED_BIWEEK_CSV}")
-    print(f"Saved year-biweekly series → {out_series_csv}")
-    print(f"Saved biweekly climatology → {out_clima_csv}")
-    print(f"Saved overlay plot → {out_png}")
+            if NU_FLUX_APPLY_MODE == "scale_free":
+                df["model_N_free_used_gN_m2"] = df["model_N_free_gN_m2"] * df["model_N_flux_mult"]
+            elif NU_FLUX_APPLY_MODE == "scale_total":
+                total_init = float(getattr(cfg, "NU_TOTAL_INIT_GNM2", NU_FREE_INIT_GNM2 + bound_init))
+                df["model_N_free_used_gN_m2"] = (total_init * df["model_N_flux_mult"]) - df["model_N_bound_gN_m2"]
+            else:
+                raise ValueError(f"Unknown NU_FLUX_APPLY_MODE={NU_FLUX_APPLY_MODE!r}")
+
+            df.loc[df["model_N_free_used_gN_m2"] < 0, "model_N_free_used_gN_m2"] = 0.0
+            model_col_used = "model_N_free_used_gN_m2"
+
+        year_biweek = _aggregate_year_biweek(df, obs_col=obs_col, model_col=model_col_used)
+        return _compute_climatology(year_biweek)
+
+    # --- Obs climatology (use matched table) ---
+    obs_clima = compute_clima_for_df(df_matched)
+
+    # --- Model climatologies to overlay ---
+    model_climas: dict[str, pd.DataFrame] = {}
+    for series in NU_PLOT_MODEL_SERIES:
+        df_s = _load_series_table(series)
+        cl = compute_clima_for_df(df_s)
+        model_climas[series] = cl
+
+    # --- Output ---
+    _ensure_dir(OUTPUT_DIR_FIGS)
+    suffix = "flux" if NU_USE_FLUX_MULT else "raw"
+    out_png_multi = os.path.join(
+        OUTPUT_DIR_FIGS,
+        f"nutrient_climatology_overlay_ecospace{SCENARIO}_freeN_multi_{suffix}.png",
+    )
+
+    _plot_overlay_multi(obs_clima, model_climas, out_png=out_png_multi, scenario=SCENARIO)
+
+    print(f"Saved multi-series overlay plot → {out_png_multi}")
 
 
 if __name__ == "__main__":

@@ -17,8 +17,8 @@ from typing import Dict, List
 # -------------------------------------------
 # General settings
 # -------------------------------------------
-ECOSPACE_SC = "SC202"
-ECOSPACE_SC_FULL = "SC202"
+ECOSPACE_SC = "SC208"
+ECOSPACE_SC_FULL = "SC208"
 ECOPATH_F_NM = "LTL_Carb_3day_ewe6_7_19295_v17_BigPC_ECOSPACEPARAMZ"
 ECOSPACE_RAW_DIR = f"C://Users//Greig//Documents//EwE output//{ECOPATH_F_NM}//Ecospace_{ECOSPACE_SC_FULL}//asc//"
 
@@ -43,6 +43,29 @@ DO_NC_CROSSCHECK = False # can be memory intesnive to crosscheck NC with ASC aft
 EWE_ROWS = 151
 EWE_COLS = 93
 SKIPROWS = 6 # header
+
+# -------------------------------------------
+# ----- nutrient relevant detritus POC workaround --------
+# -------------------------------------------
+
+# ecospsace doesn't output detrital groups, but can export from the output window a csv (1d)
+# this links to it
+NU_POC_RELATIVE_CSV = rf"{NC_PATH_OUT}/ECOSPACE_Diag_Carb_36Day3Day_May 2025_graph_Relative Biomass_POC_{ECOSPACE_SC}.csv"
+# column inside  CSV to use
+NU_POC_REL_COL = "DE1-POC"
+NU_POC_DIAG_COL_SUBSTR = "DE1-POC"
+
+# nutr flux ASC are loaded into NC for easier access, ignoring spinup; this loads for later
+NUTR_FLUX_ASC = {
+    "N_FLUX_MULT": {
+        "template": r"..//..//data//forcing//ECOSPACE_in_3day_nutrld_fromASC_202601//XLD_normalised_{}_{:02d}.asc",
+        "units": "1",
+        "description": "Relative nutrient flux multiplier (normalised to 1) used by Ecospace.",
+        "zero_to_nan": False,   # retain zeros if any occur
+        "freq_days": 3,         # optional metadata, spacing of ASC sequence
+        "start_year": 1980,     # useful for future automation
+    },
+}
 
 
 # -------------------------------------------
@@ -79,7 +102,9 @@ ES_GROUPS_ECOPATH_B = {
     "PP1-DIA": 2.31,
     "PP2-NAN": 1.50,
     "PP3-PIC": 0.35,
-    "BA1-BAC": 0.17
+    "BA1-BAC": 0.17,
+    "DE2-DOC": 8,
+    "DE1-POC": 10.1
 }
 
 ES_START_SPINUP = "1978-01-02"
@@ -101,7 +126,7 @@ MW_SEASON_DEF: Dict[str, List[int]] = {
 MW_GROUP_MAP = {
     "Diatoms": "PP1-DIA",
     "Nano":    "PP2-NAN",
-    "Other":   "PP3-PIC",  # adjust if your "Other" aggregates differently
+    "Other":   "PP3-PIC",  # adjust if Other aggregates differently
 }
 MW_GROUP_COLORS = {
     "Diatoms": "#1f77b4",
@@ -220,13 +245,12 @@ BT_RECOMPUTE_BLOOM_TIMING_C09 = True
 BT_START_YEAR = 1980 # analysis years (exclude spinup?)
 BT_END_YEAR = 2018
 
-# use mask c09 instead of pnt?
 BT_CREATE_MASKS = True  # Set to True to regenerate masks
 
 # 20260102 - we may look at just applying this to that one year - or year by year would be ideal
 # SGC2 is more accurate to map in suchy pub, but in 2005 clouds mask northern portion, affecting accuracy so SGC3 trims north
 # results somewhat sensitive
-BT_MASK_REGNM = "SGC4"
+BT_MASK_REGNM = "SGC2"
 BT_USEC09_MASK_FOR_SAT = False # overrides above!
 BT_USE_SAT_MASK_CO9 = False
 BT_C09_ROW = 100 # overridden by above!
@@ -244,7 +268,7 @@ BT_VARS_TO_ANALYZE_C09 = ["PP1-DIA"]
 BT_ANNUAL_AVG_METHOD_C09 = "annual" # annual or all (this is always annual for C09 PCT MAX method)
 
 # Bloom detection method
-BT_LOG_TRANSFORM_SAT = False #
+BT_LOG_TRANSFORM_SAT = True #
 BT_MEAN_OR_MEDIAN_SAT = "median" # 'median" or "mean"
 BT_THRESHOLD_FACTOR_SAT = 1.05
 BT_SUB_THRESHOLD_FACTOR_SAT = 0.7
@@ -335,7 +359,7 @@ ZP_ANOM_CLIM_MIN_TOWS_PER_YEAR = 3      # years with <3 tows won’t define base
 # Optional tow-eligibility filter (to mirror Ecosim workflow)
 #   - "deep_or_complete": keep tows with (tow_prop >= min_prop) OR (start_depth >= min_start_depth_m)
 #   - "none": keep all tows
-# NOTE: if you change these, set RECOMPUTE_MATCH=True! or delete the old matched CSV.
+# NOTE: if changed, set RECOMPUTE_MATCH=True! or delete the old matched CSV.
 # -------------------------------------------------------------------------
 ZP_TOW_FILTER_MODE = "none"   # {"deep_or_complete", "none"}
 ZP_TOW_MIN_PROP = 0.7
@@ -345,10 +369,9 @@ ZP_TOW_MAX_BOTTOM_DEPTH_M = None   # optional additional cutoff
 
 
 # -------------------------------------------
-# evaluation 6 - nutrients (obs vs inferred model free N)
+# evaluation 6 - NUTRIENTS
 # -------------------------------------------
 
-# --- Inputs ---
 NU_F_PREPPED = f"{EVALOUT_P}//nutrients_ios_csop_combined_sampled.csv"  # must contain date,ewe_row,ewe_col,depth,nitrogen(umol/L)
 
 # Years for the plotted climatology (exclusive end, like range())
@@ -356,43 +379,35 @@ NU_PLT_YR_ST = 1980
 NU_PLT_YR_EN = 2019  # through 2018
 
 # --- 6a: observation depth integration + binning ---
-# Restrict obs years (END exclusive)
 NU_OBS_YR_ST = 2015
-NU_OBS_YR_EN = 2019  # through 2018
+NU_OBS_YR_EN = 2019  # exclusive final yr
 
 # Pooling behavior
 NU_POOL_BY_CELL = True  # keep row/col in the biweekly bins (recommended)
 
-# Depth integration window (m)
-# NOTE: 6a warns that ZMIN=0.0 can cause all casts to fail coverage checks.
-NU_ZMIN_M = 0.1
+# Depth integration (m)
+NU_ZMIN_M = 0.1 #  ZMIN=0.0 can cause all casts to fail coverage checks.
 NU_ZMAX_M = 20.0
 
-# Coverage logic
 NU_REQUIRE_FULL_COVERAGE = True
 
+# casts in obs data are mostly at two depths - near-surface and 20 m
 # Endpoint padding tolerances (m): if a cast is within tolerance of endpoint, pad using nearest measured conc.
 NU_SURFACE_PAD_TOL_M = 0.11
 NU_DEEP_PAD_TOL_M = 0.0
-
 # If beyond padding tolerance, allow extrapolation (constant endpoint value)
 NU_DEPTH_EXTRAPOLATE = False
-
 # Allow a cast with only one depth (constant profile) — usually False
 NU_ALLOW_SINGLE_DEPTH = False
-
 # Which cast metric becomes the pooled observational column:
 #   - "integral" => mmol/m^2 inventory over [zmin,zmax] (then also write gN/m^2)
 #   - "average"  => mmol/L depth-average over [zmin,zmax]
 NU_OBS_VALUE_MODE = "integral"
-
 # Pool casts within each (year,biweekly,row,col) bin
 NU_OBS_BIN_AVG_TYPE = "mean"  # or "median"
-
 # Optional cast-quality filters
 NU_MIN_DEPTHS_PER_CAST = None
 NU_MIN_MAXDEPTH_M = None
-
 # Match tolerance (days) for nearest model time
 NU_TIME_TOL_DAYS = 7
 
@@ -401,34 +416,53 @@ NU_TIME_TOL_DAYS = 7
 # Interactive plotting toggle
 NU_SHOW_PLOT = True
 
+# include POC biomass C -> N as 'bound'?
+NU_INCLUDE_POC_DIAG = True
+NU_DEBUG_POC = True          # (temporary)
+NU_DEBUG_SAVE_DF = True
+
 # Force climatology x-axis to include biweekly bins 1..26 so missing late-year bins show as gaps
 NU_FORCE_FULL_BIWEEK_AXIS = True
 NU_BIWEEK_MAX = 26
-
-# If True: only aggregate rows where BOTH obs and model exist for that (cell,time)
-# If False: aggregate obs and model independently (recommended when obs winter coverage is sparse)
-NU_REQUIRE_BOTH_FOR_AGG = True
 
 # Center statistic used for the climatology overlay
 # (6b reads OBS_AVG_TYPE and MODEL_AVG_TYPE)
 OBS_AVG_TYPE = "mean"    # "mean" or "median"
 MODEL_AVG_TYPE = "mean"  # usually mean
 
-
 # --- 6b: C -> N conversions to compute model bound N ---
 # Default C->N multiplier for living pools (Redfield-ish; in mass units): gN = gC * 0.176
 NU_C_TO_N_LIVING = 0.176
 
 # Optional detritus-specific multipliers (mass-based)
-NU_C_TO_N_DOM = 0.15   # if you later include DE2-DOC (DOM)
-NU_C_TO_N_POM = 0.07   # if you later include DE1-POC (POM)
+NU_C_TO_N_DOM = 0.15   # if later include DE2-DOC (DOM)
+NU_C_TO_N_POM = 0.07   # if later include DE1-POC (POM)
 
-# Per-group override map (if/when you include detrital pools)
+# Per-group override map (if/when including detrital pools)
 NU_C_TO_N_BY_GROUP = {
     "DE2-DOC": NU_C_TO_N_DOM,
     "DE1-POC": NU_C_TO_N_POM,
 }
+NU_EXTRACT_EXTRA_VARS = ["N_FLUX_MULT"] # new as of 2026 - added the flux forcings to the NC
+# Apply the extracted multiplier to inferred model free-N in 6b (mirrors ecosim_eval_3_assess_nutrients.py).
+NU_USE_FLUX_MULT = True              # set True to enable
+NU_FLUX_MULT_COL = "N_FLUX_MULT"      # column name in the 6a matched CSV
+NU_FLUX_MULT_FILL = None              # None => keep NaNs; set 1.0 to fill missing
+NU_FLUX_APPLY_MODE = "scale_free"     # "scale_free" or "scale_total"
+NU_MODEL_SERIES = ["matched", "box"]     # "matched" (existing), "box" (new)
 
+# Rectangle of 1-based Ecospace indices to sample for the "box" series
+# (row_min, row_max, col_min, col_max)
+NU_MODEL_SAMPLE_BOX = (90, 98, 46, 55) # CSOG box
+NU_MODEL_SAMPLE_YR_ST = 2015
+NU_MODEL_SAMPLE_YR_EN = 2019
+NU_REQUIRE_BOTH_FOR_AGG = False   # critical if box csv has no obs values
+# If True: only aggregate rows where BOTH obs and model exist for that (cell,time)
+# If False: aggregate obs and model independently (recommended when obs winter coverage is sparse)
+
+# scale_free = N_free_used = N_free * mult (matches ecosim)
+# scale_total = treats multiplier as scaling the initial total inventory then re-computes free-N:
+# N_free_used = (N_total_init * mult) - N_bound(t)
 
 def _nu_c_to_n(group_code: str) -> float:
     """Return gN per gC for a given group."""
@@ -437,7 +471,7 @@ def _nu_c_to_n(group_code: str) -> float:
 
 # --- Which model groups define N_bound(t)? ---
 # Use an explicit list to avoid surprises from set ordering.
-# This should match the *columns you expect to exist* in the 6a matched table.
+# This should match the *columns expected* in the 6a matched table.
 # (Ecospace often does NOT export detrital groups; keep them excluded for now.)
 NU_MODEL_GROUPS = [
     "NK1-COH", "NK2-CHI", "NK3-FOR",
@@ -456,13 +490,13 @@ NU_EXTRACT_GRPS = list(NU_MODEL_GROUPS)
 
 
 # --- Initial total N inventory (g N m-2) for the depth window used in 6a ---
-# Set this from your established conversion (e.g., your 18 umol/L -> 3.5 gN/m2 calculation).
+# Set this from  established conversion (e.g., 18 umol/L -> 3.5 gN/m2 calculation).
 # IMPORTANT: keep this consistent with [NU_ZMIN_M, NU_ZMAX_M].
 NU_FREE_INIT_GNM2 = 3.5
 
 # Choose either:
 # (A) compute initial bound N from Ecopath initial biomasses of the selected model groups, OR
-# (B) hard-code the value you computed elsewhere (e.g., 1.56 gN/m2 for non-detritals).
+# (B) hard-code the value computed elsewhere (e.g., 1.56 gN/m2 for non-detritals).
 
 # (A) computed
 NU_BOUND_INIT_GNM2 = sum(

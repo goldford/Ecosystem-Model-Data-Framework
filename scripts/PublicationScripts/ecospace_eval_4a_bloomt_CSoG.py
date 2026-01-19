@@ -720,8 +720,6 @@ def run_bt_eval() -> None:
         bloom_df_sat = pd.read_csv(bloom_csv_path_sat)
         print(f"Loaded bloom timing from cached files: {bloom_csv_path_sat}")
 
-
-
     print('bloom doy mean, C09:')
     print(C09_df['Day of Year_C09'].mean())
     print('bloom doy early and late thresholds, CO9:')
@@ -740,14 +738,14 @@ def run_bt_eval() -> None:
     plot_bloom_comparison(
         bloom_df_C09, C09_df,
         label_model="Ecospace Model", label_obs="C09 1D Model",
-        title=f"Diatom Bloom Timing: {SCENARIO} vs C09",
+        title=f"Bloom Timing: {SCENARIO} vs C09",
         filename=f"ecospace_vs_C09_{SCENARIO}.png")
 
     # Plot comparison with sat data
     plot_bloom_comparison(
         bloom_df_sat, sat_df,
         label_model="Ecospace Model", label_obs="Satellite",
-        title=f"Diatom Bloom Timing: {SCENARIO} vs Satellite",
+        title=f"Bloom Timing: {SCENARIO} vs Satellite",
         filename=f"ecospace_vs_satell_{SCENARIO}.png")
 
     # Compute and print statistics

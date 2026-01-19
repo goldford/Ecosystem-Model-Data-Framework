@@ -16,7 +16,7 @@ import pandas as pd # would rather not do imports here
 # General settings
 # -------------------------------------------
 
-SCENARIO = "SC202"
+SCENARIO = "SC203"
 ECOPATH_F_NM = "LTL_Carb_3day_ewe6_7_19295_v17_BigPC_ECOSPACEPARAMZ"
 
 # ===== Paths =====
@@ -92,9 +92,11 @@ END_DATE_PHYT_SEAS = '2018-12-31'
 # evaluation 3 - nutrients and annual pattern
 # -------------------------------------------
 
+P_FREE_INIT = 0.59# must be updated when Ecosim change is made!
+
 # C_TO_N_RATIO = 106 / 16  # molar Redfield ratio
 N_FREE_AVG_INIT = 18 # see ecosim_data_prep_2_nutrients.py, depth average 18 N, umol /L
-P_FREE_INIT = 0.78# must be updated when Ecosim change is made!
+
 N_BOUND_GROUPS = [1, 2, 3, 4, 5,
                   6, 7, 8, 9, 10,
                   11, 12, 13, 14, 15,

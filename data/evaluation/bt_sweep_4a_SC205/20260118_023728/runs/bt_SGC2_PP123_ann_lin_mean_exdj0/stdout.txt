@@ -1,0 +1,88 @@
+Loaded bloom timing from cached files: C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC205\20260118_023728\_cache\ecospace_bloom_timing_C09_SC205.csv
+computing bloom timing
+2003
+2004
+2005
+2006
+2007
+2008
+2009
+2010
+2011
+2012
+2013
+2014
+2015
+2016
+year 2003
+threshold 4.231380684420864
+4.027094334841068
+year 2004
+threshold 4.154758392909405
+4.0715754363924415
+year 2005
+threshold 4.085117599471464
+4.716499650676556
+year 2006
+threshold 4.13141215791785
+4.616528259654498
+year 2007
+threshold 3.9638096626595685
+4.899873674136077
+year 2008
+threshold 4.027148807056008
+3.8882313340792223
+year 2009
+threshold 3.8921793582927937
+4.633882108873921
+year 2010
+threshold 4.013412707163772
+4.004588610322898
+year 2011
+threshold 3.808703923160211
+3.7603858609321374
+year 2012
+threshold 3.851900109111463
+3.6277867468266654
+year 2013
+threshold 4.044850139139112
+5.40141122263347
+year 2014
+threshold 3.9395222997836012
+4.61775248644534
+year 2015
+threshold 4.154959771556641
+5.17011081306218
+year 2016
+threshold 3.7996619325260643
+4.175628395246461
+Saved computed bloom timing for SSoG (sat) to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC205\20260118_023728\runs\bt_SGC2_PP123_ann_lin_mean_exdj0\ecospace_bloom_timing_SSoG_SC205_bt_SGC2_PP123_ann_lin_mean_exdj0.csv
+bloom doy mean, C09:
+84.35897435897436
+bloom doy early and late thresholds, CO9:
+72.51017433204031
+96.20777438590842
+Loaded bloom timing observation data:
+Satellite (sat et al): (14, 4)
+Satellite (Gower et al): (17, 4)
+C09: (39, 4)
+Ecospace (Satellite): (14, 4)
+Ecospace (C09): (39, 4)
+C09 1D Model
+late bloom DoY: 96.05488023807051
+average bloom DoY 84.35897435897436
+early bloom DoY: 72.66306847987822
+Satellite
+late bloom DoY: 106.56981125166013
+average bloom DoY 87.64285714285714
+early bloom DoY: 68.71590303405415
+
+Evaluation Statistics:
+sat: R = 0.345, RMSE = 24.24, MAE = 15.50, Bias = -13.21, Obs Ïƒ = 18.93, Model Ïƒ = 16.39, Willmott = 0.597
+C09: R = 0.097, RMSE = 24.60, MAE = 18.77, Bias = -12.51, Obs Ïƒ = 11.70, Model Ïƒ = 18.83, Willmott = 0.354
+Saved evaluation stats to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC205\20260118_023728\runs\bt_SGC2_PP123_ann_lin_mean_exdj0\ecospace_bloom_timing_stats_SC205_bt_SGC2_PP123_ann_lin_mean_exdj0.csv
+
+Categorical Agreement:
+Satellite: 9/14 years agree in category
+C09: 15/39 years agree in category
+Saved categorical/timing agreement stats to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC205\20260118_023728\runs\bt_SGC2_PP123_ann_lin_mean_exdj0\ecospace_bloom_timing_agreement_SC205_bt_SGC2_PP123_ann_lin_mean_exdj0.csv

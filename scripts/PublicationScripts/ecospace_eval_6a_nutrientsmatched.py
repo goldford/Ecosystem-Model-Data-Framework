@@ -51,6 +51,7 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 import xarray as xr
+from datetime import datetime, timedelta
 
 import ecospace_eval_config as cfg
 
@@ -116,11 +117,62 @@ OUTPUT_DIR_EVAL = cfg.EVALOUT_P
 OUT_CAST_CSV = rf"{OUTPUT_DIR_EVAL}/ecospace_{SCENARIO}_nutrients_cast_depthint.csv"
 OUT_OBS_BIWEEK_CSV = rf"{OUTPUT_DIR_EVAL}/ecospace_{SCENARIO}_nutrients_biweek_obs.csv"
 OUT_MATCHED_BIWEEK_CSV = rf"{OUTPUT_DIR_EVAL}/ecospace_{SCENARIO}_nutrients_biweek_model_matched.csv"
+OUT_BOX_BIWEEK_CSV = rf"{OUTPUT_DIR_EVAL}/ecospace_{SCENARIO}_nutrients_biweek_model_box.csv"
 
 
 # -----------------------------------------------------------------------------
-# Utilities
+# Helpers
 # -----------------------------------------------------------------------------
+
+
+def extract_model_box_biweekly(
+    ds: xr.Dataset,
+    *,
+    years: range,
+    biweek_max: int,
+    box: tuple[int, int, int, int],
+    stride: int,
+    vars_to_get: list[str],
+) -> pd.DataFrame:
+    time_indexer = pd.Index(pd.to_datetime(ds["time"].values))
+
+    rmin, rmax, cmin, cmax = box
+    rows = list(range(rmin, rmax + 1, stride))
+    cols = list(range(cmin, cmax + 1, stride))
+
+    out_rows: list[dict] = []
+
+    for year in years:
+        for bw in range(1, biweek_max + 1):
+            # midpoint day-of-year for biweek bin (1..26): 7, 21, 35, ...
+            mid_doy = (bw - 1) * 14 + 7
+            date_rep = pd.Timestamp(datetime(year, 1, 1) + timedelta(days=mid_doy - 1))
+
+            t_idx = int(time_indexer.get_indexer([date_rep], method="nearest")[0])
+            model_time = pd.to_datetime(ds["time"].isel(time=t_idx).values)
+
+            for rr in rows:
+                for cc in cols:
+                    rr0, cc0 = rr - 1, cc - 1  # convert to 0-based
+                    row = {
+                        "year": year,
+                        "biweekly": bw,
+                        "ewe_row": rr,
+                        "ewe_col": cc,
+                        "date_rep": date_rep,
+                        "model_time": model_time,
+                        # obs columns intentionally absent/NaN in this file
+                    }
+
+                    for v in vars_to_get:
+                        if v in ds.data_vars and (0 <= rr0 < ds.dims["row"]) and (0 <= cc0 < ds.dims["col"]):
+                            row[v] = float(ds[v].isel(time=t_idx, row=rr0, col=cc0).values)
+                        else:
+                            row[v] = np.nan
+
+                    out_rows.append(row)
+
+    return pd.DataFrame(out_rows)
 
 
 def _ensure_dir(path: str) -> None:
@@ -160,6 +212,18 @@ def model_vars_to_extract(ds: xr.Dataset) -> list[str]:
         base = list(getattr(cfg, "NU_INCLUDE_GRPS", []))
 
     for v in ("DE1-POC", "DE2-DOC"):
+        if v in ds.data_vars and v not in base:
+            base.append(v)
+
+    # Allow non-biomass extras (e.g., spatiotemporal nutrient-flux multipliers loaded into the NC)
+    extra_vars = list(getattr(cfg, "NU_EXTRACT_EXTRA_VARS", []))
+    for v in extra_vars:
+        if v in ds.data_vars and v not in base:
+            base.append(v)
+
+        # Include any nutrient-flux forcing vars that were injected into the NC in script 1a
+    nutr_flux = getattr(cfg, "NUTR_FLUX_ASC", {}) or {}
+    for v in nutr_flux.keys():
         if v in ds.data_vars and v not in base:
             base.append(v)
 
@@ -396,7 +460,7 @@ def pool_casts_to_biweekly(cast: pd.DataFrame) -> pd.DataFrame:
       - avg_nitrogen_<UNITS>_obs
     (i.e., the primary already has units in the name).
 
-    If you need a backward-compatible alias, add it in 6b (recommended) rather than here.
+    for backward-compatible alias, add it in 6b (recommended) rather than here.
     """
 
     c = cast.copy()
@@ -472,7 +536,7 @@ def pool_casts_to_biweekly(cast: pd.DataFrame) -> pd.DataFrame:
 def extract_model_at_bins(ds: xr.Dataset, bins: pd.DataFrame, vars_to_get: list[str]) -> pd.DataFrame:
     """Extract model vars at (model_time,row,col) for each binned obs row.
 
-    IMPORTANT: ewe_row/ewe_col in your pipeline are 1-based. We subtract 1 here.
+    IMPORTANT: ewe_row/ewe_col in pipeline are 1-based. We subtract 1 here.
     """
 
     time_indexer = pd.Index(pd.to_datetime(ds["time"].values))
@@ -480,19 +544,20 @@ def extract_model_at_bins(ds: xr.Dataset, bins: pd.DataFrame, vars_to_get: list[
 
     for r in bins.itertuples(index=False):
         if pd.isna(r.model_time):
-            out_rows.append({v: np.nan for v in vars_to_get})
+            out_rows.append({"model_t_idx": np.nan, **{v: np.nan for v in vars_to_get}})
             continue
 
         t_idx = int(time_indexer.get_indexer([pd.to_datetime(r.model_time)], method="nearest")[0])
 
+        # If NU_POOL_BY_CELL=False, still keep t_idx for non-spatial lookups
         if not NU_POOL_BY_CELL:
-            out_rows.append({v: np.nan for v in vars_to_get})
+            out_rows.append({"model_t_idx": t_idx, **{v: np.nan for v in vars_to_get}})
             continue
 
         rr = int(r.ewe_row) - 1
         cc = int(r.ewe_col) - 1
 
-        out: dict[str, float] = {}
+        out = {"model_t_idx": t_idx}
         for v in vars_to_get:
             if v not in ds.data_vars:
                 out[v] = np.nan
@@ -544,6 +609,8 @@ def run_nut_matched() -> None:
     obs_bins.to_csv(OUT_OBS_BIWEEK_CSV, index=False)
     print(f"Wrote pooled biweekly obs: {OUT_OBS_BIWEEK_CSV} ({len(obs_bins):,} rows)")
 
+    print('Writing biweekly matched data...')
+
     # Open model
     ds = xr.open_dataset(ECOSPACE_NC)
 
@@ -561,6 +628,27 @@ def run_nut_matched() -> None:
     matched = extract_model_at_bins(ds, bins2, vars_to_get)
     matched.to_csv(OUT_MATCHED_BIWEEK_CSV, index=False)
     print(f"Wrote biweekly matched table: {OUT_MATCHED_BIWEEK_CSV} ({len(matched):,} rows)")
+
+    series = list(getattr(cfg, "NU_MODEL_SERIES", ["matched"]))
+
+    if "box" in series:
+        box = tuple(getattr(cfg, "NU_MODEL_SAMPLE_BOX"))
+        stride = int(getattr(cfg, "NU_MODEL_SAMPLE_STRIDE", 1))
+        yr_st = int(getattr(cfg, "NU_MODEL_SAMPLE_YR_ST", NU_OBS_YR_ST))
+        yr_en = int(getattr(cfg, "NU_MODEL_SAMPLE_YR_EN", NU_OBS_YR_EN))
+        biweek_max = int(getattr(cfg, "NU_BIWEEK_MAX", 26))
+
+        box_df = extract_model_box_biweekly(
+            ds,
+            years=range(yr_st, yr_en),
+            biweek_max=biweek_max,
+            box=box,
+            stride=stride,
+            vars_to_get=vars_to_get,
+        )
+        box_df.to_csv(OUT_BOX_BIWEEK_CSV, index=False)
+        print(f"Wrote biweekly box-sampled model table: {OUT_BOX_BIWEEK_CSV} ({len(box_df):,} rows)")
+
 
 
 if __name__ == "__main__":

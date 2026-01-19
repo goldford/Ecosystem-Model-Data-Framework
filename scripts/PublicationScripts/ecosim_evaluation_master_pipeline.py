@@ -22,12 +22,12 @@ import ecosim_eval_4_assess_bloom_timing as bloom_eval
 import ecosim_eval_5_zoop as zoop_eval
 
 
-def run_pipeline(run_prep=False,
-                 run_relPP=False,
-                 run_seasonal=False,
-                 run_nutrient=False,
+def run_pipeline(run_prep=True,
+                 run_relPP=True,
+                 run_seasonal=True,
+                 run_nutrient=True,
                  run_bloom=True,
-                 run_zoop=False):
+                 run_zoop=True):
     if run_prep:
         print("=== Running Data Prep Step ===")
         data_prep.run_data_prep()
