@@ -13,7 +13,7 @@ Output:
 
 
 import ecospace_eval_1a_ASC_to_NC as data_prep
-import ecopace_eval_1b_assessBspinup as assess_PPmult
+import ecospace_eval_1b_assessBspinup as assess_PPmult
 import ecospace_eval_2a_mcewan_phyto_seas as phyto_seas
 import ecospace_eval_2b_nemcek_phyto_match as phyto_match_1
 import ecospace_eval_2c_nemcek_vs_ecospace as phyto_eval_1
@@ -26,7 +26,7 @@ import ecospace_eval_5_zoop_eval as zp_eval
 
 
 
-def run_ecospace_pipeline(run_prep=True,
+def run_ecospace_pipeline(run_prep=False,
                           run_PPmult=True,
                           run_seas_phyto=True,
                           run_match_phyto1=True,
@@ -34,9 +34,9 @@ def run_ecospace_pipeline(run_prep=True,
                           run_match_phyto2=True,
                           run_eval_phyto2=True,
                           run_eval_bt1=True,
-                          run_nutr1=False,
-                          run_nutr2=False,
-                          run_zp_eval=False):
+                          run_nutr1=True,
+                          run_nutr2=True,
+                          run_zp_eval=True):
     if run_prep:
         print("=== Running Data Prep Step ===")
         data_prep.run_ecospace_prep()

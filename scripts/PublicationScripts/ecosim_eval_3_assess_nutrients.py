@@ -206,7 +206,7 @@ def run_nutrient_eval():
     plt.grid()
     plt.tight_layout()
 
-    plt.savefig(f"{OUTPUT_DIR_FIGS}//nutrient_climatology_overlay_ecosim{SCENARIO}.png")
+    plt.savefig(f"{OUTPUT_DIR_FIGS}//ecosim_nutrient_clima_overlay_{SCENARIO}.png")
     plt.show()
     plt.close()
 

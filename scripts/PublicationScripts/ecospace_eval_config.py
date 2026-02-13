@@ -14,12 +14,13 @@ import pandas as pd # would rather not do imports here
 import os
 from typing import Dict, List
 
+
 # -------------------------------------------
 # General settings
 # -------------------------------------------
-ECOSPACE_SC = "SC208"
-ECOSPACE_SC_FULL = "SC208"
-ECOPATH_F_NM = "LTL_Carb_3day_ewe6_7_19295_v17_BigPC_ECOSPACEPARAMZ"
+ECOSPACE_SC = "SC213"
+ECOSPACE_SC_FULL = "SC213"
+ECOPATH_F_NM = "LTL_Carb_3day_ewe6_7_19295_v18_BigPC_ECOSPACEPARAMZ"
 ECOSPACE_RAW_DIR = f"C://Users//Greig//Documents//EwE output//{ECOPATH_F_NM}//Ecospace_{ECOSPACE_SC_FULL}//asc//"
 
 FIGS_P = "../../figs"
@@ -44,8 +45,9 @@ EWE_ROWS = 151
 EWE_COLS = 93
 SKIPROWS = 6 # header
 
+
 # -------------------------------------------
-# ----- nutrient relevant detritus POC workaround --------
+#  nutrient relevant detritus POC workaround
 # -------------------------------------------
 
 # ecospsace doesn't output detrital groups, but can export from the output window a csv (1d)
@@ -196,6 +198,7 @@ NM_APPLY_NEMCEK_SEASON = False
 # -------------------------------------------
 
 QU39_SHOW_PLTS = False # causes halt of pipeline - optional
+QU39_SHOW_SSC_BXPLTS = False
 QU39_DO_ECOSPACE_MATCHING = True       # Perform Ecospace matching
 QU39_DOWNLOAD_SSC = False              # Download SSC ERDDAP files
 QU39_MATCH_SSC = True                  # Match existing SSC files
@@ -250,9 +253,9 @@ BT_CREATE_MASKS = True  # Set to True to regenerate masks
 # 20260102 - we may look at just applying this to that one year - or year by year would be ideal
 # SGC2 is more accurate to map in suchy pub, but in 2005 clouds mask northern portion, affecting accuracy so SGC3 trims north
 # results somewhat sensitive
-BT_MASK_REGNM = "SGC2"
+BT_MASK_REGNM = "SGC4"
 BT_USEC09_MASK_FOR_SAT = False # overrides above!
-BT_USE_SAT_MASK_CO9 = False
+BT_USE_SAT_MASK_CO9 = True
 BT_C09_ROW = 100 # overridden by above!
 BT_C09_COL = 52
 
@@ -268,7 +271,7 @@ BT_VARS_TO_ANALYZE_C09 = ["PP1-DIA"]
 BT_ANNUAL_AVG_METHOD_C09 = "annual" # annual or all (this is always annual for C09 PCT MAX method)
 
 # Bloom detection method
-BT_LOG_TRANSFORM_SAT = True #
+BT_LOG_TRANSFORM_SAT = False #
 BT_MEAN_OR_MEDIAN_SAT = "median" # 'median" or "mean"
 BT_THRESHOLD_FACTOR_SAT = 1.05
 BT_SUB_THRESHOLD_FACTOR_SAT = 0.7
@@ -276,16 +279,14 @@ BT_SUB_THRESHOLD_FACTOR_SAT = 0.7
 BT_EXCLUDE_DEC_JAN_SAT = False # working
 BT_EXCLUDE_DEC_JAN_C09 = False
 
-BT_LOG_TRANSFORM_C09 = True
+BT_LOG_TRANSFORM_C09 = False
 BT_USE_PCT_MAX_C09 = False # new method added 2025-9-12 GO
 BT_PCT_MAX_C09 = 0.9
 BT_PCT_MAX_WINDOW_DAYS_C09 = 6
 
 
-
 BT_DO_NUTRIENTS = False # another script does this now (#9?)
 # OVERRIDE_REDFIELD = True # added by GO to help eval 2025-06-03
-
 
 BT_MIN_Y_TICK = 38
 
@@ -404,7 +405,7 @@ NU_ALLOW_SINGLE_DEPTH = False
 #   - "average"  => mmol/L depth-average over [zmin,zmax]
 NU_OBS_VALUE_MODE = "integral"
 # Pool casts within each (year,biweekly,row,col) bin
-NU_OBS_BIN_AVG_TYPE = "mean"  # or "median"
+NU_OBS_BIN_AVG_TYPE = "median"  # or "median"
 # Optional cast-quality filters
 NU_MIN_DEPTHS_PER_CAST = None
 NU_MIN_MAXDEPTH_M = None
@@ -430,13 +431,31 @@ NU_BIWEEK_MAX = 26
 OBS_AVG_TYPE = "mean"    # "mean" or "median"
 MODEL_AVG_TYPE = "mean"  # usually mean
 
+
+#  - "ecopath": current behavior; uses cfg.ES_GROUPS_ECOPATH_B and C->N multipliers
+#  - "t0_series": compute bound_init from the first model timestep present in the
+#                6a series table (matched/box), using the same bound-N computation
+NU_BOUND_INIT_MODE = "t0_series"   # "ecopath" | "t0_series"
+# When NU_BOUND_INIT_MODE == "t0_series", how to aggregate the "t0" bound across space
+#  - "median" is robust to outliers; "mean" is fine too
+NU_T0_SPATIAL_REDUCER = "mean"  # "median" | "mean"
+# If True, bound_init is computed separately for each series (matched vs box)
+# (recommended if those tables include different cells/timesteps)
+NU_T0_PER_SERIES = True
+# Optional: also re-anchor free_init using the first timestep:
+# If True, infer free_init so that total inventory equals (NU_FREE_INIT_GNM2 + bound_init_ecopath)
+# at t0. Usually leave False unless preserve  old total inventory definition.
+NU_FREE_INIT_MODE = "config"      # "config" | "t0_preserve_total"
+NU_DEBUG_INIT_ANCHOR = False
+
+
 # --- 6b: C -> N conversions to compute model bound N ---
 # Default C->N multiplier for living pools (Redfield-ish; in mass units): gN = gC * 0.176
 NU_C_TO_N_LIVING = 0.176
 
 # Optional detritus-specific multipliers (mass-based)
-NU_C_TO_N_DOM = 0.15   # if later include DE2-DOC (DOM)
-NU_C_TO_N_POM = 0.07   # if later include DE1-POC (POM)
+NU_C_TO_N_DOM = 0.15   # Benner et al., 1997; Schneider et al., 2003)
+NU_C_TO_N_POM = 0.07   # Benner et al., 1997; Schneider et al., 2003)
 
 # Per-group override map (if/when including detrital pools)
 NU_C_TO_N_BY_GROUP = {

@@ -20,10 +20,16 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 # Define scenario directories
+# scenarios = {
+#     "SC109 - NO PP Anom": "SC109",
+#     "SC108 - WITH PP Anom": "SC108"
+# }
+
 scenarios = {
-    "SC109 - NO PP Anom": "SC109",
-    "SC108 - WITH PP Anom": "SC108"
+    "EcosimScenCalib6 - NO PP Anom": "EcosimScenCalib6",
+    "EcosimScenCalib6 - junk repetition": "EcosimScenCalib6"
 }
+
 
 # Define paths
 root_dir_mc = "C://Users//Greig//Documents//EwE output//"
@@ -31,9 +37,14 @@ root_dir_cwt_chin = "C://Users//Greig//Sync//6. SSMSP Model//Model Greig//Data//
 root_dir_cwt_coho = "C://Users//Greig//Sync//6. SSMSP Model//Model Greig//Data//1. Salmon//All Species Survival Exploitation//"
 root_dir_nelson = "C://Users//Greig//Sync//6. SSMSP Model//Model Greig//Data//1. Salmon//Coho_Mort_Seal_Nelson_2024\ORIGINAL//"
 
+# mc_root_base = {
+#     "SC109": os.path.join(root_dir_mc, "GeorgiaStrait2023_v103_v6_7_0_18858_64b//mc_EcosimScen109"),
+#     "SC108": os.path.join(root_dir_mc, "GeorgiaStrait2023_v103_v6_7_0_18858_64b//mc_EcosimScen108")
+# }
+
 mc_root_base = {
-    "SC109": os.path.join(root_dir_mc, "GeorgiaStrait2023_v103_v6_7_0_18858_64b//mc_EcosimScen109"),
-    "SC108": os.path.join(root_dir_mc, "GeorgiaStrait2023_v103_v6_7_0_18858_64b//mc_EcosimScen108")
+    "EcosimScenCalib6": os.path.join(root_dir_mc, "GeorgiaStrait2025_DietProjectFork_v103_v6_7_0_18858_64b//mc_EcosimScenCalib6"),
+    "EcosimScenCalib6": os.path.join(root_dir_mc, "GeorgiaStrait2025_DietProjectFork_v103_v6_7_0_18858_64b//mc_EcosimScenCalib6")
 }
 
 # Define column groups for each species/subtype

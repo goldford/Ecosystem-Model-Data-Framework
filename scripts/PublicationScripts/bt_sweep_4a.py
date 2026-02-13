@@ -80,9 +80,9 @@ def main() -> int:
     # Pull scenario code from config (used for shared cache filenames)
     try:
         import ecospace_eval_config_sweep as cfg  # expected to be alongside this script
-        scenario = getattr(cfg, 'ECOSPACE_SC', 'SC204')
+        scenario = getattr(cfg, 'ECOSPACE_SC', 'SC211')
     except Exception:
-        scenario = 'SC204'
+        scenario = 'SC211'
 
     # --- output dirs ---
     sweep_root = Path(

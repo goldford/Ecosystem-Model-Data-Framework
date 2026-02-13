@@ -1,6 +1,6 @@
-# this doesn't make a ton of sense
+
 # going 1d NC -> 3 day ASC -> 3 day NC
-# but it is what it is for now
+# it is what it is for now
 
 import os
 import pandas as pd

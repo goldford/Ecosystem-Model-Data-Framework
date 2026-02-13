@@ -15,7 +15,7 @@ N budget over the evaluation layer (e.g., 0–20 m):
 
 where:
 - N_free_init is the initial dissolved inventory (g N m-2) for the layer
-  (e.g., from 18 umol/L climatological average -> user-provided 3.5 g N m-2).
+  (e.g., from 18 umol/L climatological average -> 3.5 g N m-2).
 - N_bound_init is initial N bound in model biomass pools included in the sum (g N m-2)
   (user-provided 1.56 g N m-2, OR computed from Ecopath B_init + C->N factors).
 - N_bound(t) is the time-varying N bound in those biomass pools, obtained by converting
@@ -143,6 +143,12 @@ NU_MODEL_GROUPS = list(getattr(cfg, "NU_MODEL_GROUPS", []))
 
 # When True, include detrital columns if present in the matched table.
 NU_INCLUDE_DETRITUS_IF_AVAILABLE = bool(getattr(cfg, "NU_INCLUDE_DETRITUS_IF_AVAILABLE", True))
+
+NU_BOUND_INIT_MODE = getattr(cfg, "NU_BOUND_INIT_MODE", "ecopath")
+NU_T0_SPATIAL_REDUCER = getattr(cfg, "NU_T0_SPATIAL_REDUCER", "median")
+NU_T0_PER_SERIES = bool(getattr(cfg, "NU_T0_PER_SERIES", True))
+NU_FREE_INIT_MODE = getattr(cfg, "NU_FREE_INIT_MODE", "config")
+NU_DEBUG_INIT_ANCHOR = bool(getattr(cfg, "NU_DEBUG_INIT_ANCHOR", False))
 
 
 # -----------------------------------------------------------------------------
@@ -621,11 +627,173 @@ def _plot_overlay_multi(
         plt.show()
     plt.close()
 
+def plot_total_biomass_swings(
+    series: str = "box",                  # "box" or "matched"
+    spatial_reduction: str = "mean",       # "mean" | "median" | "sum"
+    include_poc_diag: bool = False,        # optional: add DE1-POC from diagnostics
+) -> str:
+    """
+    Plot total biomass (sum across groups) and its timestep-to-timestep swing.
+
+    Notes:
+      - Uses the same group list logic as 6b (cfg.NU_MODEL_GROUPS via _infer_group_cols).
+      - If your CSV doesn't actually include *every* 3-day model step (depends on 6a),
+        this will show swings at whatever timesteps exist in that table.
+    """
+    df = _load_series_table(series)  # 6b already knows "matched" vs "box" CSVs :contentReference[oaicite:3]{index=3}
+    group_cols = _infer_group_cols(df)  # picks cfg.NU_MODEL_GROUPS if set :contentReference[oaicite:4]{index=4}
+
+    # ---- pick a timestep key (prefer model_t_idx if present) ----
+    if "model_t_idx" in df.columns:
+        tkey = pd.to_numeric(df["model_t_idx"], errors="coerce")
+        x_label = "Model step (t_idx)"
+    elif "model_time" in df.columns:
+        tkey = pd.to_datetime(df["model_time"], errors="coerce")
+        x_label = "Model time"
+    else:
+        # fallback: not ideal, but keeps it working
+        tkey = df["year"].astype(int) * 100 + df["biweekly"].astype(int)
+        x_label = "YearBiweek (fallback)"
+
+    # ---- sum biomass across groups (gC/m2) per row ----
+    B = df[group_cols].apply(pd.to_numeric, errors="coerce").clip(lower=0)
+    df = df.copy()
+    df["tkey"] = tkey
+    df["Bsum_gc_m2"] = B.sum(axis=1, min_count=1)
+
+    # ---- optional: include POC from diagnostics the same way 6b aligns it ----
+    # 6b aligns POC to model steps using model_t_idx (preferred) or model_time mapping :contentReference[oaicite:5]{index=5}
+    if include_poc_diag:
+        rel = _load_diag_relative_series_poc(NU_POC_RELATIVE_CSV, rel_col=NU_POC_REL_COL)
+        B0_poc_gc = float(getattr(cfg, "ES_GROUPS_ECOPATH_B", {})["DE1-POC"])
+        # rel(t) = B/B0 - 1  =>  B = B0 * (1 + rel)
+        poc_gc = B0_poc_gc * (1.0 + df["tkey"].map(rel).astype(float).fillna(0.0))
+        df["Bsum_gc_m2"] = df["Bsum_gc_m2"] + poc_gc
+
+    df = df.dropna(subset=["tkey", "Bsum_gc_m2"])
+
+    # ---- aggregate across space at each timestep ----
+    g = df.groupby("tkey")["Bsum_gc_m2"]
+    spatial_reduction = spatial_reduction.lower()
+    if spatial_reduction == "mean":
+        ts = g.mean()
+        y_label = "Mean total biomass across cells (g C m$^{-2}$)"
+    elif spatial_reduction == "median":
+        ts = g.median()
+        y_label = "Median total biomass across cells (g C m$^{-2}$)"
+    elif spatial_reduction == "sum":
+        ts = g.sum()
+        y_label = "Sum over sampled cells (g C m$^{-2}$ × n_cells)"
+    else:
+        raise ValueError("spatial_reduction must be: 'mean', 'median', or 'sum'")
+
+    ts = ts.sort_index()
+
+    # ---- swings ----
+    dB = ts.diff()
+    pct = ts.pct_change() * 100.0
+
+    # quick diagnostics you can print/log
+    print(f"[biomass] series={series}, reduction={spatial_reduction}, n_steps={len(ts)}")
+    print(f"[biomass] |ΔB| median={float(dB.abs().median()):.4g}, 90%={float(dB.abs().quantile(0.9)):.4g}, max={float(dB.abs().max()):.4g}")
+    print(f"[biomass] |%Δ| median={float(pct.abs().median()):.4g}%, 90%={float(pct.abs().quantile(0.9)):.4g}%, max={float(pct.abs().max()):.4g}%")
+
+    # ---- plot ----
+    plt.figure(figsize=(11, 6))
+
+    ax1 = plt.subplot(2, 1, 1)
+    ax1.plot(ts.index, ts.values)
+    ax1.set_ylabel(y_label)
+    ax1.grid(True, alpha=0.3)
+
+    ax2 = plt.subplot(2, 1, 2, sharex=ax1)
+    ax2.plot(pct.index, pct.values)
+    ax2.axhline(0, linewidth=0.8)
+    ax2.set_ylabel("Step swing (%Δ)")
+    ax2.set_xlabel(x_label)
+    ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+
+    _ensure_dir(OUTPUT_DIR_FIGS)
+    out_png = os.path.join(OUTPUT_DIR_FIGS, f"biomass_total_swing_{SCENARIO}_{series}_{spatial_reduction}.png")
+    plt.savefig(out_png, dpi=200)
+
+    if NU_SHOW_PLOT:
+        plt.show()
+    plt.close()
+    print(f"Saved biomass swing plot → {out_png}")
+    return out_png
+
+
+def _series_t0_bound_init_gN_m2(df: pd.DataFrame) -> float:
+    """
+    Compute bound_init (gN/m2) from the first model timestep present in the series table.
+
+    Requirements:
+      - df must already have 'model_N_bound_gN_m2' computed.
+      - Prefer 'model_t_idx' if present; else use earliest 'model_time'.
+      - If 'ewe_row'/'ewe_col' exist, take earliest timestep per cell, then reduce across cells.
+        Otherwise, just reduce across all rows at the earliest timestep.
+
+    Returns: scalar bound_init (gN/m2)
+    """
+    if "model_N_bound_gN_m2" not in df.columns:
+        raise ValueError("df is missing model_N_bound_gN_m2; compute bound first.")
+
+    d = df.dropna(subset=["model_N_bound_gN_m2"]).copy()
+    if d.empty:
+        raise ValueError("No non-NaN model_N_bound_gN_m2 values to compute t0 bound_init.")
+
+    have_cells = ("ewe_row" in d.columns) and ("ewe_col" in d.columns)
+
+    # ---- choose timestep key ----
+    if "model_t_idx" in d.columns:
+        d["__tkey"] = pd.to_numeric(d["model_t_idx"], errors="coerce")
+    elif "model_time" in d.columns:
+        d["__tkey"] = pd.to_datetime(d["model_time"], errors="coerce")
+    else:
+        raise ValueError("Need 'model_t_idx' or 'model_time' in df to compute t0.")
+
+    d = d.dropna(subset=["__tkey"])
+    if d.empty:
+        raise ValueError("All timestep keys were NaN (model_t_idx/model_time).")
+
+    # ---- select t0 rows ----
+    if have_cells:
+        # earliest timestep per cell
+        idx = d.groupby(["ewe_row", "ewe_col"])["__tkey"].idxmin()
+        d0 = d.loc[idx]
+    else:
+        # earliest timestep overall
+        t0 = d["__tkey"].min()
+        d0 = d.loc[d["__tkey"] == t0]
+
+    # ---- reduce across space ----
+    reducer = NU_T0_SPATIAL_REDUCER.lower()
+    if reducer == "median":
+        out = float(d0["model_N_bound_gN_m2"].median())
+    elif reducer == "mean":
+        out = float(d0["model_N_bound_gN_m2"].mean())
+    else:
+        raise ValueError("NU_T0_SPATIAL_REDUCER must be 'median' or 'mean'")
+
+    if NU_DEBUG_INIT_ANCHOR:
+        # show the chosen t0 and summary
+        t0_show = d0["__tkey"].median() if have_cells else d0["__tkey"].iloc[0]
+        print(f"[init-anchor] t0={t0_show}  n_rows={len(d0)}  bound_init_t0={out:.4g} gN/m2")
+        print(f"[init-anchor] bound@t0 min/med/max: "
+              f"{float(d0['model_N_bound_gN_m2'].min()):.4g} / "
+              f"{float(d0['model_N_bound_gN_m2'].median()):.4g} / "
+              f"{float(d0['model_N_bound_gN_m2'].max()):.4g}")
+
+    return out
+
+
 
 # -----------------------------------------------------------------------------
 # Main
 # -----------------------------------------------------------------------------
-
 
 def run_nutrient_overlay() -> None:
     """Pipeline entrypoint (keeps the same name used by ecospace_evaluation_master_pipeline.py)."""
@@ -684,28 +852,112 @@ def run_nutrient_overlay() -> None:
             df["model_POC_N_bound_gN_m2"] = B_poc_gc * c2n_poc
 
             if NU_DEBUG_POC:
-                frac_nan = float(df['model_POC_N_bound_gN_m2'].isna().mean())
-                print(f"[POC] c2n={c2n_poc:.4g} B0={B0_poc_gc:.4g} gC/m2; rel index max={int(rel.index.max()) if len(rel.index) else -1}; rows NaN frac={frac_nan:.3f}")
-                print(f"[POC] N_bound range: {float(df['model_POC_N_bound_gN_m2'].min()):.4g} to {float(df['model_POC_N_bound_gN_m2'].max()):.4g} gN/m2")
-                cols = [c for c in ['year','biweekly','model_t_idx','model_time','model_POC_N_bound_gN_m2'] if c in df.columns]
-                print('[POC] head:', df[cols].head(3).to_dict(orient='records'))
+                frac_nan = float(df["model_POC_N_bound_gN_m2"].isna().mean())
+                print(
+                    f"[POC] c2n={c2n_poc:.4g} B0={B0_poc_gc:.4g} gC/m2; "
+                    f"rel index max={int(rel.index.max()) if len(rel.index) else -1}; "
+                    f"rows NaN frac={frac_nan:.3f}"
+                )
+                print(
+                    f"[POC] N_bound range: {float(df['model_POC_N_bound_gN_m2'].min()):.4g} "
+                    f"to {float(df['model_POC_N_bound_gN_m2'].max()):.4g} gN/m2"
+                )
+                cols = [c for c in ["year", "biweekly", "model_t_idx", "model_time", "model_POC_N_bound_gN_m2"] if c in df.columns]
+                print("[POC] head:", df[cols].head(3).to_dict(orient="records"))
 
             if NU_DEBUG_SAVE_DF:
                 out_dbg = os.path.join(OUTPUT_DIR_EVAL, f"ecospace_{SCENARIO}_nutrients_debug_poc.csv")
-                keep = [c for c in ['year','biweekly','ewe_row','ewe_col','model_t_idx','model_time',obs_col,'model_N_bound_gN_m2','model_POC_N_bound_gN_m2','model_N_free_gN_m2'] if c in df.columns]
+                keep = [
+                    c for c in [
+                        "year", "biweekly", "ewe_row", "ewe_col", "model_t_idx", "model_time",
+                        obs_col, "model_N_bound_gN_m2", "model_POC_N_bound_gN_m2", "model_N_free_gN_m2"
+                    ]
+                    if c in df.columns
+                ]
                 df.head(NU_DEBUG_SAVE_MAX_ROWS)[keep].to_csv(out_dbg, index=False)
-                print('[POC] wrote debug CSV ->', out_dbg)
-
+                print("[POC] wrote debug CSV ->", out_dbg)
 
             # Add into total bound N (this is the key step you’re missing)
             df["model_N_bound_gN_m2"] = df["model_N_bound_gN_m2"] + df["model_POC_N_bound_gN_m2"]
 
-        # If the POC diagnostic path inf ull file, keep that here as well.
-        # (file includes a branch that adds df["model_POC_N_bound_gN_m2"] when NU_INCLUDE_POC_DIAG is True.) :contentReference[oaicite:4]{index=4}
+        # --- bound_init selection (ecopath baseline vs first timestep in series table) ---
+        bound_init_ecopath = float(bound_init)  # includes optional POC baseline already added above
+        bound_init_used = bound_init_ecopath
 
-        df["model_N_free_gN_m2"] = NU_FREE_INIT_GNM2 + bound_init - df["model_N_bound_gN_m2"]
+        def _bound_t0_from_df(dfx: pd.DataFrame) -> float:
+            """Compute bound_init from the first model timestep present in THIS df."""
+            if "model_N_bound_gN_m2" not in dfx.columns:
+                raise ValueError("Expected model_N_bound_gN_m2 to be computed before calling _bound_t0_from_df().")
+
+            d = dfx.dropna(subset=["model_N_bound_gN_m2"]).copy()
+            if d.empty:
+                raise ValueError("No non-NaN model_N_bound_gN_m2 values to compute t0 bound_init.")
+
+            have_cells = ("ewe_row" in d.columns) and ("ewe_col" in d.columns)
+
+            # Choose timestep key
+            if "model_t_idx" in d.columns:
+                d["__tkey"] = pd.to_numeric(d["model_t_idx"], errors="coerce")
+            else:
+                d["__tkey"] = pd.to_datetime(d["model_time"], errors="coerce")
+
+            d = d.dropna(subset=["__tkey"])
+            if d.empty:
+                raise ValueError("All timestep keys were NaN (model_t_idx/model_time).")
+
+            # Earliest timestep per cell (if cell columns exist), otherwise earliest overall
+            if have_cells:
+                d = d.sort_values("__tkey")
+                d0 = d.groupby(["ewe_row", "ewe_col"], as_index=False).first()
+            else:
+                t0 = d["__tkey"].min()
+                d0 = d.loc[d["__tkey"] == t0]
+
+            reducer = str(getattr(cfg, "NU_T0_SPATIAL_REDUCER", "median")).lower()
+            if reducer == "median":
+                return float(d0["model_N_bound_gN_m2"].median())
+            elif reducer == "mean":
+                return float(d0["model_N_bound_gN_m2"].mean())
+            else:
+                raise ValueError("NU_T0_SPATIAL_REDUCER must be 'median' or 'mean'")
+
+        if NU_BOUND_INIT_MODE.lower() == "t0_series":
+            # Compute bound_init from the first timestep in THIS df
+            bound_init_used = _bound_t0_from_df(df)
+
+            if NU_DEBUG_INIT_ANCHOR:
+                print(
+                    f"[init-anchor] bound_init ecopath={bound_init_ecopath:.4g} "
+                    f"vs t0_series={bound_init_used:.4g} gN/m2"
+                )
+
+        elif NU_BOUND_INIT_MODE.lower() != "ecopath":
+            raise ValueError("NU_BOUND_INIT_MODE must be 'ecopath' or 't0_series'")
+
+        # --- free_init selection ---
+        free_init = float(NU_FREE_INIT_GNM2)
+
+        if NU_FREE_INIT_MODE.lower() == "t0_preserve_total":
+            # Preserve the old definition of total inventory based on config + ecopath baseline,
+            # but ensure the budget closes at t0 by adjusting free_init.
+            total_ref = float(NU_FREE_INIT_GNM2 + bound_init_ecopath)
+
+            # Compute mean/median bound at t0 (already computed if NU_BOUND_INIT_MODE=="t0_series",
+            # otherwise compute it here without changing bound_init_used)
+            bound_t0 = bound_init_used if NU_BOUND_INIT_MODE.lower() == "t0_series" else _bound_t0_from_df(df)
+            free_init = float(max(0.0, total_ref - bound_t0))
+
+            if NU_DEBUG_INIT_ANCHOR:
+                print(
+                    f"[init-anchor] total_ref={total_ref:.4g}  bound_t0={bound_t0:.4g}  "
+                    f"free_init(adjusted)={free_init:.4g}"
+                )
+
+        elif NU_FREE_INIT_MODE.lower() != "config":
+            raise ValueError("NU_FREE_INIT_MODE must be 'config' or 't0_preserve_total'")
+
+        df["model_N_free_gN_m2"] = free_init + bound_init_used - df["model_N_bound_gN_m2"]
         df.loc[df["model_N_free_gN_m2"] < 0, "model_N_free_gN_m2"] = 0.0
-
         model_col_used = "model_N_free_gN_m2"
 
         # Optional flux scaling
@@ -718,7 +970,7 @@ def run_nutrient_overlay() -> None:
             if NU_FLUX_APPLY_MODE == "scale_free":
                 df["model_N_free_used_gN_m2"] = df["model_N_free_gN_m2"] * df["model_N_flux_mult"]
             elif NU_FLUX_APPLY_MODE == "scale_total":
-                total_init = float(getattr(cfg, "NU_TOTAL_INIT_GNM2", NU_FREE_INIT_GNM2 + bound_init))
+                total_init = float(getattr(cfg, "NU_TOTAL_INIT_GNM2", free_init + bound_init_used))
                 df["model_N_free_used_gN_m2"] = (total_init * df["model_N_flux_mult"]) - df["model_N_bound_gN_m2"]
             else:
                 raise ValueError(f"Unknown NU_FLUX_APPLY_MODE={NU_FLUX_APPLY_MODE!r}")
@@ -754,3 +1006,5 @@ def run_nutrient_overlay() -> None:
 
 if __name__ == "__main__":
     run_nutrient_overlay()
+    plot_total_biomass_swings(series="box", spatial_reduction="mean", include_poc_diag=False)
+

@@ -16,8 +16,8 @@ import pandas as pd # would rather not do imports here
 # General settings
 # -------------------------------------------
 
-SCENARIO = "SC203"
-ECOPATH_F_NM = "LTL_Carb_3day_ewe6_7_19295_v17_BigPC_ECOSPACEPARAMZ"
+SCENARIO = "SC212"
+ECOPATH_F_NM = "LTL_Carb_3day_ewe6_7_19295_v18_BigPC_ECOSPACEPARAMZ"
 
 # ===== Paths =====
 YEAR_START_FULLRUN = 1978
@@ -100,7 +100,7 @@ N_FREE_AVG_INIT = 18 # see ecosim_data_prep_2_nutrients.py, depth average 18 N, 
 N_BOUND_GROUPS = [1, 2, 3, 4, 5,
                   6, 7, 8, 9, 10,
                   11, 12, 13, 14, 15,
-                  16, 17, 18, 19, 20]
+                  16, 17, 18, 19, 20, 22]
 # N_BOUND_GROUPS = [17, 18, 19]
 
 OBS_AVG_TYPE = "mean" # mean, median
@@ -169,7 +169,7 @@ END_FULL_BLM = '2018-12-31'
 
 # Biomass columns for bloom detection (output from model is named by model group number)
 BIOMASS_COLS_SATELLITE = ['17', '18', '19']
-BIOMASS_COLS_C09 = ['17']
+BIOMASS_COLS_C09 = ['17', '18', '19']
 
 # adds a col before doing eval (sum across groups above, optionally)
 TOTAL_BIOMASS_COL_SATELLITE = "Biomass_Total_Satellite"
@@ -183,7 +183,7 @@ C09_PCT_MAX_WINDOW_DAYS = 6
 C09_USE_ANNUALORALL = "annual" # a future swithc; for threshold, use just that year's data to determine bloom?
 C09_MEAN_OR_MEDIAN = "NOT SET UP" # a future switch (uses mean for now, or logmean)
 
-SAT_LOG_TRNSFRM = True
+SAT_LOG_TRNSFRM = False
 SAT_THRESHOLD_FACTOR = 1.05
 SAT_SUB_THRESHOLD_FACTOR = 0.7
 SAT_MEAN_OR_MEDIAN = "median"

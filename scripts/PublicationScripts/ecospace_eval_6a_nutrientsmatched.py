@@ -467,11 +467,13 @@ def pool_casts_to_biweekly(cast: pd.DataFrame) -> pd.DataFrame:
     c["date"] = pd.to_datetime(c["date"], errors="coerce")
 
     # Both cast-level metrics must exist
+    # should be umol??
     need_cols = {"cast_nitrogen_int_mmol_m2", "cast_nitrogen_avg_mmol_L"}
     miss = need_cols - set(c.columns)
     if miss:
         raise ValueError(f"Cast table is missing required columns: {sorted(miss)}")
 
+    #
     c = c.dropna(subset=["date", "ewe_row", "ewe_col", "cast_nitrogen_int_mmol_m2", "cast_nitrogen_avg_mmol_L"]).copy()
 
     c["year"] = c["date"].dt.year

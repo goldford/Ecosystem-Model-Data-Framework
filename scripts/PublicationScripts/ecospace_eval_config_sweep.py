@@ -36,9 +36,9 @@ def _env_list(name: str, default: list[str]) -> list[str]:
 # -------------------------------------------
 # General settings
 # -------------------------------------------
-ECOSPACE_SC = _env_str("ECOSPACE_SC", "SC206")
+ECOSPACE_SC = _env_str("ECOSPACE_SC", "SC211")
 ECOSPACE_SC_FULL = _env_str("ECOSPACE_SC_FULL", ECOSPACE_SC)
-ECOPATH_F_NM = "LTL_Carb_3day_ewe6_7_19295_v17_BigPC_ECOSPACEPARAMZ"
+ECOPATH_F_NM = "LTL_Carb_3day_ewe6_7_19295_v18_BigPC_ECOSPACEPARAMZ"
 ECOSPACE_RAW_DIR = f"C://Users//Greig//Documents//EwE output//{ECOPATH_F_NM}//Ecospace_{ECOSPACE_SC_FULL}//asc//"
 
 FIGS_P = "../../figs"
