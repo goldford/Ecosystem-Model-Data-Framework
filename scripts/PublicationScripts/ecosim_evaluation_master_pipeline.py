@@ -14,11 +14,11 @@ Output:
 import ecosim_eval_config
 
 # Import the three modules you revised
-import ecosim_data_prep_1_single_run_outputs as data_prep
+import ecosim_dataprep_1_single_run_outputs as data_prep
 import ecosim_eval_1_PPmultcalc as relPP_eval
-import ecosim_eval_2_assess_seasonal_phyto as seasonal_eval
-import ecosim_eval_3_assess_nutrients as nutrient_eval
-import ecosim_eval_4_assess_bloom_timing as bloom_eval
+import ecosim_eval_2_seasonal_phyto as seasonal_eval
+import ecosim_eval_3_nutrients as nutrient_eval
+import ecosim_eval_4_bloom_timing as bloom_eval
 import ecosim_eval_5_zoop as zoop_eval
 
 

@@ -41,9 +41,14 @@ import numpy as np
 import pandas as pd
 import ecospace_eval_config as cfg
 import matplotlib
+
+# Whether to show figures interactively (default False for batch/HPC runs)
+NU_SHOW_PLOT = bool(getattr(cfg, "NU_SHOW_PLOT", False))
+
 # Use a non-interactive backend unless explicitly showing plots
-if not bool(getattr(cfg, 'NU_SHOW_PLOT', False)):
-    matplotlib.use('Agg')
+if not NU_SHOW_PLOT:
+    matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 
 
@@ -119,7 +124,6 @@ NU_FREE_INIT_GNM2 = float(getattr(cfg, "NU_FREE_INIT_GNM2", 3.5))
 NU_BOUND_INIT_GNM2 = getattr(cfg, "NU_BOUND_INIT_GNM2", None)
 
 # Plot display toggle (interactive). If running headless/HPC, set False.
-NU_SHOW_PLOT = bool(getattr(cfg, "NU_SHOW_PLOT", False))
 
 # If True, force climatology index to include all biweekly bins 1..NU_BIWEEK_MAX
 NU_FORCE_FULL_BIWEEK_AXIS = bool(getattr(cfg, "NU_FORCE_FULL_BIWEEK_AXIS", True))
@@ -151,6 +155,14 @@ NU_FREE_INIT_MODE = getattr(cfg, "NU_FREE_INIT_MODE", "config")
 NU_DEBUG_INIT_ANCHOR = bool(getattr(cfg, "NU_DEBUG_INIT_ANCHOR", False))
 
 
+# --- Optional: overlay Ecosim (1D) nutrient series on the same plot ---
+NU_OVERLAY_ECOSIM = bool(getattr(cfg, "NU_OVERLAY_ECOSIM", False))
+NU_ECOSIM_NUTRIENTS_CSV = getattr(cfg, "NU_ECOSIM_NUTRIENTS_CSV", None)
+NU_ECOSIM_MODEL_COL = str(getattr(cfg, "NU_ECOSIM_MODEL_COL", "model_N_free_used_gN_m2"))
+NU_ECOSIM_LABEL = str(getattr(cfg, "NU_ECOSIM_LABEL", "ecosim"))
+
+
+
 # -----------------------------------------------------------------------------
 # Helpers
 # -----------------------------------------------------------------------------
@@ -172,21 +184,6 @@ def _ensure_obs_col(df: pd.DataFrame, obs_col: str) -> pd.DataFrame:
     return d
 
 
-def _load_series_table(series: str) -> pd.DataFrame:
-    if series == "matched":
-        return _load_paired_table(PAIRED_BIWEEK_CSV)
-    if series == "box":
-        return _load_paired_table(BOX_BIWEEK_CSV)
-    raise ValueError(f"Unknown model series {series!r}. Use 'matched' or 'box'.")
-
-
-def _ensure_obs_col(df: pd.DataFrame, obs_col: str) -> pd.DataFrame:
-    # Box tables often have no obs column; we need it present so _aggregate_year_biweek() can run.
-    if obs_col in df.columns:
-        return df
-    d = df.copy()
-    d[obs_col] = np.nan
-    return d
 
 def _load_diag_relative_series_poc(csv_path: str, *, rel_col: str = "DE1-POC") -> pd.Series:
     """
@@ -468,6 +465,46 @@ def _compute_climatology(year_biweek: pd.DataFrame) -> pd.DataFrame:
     return clima
 
 
+
+def _compute_ecosim_climatology(csv_path: str, *, value_col: str) -> pd.DataFrame:
+    """Compute a biweekly climatology from an Ecosim nutrient-series CSV (1D)."""
+    df = pd.read_csv(csv_path)
+    if "date" not in df.columns:
+        raise ValueError("Ecosim CSV must contain a 'date' column.")
+    df["date"] = pd.to_datetime(df["date"], errors="coerce")
+    df = df.dropna(subset=["date"]).copy()
+
+    df["year"] = df["date"].dt.year
+    df["day_of_year"] = df["date"].dt.dayofyear
+    df["biweekly"] = ((df["day_of_year"] - 1) // 14 + 1)
+
+    # pick the model series column
+    if value_col not in df.columns:
+        # common fallbacks
+        for alt in ["model_N_free_used_gN_m2", "model_N_free_gN_m2", "N_Free_Adjusted", "N_Free"]:
+            if alt in df.columns:
+                value_col = alt
+                break
+        else:
+            raise ValueError(f"Could not find model series column '{value_col}' (or fallbacks) in {csv_path}")
+
+    # restrict to the same plot window (if desired)
+    if NU_PLT_YR_ST is not None:
+        df = df[df["year"] >= int(NU_PLT_YR_ST)]
+    if NU_PLT_YR_EN is not None:
+        df = df[df["year"] < int(NU_PLT_YR_EN)]
+
+    df[value_col] = pd.to_numeric(df[value_col], errors="coerce")
+
+    # Reduce within (year, biweekly) first so each year counts equally
+    yrbw = df.groupby(["year", "biweekly"], as_index=False).agg(avg_model=(value_col, "mean"))
+    # Provide dummy obs column so _compute_climatology stays reusable
+    yrbw["avg_obs"] = np.nan
+
+    clima = _compute_climatology(yrbw)
+    return clima
+
+
 def _plot_overlay(clima: pd.DataFrame, *, scenario: str) -> str:
     clima = clima.copy()
     clima.index = clima.index.astype(int)
@@ -527,8 +564,9 @@ def _plot_overlay(clima: pd.DataFrame, *, scenario: str) -> str:
     plt.legend()
     plt.tight_layout()
 
-    if NU_SHOW_PLOT:
-        plt.show()
+    # if NU_SHOW_PLOT:
+
+    plt.show()
 
     _ensure_dir(OUTPUT_DIR_FIGS)
     out_png = os.path.join(OUTPUT_DIR_FIGS, f"nutrient_climatology_overlay_ecospace{scenario}_freeNredo.png")
@@ -991,18 +1029,36 @@ def run_nutrient_overlay() -> None:
         cl = compute_clima_for_df(df_s)
         model_climas[series] = cl
 
+    # --- Optional: add Ecosim climatology to the overlay ---
+    print("1")
+    print(NU_ECOSIM_NUTRIENTS_CSV)
+    print("2")
+    print(NU_OVERLAY_ECOSIM)
+    if NU_OVERLAY_ECOSIM and NU_ECOSIM_NUTRIENTS_CSV:
+        if os.path.exists(NU_ECOSIM_NUTRIENTS_CSV):
+            try:
+                cl_ecosim = _compute_ecosim_climatology(
+                    NU_ECOSIM_NUTRIENTS_CSV, value_col=NU_ECOSIM_MODEL_COL
+                )
+                model_climas[NU_ECOSIM_LABEL] = cl_ecosim
+                print(f"[ecosim overlay] added: {NU_ECOSIM_LABEL} from {NU_ECOSIM_NUTRIENTS_CSV}")
+            except Exception as e:
+                print(f"[ecosim overlay] failed: {e}")
+        else:
+            print(f"[ecosim overlay] missing CSV: {NU_ECOSIM_NUTRIENTS_CSV}")
+
     # --- Output ---
     _ensure_dir(OUTPUT_DIR_FIGS)
     suffix = "flux" if NU_USE_FLUX_MULT else "raw"
     out_png_multi = os.path.join(
         OUTPUT_DIR_FIGS,
-        f"nutrient_climatology_overlay_ecospace{SCENARIO}_freeN_multi_{suffix}.png",
+        f"ecospace__{SCENARIO}_nutrient_climatology_overlay_freeN_multi_{suffix}.png",
     )
 
     _plot_overlay_multi(obs_clima, model_climas, out_png=out_png_multi, scenario=SCENARIO)
-
     print(f"Saved multi-series overlay plot → {out_png_multi}")
 
+    return out_png_multi
 
 if __name__ == "__main__":
     run_nutrient_overlay()

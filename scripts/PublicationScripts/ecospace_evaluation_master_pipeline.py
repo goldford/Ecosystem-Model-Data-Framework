@@ -26,7 +26,7 @@ import ecospace_eval_5_zoop_eval as zp_eval
 
 
 
-def run_ecospace_pipeline(run_prep=False,
+def run_ecospace_pipeline(run_prep=True,
                           run_PPmult=True,
                           run_seas_phyto=True,
                           run_match_phyto1=True,

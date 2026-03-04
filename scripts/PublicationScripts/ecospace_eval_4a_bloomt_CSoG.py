@@ -737,14 +737,14 @@ def run_bt_eval() -> None:
     # Plot comparison with C09 1D model
     plot_bloom_comparison(
         bloom_df_C09, C09_df,
-        label_model="Ecospace Model", label_obs="C09 1D Model",
+        label_model="SOGEM-LTL", label_obs="C09 1D Model",
         title=f"Bloom Timing: {SCENARIO} vs C09",
         filename=f"ecospace_vs_C09_{SCENARIO}.png")
 
     # Plot comparison with sat data
     plot_bloom_comparison(
         bloom_df_sat, sat_df,
-        label_model="Ecospace Model", label_obs="Satellite",
+        label_model="SOGEM-LTL", label_obs="Satellite",
         title=f"Bloom Timing: {SCENARIO} vs Satellite",
         filename=f"ecospace_vs_satell_{SCENARIO}.png")
 
