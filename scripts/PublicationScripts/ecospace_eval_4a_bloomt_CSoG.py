@@ -417,7 +417,7 @@ def plot_bloom_comparison(df_model, df_obs, label_model="Ecospace",
     ax.set_ylabel("Day of Year")
     ax.set_title(title)
     ax.set_ylim([MIN_Y_TICK, df_merged[["Day of Year_Model", "Day of Year_Obs"]].max().max() + 10])
-    ax.legend()
+    # ax.legend()
     plt.tight_layout()
     plt.savefig('..//..//figs//' + filename)
     plt.show()
