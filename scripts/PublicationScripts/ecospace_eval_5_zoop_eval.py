@@ -398,6 +398,8 @@ def panel_seasonal_boxplots(
             showfliers=False,  # match Ecosim behaviour
             hue="Source",
             ax=ax,
+            palette={"Obs": "darkorange", "Model": "blue"},
+            medianprops={"color": "white", "linewidth": 0.8}
         )
 
         # nicer labels
@@ -534,6 +536,8 @@ def plot_seasonal_boxpanels(
             hue="Source",
             ax=ax,
             showfliers=False,
+            palette={"Obs": "darkorange", "Model": "blue"},
+            medianprops={"color": "white", "linewidth": 0.8}
         )
         # ax.set_yscale("log")
         ax.grid(True, which="major", axis="both", linestyle="-", alpha=0.4)
