@@ -721,7 +721,7 @@ def run_qu39_eval() -> None:
         output_file_dia = os.path.join(figs_out_p, 'ecospace_' + MODEL_RUN + '_Diatoms_Monthly_QU39_2016_2018.png')
         output_file_nan = os.path.join(figs_out_p,
                                        'ecospace_' + MODEL_RUN + '_Nanophytoplankton_Monthly_QU39_vs_Ecospace_2016_2018.png')
-        source_names = ['Ecospace', 'QU39']
+        source_names = ['SOGEM-LTL', 'Data']
         field_codes_dia = ['log_PP1-DIA', 'logQU39']
         field_codes_nan = ['log_PP2-NAN', 'logQU39']
         field_codes_panel = [
