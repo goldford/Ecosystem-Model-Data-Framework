@@ -77,6 +77,19 @@ ECOSPACE_NC_P = cfg.NC_PATH_OUT
 ECOSPACE_RN_STR_YR = cfg.ECOSPACE_RN_STR_YR
 ECOSPACE_RN_END_YR = cfg.ECOSPACE_RN_END_YR
 
+# added by GO Mar '26 to include ecosim
+import ecosim_eval_config as cfg_sim
+
+ECOSIM_FILE = cfg_sim.ECOSIM_F_PREPPED_SINGLERUN
+
+# Fix "Other" to 19 if that is meant to be PP3-PIC
+ECOSIM_GROUP_MAP = {
+    "Diatoms": 17,
+    "Nano": 18,
+    "Other": 19,
+}
+
+
 # ================================
 # Utilities
 # ================================
@@ -245,6 +258,158 @@ def plot_stacked_side_by_side(seasonal_stats_df: pd.DataFrame, domain_label: str
 
     plt.close()
 
+# added by GO Mar '26 for adding ecosim
+def compute_ecosim_group_seasonal() -> pd.DataFrame:
+    df = pd.read_csv(ECOSIM_FILE)
+    df["date"] = pd.to_datetime(df["date"])
+
+    if START_DATE is not None:
+        df = df[df["date"] >= pd.to_datetime(START_DATE)]
+    if END_DATE is not None:
+        df = df[df["date"] <= pd.to_datetime(END_DATE)]
+
+    # Recompute season here so both scripts use the same definition
+    df["season"] = df["date"].dt.month.map(month_to_season)
+    df = df[df["season"].isin(SEASONS_ORDER)]
+
+    rows = []
+    for grp, col in ECOSIM_GROUP_MAP.items():
+        means = (
+            df.groupby("season")[str(col)]
+              .mean()
+              .reindex(SEASONS_ORDER)
+              .fillna(0.0)
+        )
+        for season, val in means.items():
+            rows.append({
+                "Group": grp,
+                "Season": season,
+                "Source": "Ecosim",
+                "Mean": float(val),
+            })
+
+    return pd.DataFrame(rows)
+
+
+def ecospace_stats_to_long(df_model: pd.DataFrame) -> pd.DataFrame:
+    out = df_model.rename(columns={"ModelMean": "Mean"}).copy()
+    out["Source"] = "Ecospace"
+    return out[["Group", "Season", "Source", "Mean"]]
+
+
+def obs_seasonal_to_long(obs_dict, domain_key: str) -> pd.DataFrame:
+    rows = []
+    dom = obs_dict[domain_key]
+    for grp in GROUP_MAP.keys():
+        for season in SEASONS_ORDER:
+            rows.append({
+                "Group": grp,
+                "Season": season,
+                "Source": "McEwan",
+                "Mean": float(dom[grp][season]),
+            })
+    return pd.DataFrame(rows)
+
+
+def plot_stacked_three_source(df_long: pd.DataFrame, domain_label: str, out_png: str) -> None:
+    groups = list(GROUP_MAP.keys())
+    sources = ["Ecospace", "Ecosim", "McEwan"]
+
+    source_hatch = {
+        "Ecospace": "",
+        "Ecosim": "//",
+        "McEwan": "xx",
+    }
+
+    source_edge = {
+        "Ecospace": "black",
+        "Ecosim": "0.25",
+        "McEwan": "0.25",
+    }
+
+    bar_width = 0.22
+    group_spacing = 1.2
+    offsets = {
+        "Ecospace": -0.28,
+        "Ecosim":    0.00,
+        "McEwan":    0.28,
+    }
+
+    centers = [i * group_spacing for i in range(len(SEASONS_ORDER))]
+    x_pos = {
+        src: [c + offsets[src] for c in centers]
+        for src in sources
+    }
+
+    fig, ax = plt.subplots(figsize=(6.4, 4.6))
+
+    for src in sources:
+        bottoms = [0.0] * len(SEASONS_ORDER)
+        for grp in groups:
+            vals = []
+            for season in SEASONS_ORDER:
+                sub = df_long[
+                    (df_long["Season"] == season) &
+                    (df_long["Group"] == grp) &
+                    (df_long["Source"] == src)
+                ]
+                vals.append(float(sub["Mean"].iloc[0]) if not sub.empty else 0.0)
+
+            ax.bar(
+                x_pos[src],
+                vals,
+                bar_width,
+                bottom=bottoms,
+                color=GROUP_COLORS[grp],
+                hatch=source_hatch[src],
+                edgecolor=source_edge[src],
+                linewidth=0.8,
+            )
+            bottoms = [b + v for b, v in zip(bottoms, vals)]
+
+    xticks = []
+    xticklabels = []
+    for i in range(len(SEASONS_ORDER)):
+        for src in sources:
+            xticks.append(x_pos[src][i])
+            xticklabels.append(src)
+
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xticklabels, rotation=0, ha="right", fontsize=7)
+
+    for i, season in enumerate(SEASONS_ORDER):
+        ax.text(
+            centers[i], -0.10, season,
+            ha="center", va="top",
+            transform=ax.get_xaxis_transform()
+        )
+
+    group_handles = [
+        Patch(facecolor=GROUP_COLORS[g], edgecolor="black", label=g)
+        for g in groups
+    ]
+    source_handles = [
+        Patch(facecolor="white", edgecolor="0.25", hatch=source_hatch[s], label=s)
+        for s in sources
+    ]
+
+    leg1 = ax.legend(handles=group_handles, loc="upper left", title="Group", fontsize=8)
+    ax.add_artist(leg1)
+    # ax.legend(handles=source_handles, loc="upper right", title="Source", fontsize=8)
+
+    ax.set_ylabel("Biomass (g C m$^{-2}$)")
+    ax.set_title(f"{domain_label}: Seasonal phytoplankton biomass")
+    ax.grid(True, axis="y", linestyle=":", alpha=0.5)
+
+    plt.tight_layout()
+    plt.subplots_adjust(bottom=0.18)
+
+    os.makedirs(os.path.dirname(out_png), exist_ok=True)
+    fig.savefig(out_png, dpi=300)
+    if SHOW_PLTS:
+        plt.show()
+    plt.close(fig)
+
 
 # ================================
 # Main
@@ -262,6 +427,27 @@ def run_eval_2d_phyto() -> None:
     ds = xr.open_dataset(ecospace_nc)
 
     results_all = []
+
+    df_ecosim = compute_ecosim_group_seasonal()
+
+    for dom_label, dom_key in DOMAINS.items():
+        mask = make_domain_mask(ds, DOMAIN_FP, dom_key)
+
+        df_ecospace = compute_domain_group_seasonal(ds, mask)
+        df_ecospace_long = ecospace_stats_to_long(df_ecospace)
+        df_obs_long = obs_seasonal_to_long(OBS_MCEWAN, dom_label)
+
+        combo = pd.concat(
+            [
+                df_ecospace_long.assign(Domain=dom_label),
+                df_ecosim.assign(Domain=dom_label),  # repeated 1D reference
+                df_obs_long.assign(Domain=dom_label),
+            ],
+            ignore_index=True,
+        )
+
+        out_png = os.path.join(FIGS_OUT, f"ecospace_ecosim_mcewan_phyto_{dom_label}.png")
+        plot_stacked_three_source(combo, dom_label, out_png)
 
     for dom_label, dom_key in DOMAINS.items():
         print(f"Computing domain: {dom_label} ({dom_key}) …")
