@@ -85,6 +85,8 @@ CREATE_MASKS = cfg.BT_CREATE_MASKS # Set to True to regenerate masks
 DO_NUTRIENTS = cfg.BT_DO_NUTRIENTS # script 9 visualises nutrients now
 
 USEC09_MASK_FOR_SAT = cfg.BT_USEC09_MASK_FOR_SAT
+C09_ROW = cfg.BT_C09_ROW
+C09_COL = cfg.BT_C09_COL
 
 
 # ================================
@@ -415,7 +417,7 @@ def plot_bloom_comparison(df_model, df_obs, label_model="Ecospace",
     ax.set_ylabel("Day of Year")
     ax.set_title(title)
     ax.set_ylim([MIN_Y_TICK, df_merged[["Day of Year_Model", "Day of Year_Obs"]].max().max() + 10])
-    ax.legend()
+    # ax.legend()
     plt.tight_layout()
     plt.savefig('..//..//figs//' + filename)
     plt.show()
@@ -643,6 +645,8 @@ def run_bt_eval() -> None:
     # Load Ecospace model outputs
     ds = load_ecospace_dataset()
 
+    row_C09, col_C09 = C09_ROW, C09_COL
+
     # Generate masks if required
     if CREATE_MASKS:
         generate_2d_mask(ds, os.path.join(DOMAIN_CONFIG_PATH, DOMAIN_FILE))
@@ -658,8 +662,6 @@ def run_bt_eval() -> None:
     var_name_C09 = VARIABLES_TO_ANALYZE_C09
 
     if RECOMPUTE_BLOOM_TIMING_C09:
-        # Hardcoded C09 1D location
-        col_C09, row_C09 = 52, 100
         mask = None
 
         # override option to use satellite 2d mask
@@ -718,8 +720,6 @@ def run_bt_eval() -> None:
         bloom_df_sat = pd.read_csv(bloom_csv_path_sat)
         print(f"Loaded bloom timing from cached files: {bloom_csv_path_sat}")
 
-
-
     print('bloom doy mean, C09:')
     print(C09_df['Day of Year_C09'].mean())
     print('bloom doy early and late thresholds, CO9:')
@@ -737,15 +737,15 @@ def run_bt_eval() -> None:
     # Plot comparison with C09 1D model
     plot_bloom_comparison(
         bloom_df_C09, C09_df,
-        label_model="Ecospace Model", label_obs="C09 1D Model",
-        title=f"Diatom Bloom Timing: {SCENARIO} vs C09",
+        label_model="SOGEM-LTL", label_obs="C09 1D Model",
+        title=f"Bloom Timing: {SCENARIO} vs C09",
         filename=f"ecospace_vs_C09_{SCENARIO}.png")
 
     # Plot comparison with sat data
     plot_bloom_comparison(
         bloom_df_sat, sat_df,
-        label_model="Ecospace Model", label_obs="Satellite",
-        title=f"Diatom Bloom Timing: {SCENARIO} vs Satellite",
+        label_model="SOGEM-LTL", label_obs="Satellite",
+        title=f"Bloom Timing: {SCENARIO} vs Satellite",
         filename=f"ecospace_vs_satell_{SCENARIO}.png")
 
     # Compute and print statistics

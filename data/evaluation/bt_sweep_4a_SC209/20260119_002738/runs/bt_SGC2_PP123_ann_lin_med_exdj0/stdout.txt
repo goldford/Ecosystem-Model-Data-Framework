@@ -1,0 +1,247 @@
+Saved 2D mask to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC209\20260119_002738\_cache\suchy_ecospace_mask_SGC2.nc
+1D index (row, col, depth): (np.int64(52), np.int64(100), np.float64(370.68523301071156))
+computing bloom timing
+1980
+1981
+1982
+1983
+1984
+1985
+1986
+1987
+1988
+1989
+1990
+1991
+1992
+1993
+1994
+1995
+1996
+1997
+1998
+1999
+2000
+2001
+2002
+2003
+2004
+2005
+2006
+2007
+2008
+2009
+2010
+2011
+2012
+2013
+2014
+2015
+2016
+2017
+2018
+year 1980
+threshold 2.189460200071331
+2.73529624938965
+year 1981
+threshold 2.4273409366607677
+2.43481421470642
+year 1982
+threshold 2.376542919874195
+2.73719096183777
+year 1983
+threshold 2.1972644090652467
+2.58032083511353
+year 1984
+threshold 2.249843090772627
+2.81897640228271
+year 1985
+threshold 2.428598266839985
+2.48388862609863
+year 1986
+threshold 2.4244410037994366
+2.91015195846558
+year 1987
+threshold 2.3581664979457884
+2.54267334938049
+year 1988
+threshold 2.541695648431779
+2.97439789772034
+year 1989
+threshold 2.361969906091687
+2.44621253013611
+year 1990
+threshold 2.070320311188696
+2.45203399658203
+year 1991
+threshold 2.391204804182051
+2.56025981903076
+year 1992
+threshold 2.533619821071623
+2.81157422065735
+year 1993
+threshold 1.958590221405027
+2.33268737792969
+year 1994
+threshold 1.8465353161096536
+2.54069519042969
+year 1995
+threshold 2.456733673810957
+2.76662492752075
+year 1996
+threshold 2.1730609595775623
+2.49001502990723
+year 1997
+threshold 1.869403454661367
+2.39375948905945
+year 1998
+threshold 1.817988413572312
+2.32533955574036
+year 1999
+threshold 2.1821221232414256
+2.4287486076355
+year 2000
+threshold 2.086295664310457
+2.32537961006165
+year 2001
+threshold 2.1926681756973263
+2.35237741470337
+year 2002
+threshold 2.407405650615693
+2.52893900871277
+year 2003
+threshold 2.4450354337692257
+2.67679595947266
+year 2004
+threshold 2.304429996013645
+2.40117573738098
+year 2005
+threshold 2.5036462962627373
+2.39850568771362
+year 2006
+threshold 2.302109724283215
+2.47115468978882
+year 2007
+threshold 2.04212594926357
+2.14189314842224
+year 2008
+threshold 2.6133871257305126
+2.86754298210144
+year 2009
+threshold 1.5471456617116919
+1.76001119613647
+year 2010
+threshold 2.3418981850147222
+2.10313177108765
+year 2011
+threshold 1.566405594348903
+2.10124087333679
+year 2012
+threshold 1.8173759579658482
+1.73767304420471
+year 2013
+threshold 1.613039588928222
+2.04831433296204
+year 2014
+threshold 1.7351209670305245
+2.14455842971802
+year 2015
+threshold 2.3531097650527952
+2.62614107131958
+year 2016
+threshold 1.8589836359024072
+1.93346309661865
+year 2017
+threshold 1.8027211457490955
+1.80119287967682
+year 2018
+threshold 2.186146706342697
+2.53943538665771
+Saved computed bloom timing for C09 1D to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC209\20260119_002738\_cache\ecospace_bloom_timing_C09_SC209.csv
+computing bloom timing
+2003
+2004
+2005
+2006
+2007
+2008
+2009
+2010
+2011
+2012
+2013
+2014
+2015
+2016
+year 2003
+threshold 4.520945348963142
+4.0679162144660985
+year 2004
+threshold 4.578218839131298
+4.593388080596927
+year 2005
+threshold 4.656332193687565
+5.214045941829684
+year 2006
+threshold 4.825797685235742
+5.176635771989824
+year 2007
+threshold 4.440148284472527
+5.044421866536146
+year 2008
+threshold 4.699606960639358
+5.042234778404236
+year 2009
+threshold 4.063306167908017
+4.734533265233036
+year 2010
+threshold 4.399193269014359
+4.552131772041323
+year 2011
+threshold 4.128573745675386
+4.385386690497398
+year 2012
+threshold 3.8279383275657874
+4.4542451351880965
+year 2013
+threshold 4.218816870823504
+4.760646790266036
+year 2014
+threshold 4.063427954167128
+4.480550944805149
+year 2015
+threshold 4.446748818084596
+5.076450616121289
+year 2016
+threshold 4.221130492910739
+5.151680186390872
+Saved computed bloom timing for SSoG (sat) to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC209\20260119_002738\runs\bt_SGC2_PP123_ann_lin_med_exdj0\ecospace_bloom_timing_SSoG_SC209_bt_SGC2_PP123_ann_lin_med_exdj0.csv
+bloom doy mean, C09:
+84.35897435897436
+bloom doy early and late thresholds, CO9:
+72.51017433204031
+96.20777438590842
+Loaded bloom timing observation data:
+Satellite (sat et al): (14, 4)
+Satellite (Gower et al): (17, 4)
+C09: (39, 4)
+Ecospace (Satellite): (14, 4)
+Ecospace (C09): (39, 4)
+C09 1D Model
+late bloom DoY: 96.05488023807051
+average bloom DoY 84.35897435897436
+early bloom DoY: 72.66306847987822
+Satellite
+late bloom DoY: 106.56981125166013
+average bloom DoY 87.64285714285714
+early bloom DoY: 68.71590303405415
+
+Evaluation Statistics:
+sat: R = 0.797, RMSE = 11.74, MAE = 10.29, Bias = 0.71, Obs Ïƒ = 18.93, Model Ïƒ = 12.48, Willmott = 0.851
+C09: R = 0.360, RMSE = 13.26, MAE = 10.26, Bias = 0.41, Obs Ïƒ = 11.70, Model Ïƒ = 11.74, Willmott = 0.616
+Saved evaluation stats to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC209\20260119_002738\runs\bt_SGC2_PP123_ann_lin_med_exdj0\ecospace_bloom_timing_stats_SC209_bt_SGC2_PP123_ann_lin_med_exdj0.csv
+
+Categorical Agreement:
+Satellite: 11/14 years agree in category
+C09: 18/39 years agree in category
+Saved categorical/timing agreement stats to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC209\20260119_002738\runs\bt_SGC2_PP123_ann_lin_med_exdj0\ecospace_bloom_timing_agreement_SC209_bt_SGC2_PP123_ann_lin_med_exdj0.csv

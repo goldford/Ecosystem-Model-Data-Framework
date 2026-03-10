@@ -1,7 +1,7 @@
 
 """
 ecospace_eval_config.py
-Author: G Oldford, 2025
+Author: G Oldford, 2026
 
 Description:
 This script stores config params that the ecospace eval scripts have in common (single run)
@@ -14,12 +14,13 @@ import pandas as pd # would rather not do imports here
 import os
 from typing import Dict, List
 
+
 # -------------------------------------------
 # General settings
 # -------------------------------------------
-ECOSPACE_SC = "SC201"
-ECOSPACE_SC_FULL = "SC201"
-ECOPATH_F_NM = "ECOSPACE_KEYRUN_LTL_2025_Carb_3day_ewe6_7_19295_v16_BigPC"
+ECOSPACE_SC = "SC215"
+ECOSPACE_SC_FULL = "SC215"
+ECOPATH_F_NM = "LTL_Carb_3day_ewe6_7_19295_v18_BigPC_ECOSPACEPARAMZ"
 ECOSPACE_RAW_DIR = f"C://Users//Greig//Documents//EwE output//{ECOPATH_F_NM}//Ecospace_{ECOSPACE_SC_FULL}//asc//"
 
 FIGS_P = "../../figs"
@@ -45,12 +46,79 @@ EWE_COLS = 93
 SKIPROWS = 6 # header
 
 
+# -------------------------------------------
+#  nutrient relevant detritus POC workaround
+# -------------------------------------------
+
+# ecospsace doesn't output detrital groups, but can export from the output window a csv (1d)
+# this links to it
+NU_POC_RELATIVE_CSV = rf"{NC_PATH_OUT}/ECOSPACE_Diag_Carb_36Day3Day_May 2025_graph_Relative Biomass_POC_{ECOSPACE_SC}.csv"
+# column inside  CSV to use
+NU_POC_REL_COL = "DE1-POC"
+NU_POC_DIAG_COL_SUBSTR = "DE1-POC"
+
+# nutr flux ASC are loaded into NC for easier access, ignoring spinup; this loads for later
+NUTR_FLUX_ASC = {
+    "N_FLUX_MULT": {
+        "template": r"..//..//data//forcing//ECOSPACE_in_3day_nutrld_fromASC_202601//XLD_normalised_{}_{:02d}.asc",
+        "units": "1",
+        "description": "Relative nutrient flux multiplier (normalised to 1) used by Ecospace.",
+        "zero_to_nan": False,   # retain zeros if any occur
+        "freq_days": 3,         # optional metadata, spacing of ASC sequence
+        "start_year": 1980,     # useful for future automation
+    },
+}
+
+
+# -------------------------------------------
+# 1 b - B before and after spin-up
+# -------------------------------------------
+
+ES_GROUPS_RELB = {
+    "NK1-COH", "NK2-CHI", "NK3-FOR",
+    "ZF1-ICT",
+    "ZC1-EUP", "ZC2-AMP", "ZC3-DEC", "ZC4-CLG", "ZC5-CSM",
+    "ZS1-JEL", "ZS2-CTH", "ZS3-CHA", "ZS4-LAR",
+    "PZ1-CIL", "PZ2-DIN", "PZ3-HNF",
+    "PP1-DIA", "PP2-NAN", "PP3-PIC",
+    "BA1-BAC",
+}
+
+ES_GROUPS_ECOPATH_B = {
+    "NK1-COH": 0.0046,
+    "NK2-CHI": 0.00018,
+    "NK3-FOR": 0.28,
+    "ZF1-ICT": 0.03,
+    "ZC1-EUP": 0.6,
+    "ZC2-AMP": 0.52,
+    "ZC3-DEC": 0.09,
+    "ZC4-CLG": 0.64,
+    "ZC5-CSM": 0.5,
+    "ZS1-JEL": 0.003,
+    "ZS2-CTH": 0.03,
+    "ZS3-CHA": 0.26,
+    "ZS4-LAR": 0.04,
+    "PZ1-CIL": 1.1,
+    "PZ2-DIN": 0.87,
+    "PZ3-HNF": 0.46,
+    "PP1-DIA": 2.31,
+    "PP2-NAN": 1.50,
+    "PP3-PIC": 0.35,
+    "BA1-BAC": 0.17,
+    "DE2-DOC": 8,
+    "DE1-POC": 10.1
+}
+
+ES_START_SPINUP = "1978-01-02"
+ES_END_SPINUP =   "1979-12-31"
+
+
 
 # -------------------------------------------
 # Prep 2 - mcewan seasonal eval
 # -------------------------------------------
 
-MW_SHOW_PLTS = True # causes halt of pipeline - optional
+MW_SHOW_PLTS = False # causes halt of pipeline - optional
 MW_SEASON_DEF: Dict[str, List[int]] = {
     "Winter": [11,12, 1, 2],
     "Spring": [3, 4, 5],
@@ -60,7 +128,7 @@ MW_SEASON_DEF: Dict[str, List[int]] = {
 MW_GROUP_MAP = {
     "Diatoms": "PP1-DIA",
     "Nano":    "PP2-NAN",
-    "Other":   "PP3-PIC",  # adjust if your "Other" aggregates differently
+    "Other":   "PP3-PIC",  # adjust if Other aggregates differently
 }
 MW_GROUP_COLORS = {
     "Diatoms": "#1f77b4",
@@ -98,7 +166,7 @@ MW_END_DATE   = '2018-12-31'
 # Prep 2 - nemcek dataset eval
 # -------------------------------------------
 
-NM_SHOW_PLTS = True # causes halt of pipeline - optional
+NM_SHOW_PLTS = False # causes halt of pipeline - optional
 
 SSC_MO_F = "SalishSeaCast_biology_2008.nc"
 SSC_GRD_F = "ubcSSnBathymetryV21-08_a29d_efc9_4047.nc"
@@ -130,6 +198,7 @@ NM_APPLY_NEMCEK_SEASON = False
 # -------------------------------------------
 
 QU39_SHOW_PLTS = False # causes halt of pipeline - optional
+QU39_SHOW_SSC_BXPLTS = False
 QU39_DO_ECOSPACE_MATCHING = True       # Perform Ecospace matching
 QU39_DOWNLOAD_SSC = False              # Download SSC ERDDAP files
 QU39_MATCH_SSC = True                  # Match existing SSC files
@@ -172,10 +241,23 @@ QU39_DO_HIST = False
 BT_DOMAIN_CONFIG_PATH = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Framework/data/evaluation"
 BT_DOMAIN_FILE = "analysis_domains_suchy.yml"
 BT_SAT_MASK_PF = r'../../data/evaluation/suchy_ecospace_mask.nc'
-BT_RECOMPUTE_BLOOM_TIMING_SAT = False  # Set to True to force recomputation as needed, saves time
+
+BT_RECOMPUTE_BLOOM_TIMING_SAT = True  # Set to True to force recomputation as needed, saves time
 BT_RECOMPUTE_BLOOM_TIMING_C09 = True
+
 BT_START_YEAR = 1980 # analysis years (exclude spinup?)
 BT_END_YEAR = 2018
+
+BT_CREATE_MASKS = True  # Set to True to regenerate masks
+
+# 20260102 - we may look at just applying this to that one year - or year by year would be ideal
+# SGC2 is more accurate to map in suchy pub, but in 2005 clouds mask northern portion, affecting accuracy so SGC3 trims north
+# results somewhat sensitive
+BT_MASK_REGNM = "SGC4"
+BT_USEC09_MASK_FOR_SAT = False # overrides above!
+BT_USE_SAT_MASK_CO9 = True
+BT_C09_ROW = 100 # overridden by above!
+BT_C09_COL = 52
 
 BT_CSV_SUCHY_PF = f"..//..//data//evaluation//ecospace_bloom_timing_SSoG_{ECOSPACE_SC}.csv"
 BT_CSV_ALLEN_PF = f"..//..//data//evaluation//ecospace_bloom_timing_C09_{ECOSPACE_SC}.csv"
@@ -184,32 +266,27 @@ BT_CSV_ALLEN_PF = f"..//..//data//evaluation//ecospace_bloom_timing_C09_{ECOSPAC
 #OK with run 96 this is first time model fit has been okay with all pp groups
 # VARIABLES_TO_ANALYZE_SAT = ["PP1-DIA"] #for 88_2 - pp1-dai only, annual, keep janfeb
 BT_VARS_TO_ANALYZE_SAT = ["PP1-DIA", "PP2-NAN", "PP3-PIC"]
-BT_ANNUAL_AVG_METHOD_SAT = "annual" # should average bloom compared against be from all years, or just one year
+BT_ANNUAL_AVG_METHOD_SAT = "annual" # 'annual' or 'all' - should average bloom compared against be from all years, or just one year
 BT_VARS_TO_ANALYZE_C09 = ["PP1-DIA"]
 BT_ANNUAL_AVG_METHOD_C09 = "annual" # annual or all (this is always annual for C09 PCT MAX method)
 
 # Bloom detection method
-BT_LOG_TRANSFORM_SAT = True
-BT_MEAN_OR_MEDIAN_SAT = "median"
+BT_LOG_TRANSFORM_SAT = False #
+BT_MEAN_OR_MEDIAN_SAT = "median" # 'median" or "mean"
 BT_THRESHOLD_FACTOR_SAT = 1.05
 BT_SUB_THRESHOLD_FACTOR_SAT = 0.7
 
-BT_LOG_TRANSFORM_C09 = True
+BT_EXCLUDE_DEC_JAN_SAT = False # working
+BT_EXCLUDE_DEC_JAN_C09 = False
+
+BT_LOG_TRANSFORM_C09 = False
 BT_USE_PCT_MAX_C09 = False # new method added 2025-9-12 GO
 BT_PCT_MAX_C09 = 0.9
 BT_PCT_MAX_WINDOW_DAYS_C09 = 6
 
-# use mask c09 instead of pnt?
-BT_CREATE_MASKS = True  # Set to True to regenerate masks
-BT_MASK_REGNM = "SGC3" # SGC2 is more accurate to map in suchy pub, but in 2005 clouds mask northern portion, affecting accuracy so SGC3 trims north
-BT_USE_SAT_MASK_CO9 = True
-BT_USEC09_MASK_FOR_SAT = False
 
 BT_DO_NUTRIENTS = False # another script does this now (#9?)
 # OVERRIDE_REDFIELD = True # added by GO to help eval 2025-06-03
-
-BT_EXCLUDE_DEC_JAN_SAT = False # not hooked up ?
-BT_EXCLUDE_DEC_JAN_C09 = False
 
 BT_MIN_Y_TICK = 38
 
@@ -222,6 +299,7 @@ BT_MIN_Y_TICK = 38
 Z_F_SEAS = "Zoopl_SofG_1996-2018_df_summary.csv" # this is output by long R script
 Z_F_TOWLEV = "Zooplankton_B_C_gm2_EWEMODELGRP_Wide_NEMO3daymatch.csv" # this is output by short one
 Z_P_PREPPED = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/4. Zooplankton/Zoop_Perryetal_2021/MODIFIED"
+Z_F_MATCH = f"Zooplankton_matched_to_model_out_{ECOSPACE_SC}.csv" # ecospace matched to zoop data
 
 # USER SETTING: choose one season and plot type ('bar' or 'line')
 ZP_SEASON_CHOICE = 'Spring'  # e.g., 'Winter','Spring','Summer','Fall'
@@ -243,7 +321,12 @@ ZP_FRIENDLY_MAP_ZC = {
     'misc': 'Other',
     'Total': 'Total'
 }
-ZP_LOG_TRANSFORM = True
+ZP_LOG_TRANSFORM = False
+ZP_SHOW_CNTS = True             # annotate n_tows
+ZP_ANOM_ALL_SEASONS = True     # True => loop Winter/Spring/Summer/Fall
+ZP_MAKE_SCATTER = True          # make scatter figs too
+ZP_SCATTER_LOG10 = False         # tow-level scatter uses log10 axes
+
 ZP_YEAR_START = 2000
 ZP_YEAR_END   = 2018
 
@@ -252,124 +335,202 @@ ZP_FULLRN_END = 2018
 
 ZP_SHOW_CNTS = True
 
+# -------------------------------------------------------------------------
+# Anomaly climatology weighting (sampling-effort imbalance)
+#
+# Problem: tow sampling effort is uneven across years (often far more tows in
+# recent years). If the climatology (mean/std) is computed by pooling all tows,
+# heavily sampled years dominate the baseline and their anomalies tend to be
+# closer to 0 by construction. If the climatology is computed from annual means
+# with equal-year weighting, sparsely sampled years (e.g., 1–2 tows) can exert
+# disproportionate influence because their annual mean is noisy.
+#
+# These options control how the climatological mean/std are estimated:
+#   - "tow": use all tows pooled (effort-weighted; dominated by sampled years)
+#   - "year_equal": use annual means; each year weight=1 (year-balanced)
+#   - "year_weighted": use annual means with year weights ~ (n_tows**power),
+#       optionally capped, and with a minimum tows-per-year threshold.
+# -------------------------------------------------------------------------
+ZP_ANOM_CLIM_MODE = "year_weighted"      # or "tow" / "year_equal"
+ZP_ANOM_CLIM_WEIGHT_POWER = 0.5         # sqrt(n) compromise
+ZP_ANOM_CLIM_WEIGHT_CAP = 25            # optional cap
+ZP_ANOM_CLIM_MIN_TOWS_PER_YEAR = 3      # years with <3 tows won’t define baseline
+
+# -------------------------------------------------------------------------
+# Optional tow-eligibility filter (to mirror Ecosim workflow)
+#   - "deep_or_complete": keep tows with (tow_prop >= min_prop) OR (start_depth >= min_start_depth_m)
+#   - "none": keep all tows
+# NOTE: if changed, set RECOMPUTE_MATCH=True! or delete the old matched CSV.
+# -------------------------------------------------------------------------
+ZP_TOW_FILTER_MODE = "none"   # {"deep_or_complete", "none"}
+ZP_TOW_MIN_PROP = 0.7
+ZP_TOW_MIN_START_DEPTH_M = 150.0
+ZP_TOW_MAX_BOTTOM_DEPTH_M = None   # optional additional cutoff
+
+
 
 # -------------------------------------------
-# evaluation 6 - nutrient plots
-# -------------------------------------------
-NU_F_PREPPED = f"{EVALOUT_P}//nutrients_ios_csop_combined_sampled.csv"
 
-NU_FREE_AVG_INIT = 18 # see ecosim_data_prep_2_nutrients.py, depth average 18 N, umol /L
-NU_P_FREE_INIT = 0.78 # must be updated when ecosim changes
-#C_TO_N_RATIO = 106 / 16  # molar Redfield ratio
-NU_PLT_YR_ST = 1980
+# =============================================================================
+# Evaluation 6 – nutrients (observations vs Ecospace; optional Ecosim overlay)
+# =============================================================================
+
+# ---- Inputs ----
+NU_F_PREPPED = os.path.join(EVALOUT_P, "nutrients_ios_csop_combined_sampled.csv")
+
+# Plot window (inclusive)
+NU_PLT_YR_ST = 2000
 NU_PLT_YR_EN = 2018
 
-NU_BOUND_GROUPS = [1, 2, 3, 4, 5,
-                  6, 7, 8, 9, 10,
-                  11, 12, 13, 14, 15,
-                  16, 17, 18, 19, 20]
-# N_BOUND_GROUPS = [17, 18, 19]
-# must update when Ecopath changes
-NU_GROUPS_ECOPATH_B = {
-    1: 0.0046,  # NK1-COH
-    2: 0.00018, # NK2-CHI
-    3: 0.28,    # NK3-FOR
-    4: 0.03,    # ZF1-ICT
-    5: 0.6,     # ZC1-EUP
-    6: 0.52,    # ZC2-AMP
-    7: 0.09,    # ZC3-DEC
-    8: 0.64,    # ZC4-CLG
-    9: 0.5,     # ZC5-CSM
-    10: 0.003,  # ZS1-JEL
-    11: 0.03,   # ZS2-CTG
-    12: 0.26,   # ZS3-CHA
-    13: 0.04,   # ZS4-LAR
-    14: 1.1,    # PZ1-CIL
-    15: 0.87,   # PZ2-DIN
-    16: 0.46,   # PZ3-HNF
-    17: 2.31, #* 2.5,   # PP1-DIA
-    18: 1.5, #* 1.6,    # PP2-NAN
-    19: 0.35, #* 1.5,   # PP3-PIC
-    20: 0.17,   # BA1-BAC
-    21: 4.3,    # DE2-DOC
-    22: 10.1    # DE1-POC
+# Observation filter window (inclusive)
+NU_OBS_YR_ST = 2000
+NU_OBS_YR_EN = 2018
+
+# ---- Observation -> inventory settings ----
+NU_POOL_BY_CELL = True
+
+NU_ZMIN_M = 0.1
+NU_ZMAX_M = 20.0
+
+# Profile handling (used by ecospace_eval_6a_nutrientsmatched.py)
+NU_REQUIRE_FULL_COVERAGE = True
+NU_SURFACE_PAD_TOL_M = 2.0
+NU_DEEP_PAD_TOL_M = 2.0
+NU_DEPTH_EXTRAPOLATE = True
+NU_ALLOW_SINGLE_DEPTH = False
+
+NU_OBS_VALUE_MODE = "integral" # how to compute depth integration = average or integral (aerial = integral)
+
+NU_OBS_BIN_AVG_TYPE = "mean"  # {"mean", "median"}
+NU_MIN_DEPTHS_PER_CAST = 2
+NU_MIN_MAXDEPTH_M = 15.0
+
+# Time matching tolerance (days) when pairing obs to model (matched series)
+NU_TIME_TOL_DAYS = 7
+
+# Plot controls
+NU_SHOW_PLOT = True
+NU_INCLUDE_POC_DIAG = False
+NU_DEBUG_POC = False
+NU_DEBUG_SAVE_DF = False
+
+# Force a full biweekly axis (1..NU_BIWEEK_MAX) even if some bins are missing
+NU_FORCE_FULL_BIWEEK_AXIS = True
+NU_BIWEEK_MAX = 26
+
+
+# ---- Initialization anchoring and flux multiplier ----
+# Bound/free pools inferred from model biomasses, then decomposed as:
+#   N_free(t) = max(0, N_total_init_used - N_bound(t))
+# where N_total_init_used and N_bound(t) can optionally incorporate a flux multiplier.
+#
+# - NU_BOUND_INIT_MODE:
+#     "ecopath"   -> use NU_BOUND_INIT_GNM2
+#     "t0_series" -> use the first available model slice as the bound anchor
+# - NU_FREE_INIT_MODE:
+#     "config"            -> use NU_FREE_INIT_GNM2
+#     "t0_preserve_total" -> adjust free so total stays NU_TOTAL_INIT_GNM2
+#                            while using the chosen bound-init anchor
+NU_BOUND_INIT_MODE = "t0_series"          # {"ecopath", "t0_series"}
+NU_T0_SPATIAL_REDUCER = "mean"            # {"mean", "median"} across cells at t0 (for t0_series)
+NU_T0_PER_SERIES = True                   # compute t0 per series ("matched" vs "box")
+
+NU_FREE_INIT_MODE = "t0_preserve_total"   # {"config", "t0_preserve_total"}
+NU_DEBUG_INIT_ANCHOR = False
+
+# Flux multiplier (optional)
+NU_USE_FLUX_MULT = True
+NU_FLUX_MULT_COL = "N_FLUX_MULT"
+NU_FLUX_MULT_FILL = 1.0
+
+# How to apply the multiplier:
+# - "scale_free":  N_free_used = N_free * mult
+# - "scale_total": N_free_used = (N_total_init_used * mult) - N_bound(t)
+NU_FLUX_APPLY_MODE = "scale_free"         # {"scale_free", "scale_total"}
+
+
+# ---- Model series definitions ----
+# "matched": model sampled at each obs location/time (then pooled)
+# "box":     model sampled over a fixed rectangle of cells (then pooled)
+NU_MODEL_SERIES = ["box", "matched"]
+
+# Box coordinates are given as (row0, row1, col0, col1), inclusive bounds.
+# This is a fixed region-of-interest, not a per-observation buffer.
+NU_MODEL_SAMPLE_BOX = (90, 98, 46, 55)
+
+# Optional stride when sampling within NU_MODEL_SAMPLE_BOX (1 = sample every cell)
+NU_MODEL_SAMPLE_STRIDE = 1
+
+# Box sampling window (inclusive)
+NU_MODEL_SAMPLE_YR_ST = 2000
+NU_MODEL_SAMPLE_YR_EN = 2018
+
+# When aggregating across cells within each (year, biweekly)
+NU_MODEL_SAMPLE_SPATIAL_REDUCER = "mean"  # {"mean", "median"}
+
+# If True, require both "matched" and "box" to exist before computing combined outputs
+NU_REQUIRE_BOTH_FOR_AGG = False
+
+
+# ---- Model pools and conversions (g N per g C) ----
+NU_MODEL_GROUPS = [
+    "NK1-COH", "NK2-CHI", "NK3-FOR",
+    "ZF1-ICT",
+    "ZC1-EUP", "ZC2-AMP", "ZC3-DEC", "ZC4-CLG", "ZC5-CSM",
+    "ZS1-JEL", "ZS2-CTH", "ZS3-CHA", "ZS4-LAR",
+    "PZ1-CIL", "PZ2-DIN", "PZ3-HNF",
+    "PP1-DIA", "PP2-NAN", "PP3-PIC",
+    "BA1-BAC",
+    "DE1-POC",
+]
+
+# Variables pulled from Ecospace output (must exist in the NetCDF)
+NU_EXTRACT_GRPS = NU_MODEL_GROUPS
+NU_EXTRACT_EXTRA_VARS = [NU_FLUX_MULT_COL] if NU_USE_FLUX_MULT else []
+
+NU_C_TO_N_LIVING = 0.176
+NU_C_TO_N_DOM = 0.15
+NU_C_TO_N_POM = 0.07
+
+# Group-specific overrides
+NU_C_TO_N_BY_GROUP = {
+    "DE1-POC": NU_C_TO_N_POM,
 }
 
-NU_INCLUDE_GRPS = [
-    "NK1-COH", "NK2-CHI", "NK3-FOR",
-    "ZF1-ICT", "ZC1-EUP", "ZC2-AMP",
-    "ZC3-DEC", "ZC4-CLG", "ZC5-CSM",
-    "ZS1-JEL", "ZS2-CTH", "ZS3-CHA",
-    "ZS4-LAR", "PZ1-CIL", "PZ2-DIN",
-    "PZ3-HNF", "PP1-DIA", "PP2-NAN",
-    "PP3-PIC", "BA1-BAC",
-    "DE1-POC", "DE2-DOC"
-]
-
-NU_PLT_GRPS = [
-    "PP1-DIA", "PP2-NAN", "PP3-PIC"
-]
-
-NU_OBS_AVG_TYPE = "mean" # mean, median
-
-TOT_B_INIT = 0
-for group_col in NU_BOUND_GROUPS:
-    INIT_B = NU_GROUPS_ECOPATH_B[group_col]
-    TOT_B_INIT += INIT_B
-
-N_B_INIT = NU_FREE_AVG_INIT *  (1 - NU_P_FREE_INIT) / NU_P_FREE_INIT # inferred absolute amount bound in biomass in nitrogen units (see text)
+def _nu_c_to_n(grp: str) -> float:
+    return float(NU_C_TO_N_BY_GROUP.get(grp, NU_C_TO_N_LIVING))
 
 
-# -------------------------------------------
-# evaluation 7 - taylor plots
-# -------------------------------------------
+# ---- Initial N inventories (g N m-2) ----
+# These define the total inventory reference. If NU_BOUND_INIT_MODE="t0_series",
+# the bound anchor is taken from the model, while the total remains fixed.
+NU_FREE_INIT_GNM2 = 3.5
+NU_BOUND_INIT_GNM2 = sum(float(ES_GROUPS_ECOPATH_B[g]) * _nu_c_to_n(g) for g in NU_MODEL_GROUPS if g in ES_GROUPS_ECOPATH_B)
+NU_TOTAL_INIT_GNM2 = float(NU_FREE_INIT_GNM2 + NU_BOUND_INIT_GNM2)
+
+# Convenience: implied initial fraction free (dimensionless)
+NU_P_FREE_INIT = float(NU_FREE_INIT_GNM2 / NU_TOTAL_INIT_GNM2) if NU_TOTAL_INIT_GNM2 > 0 else float("nan")
+
+
+# ---- Outputs (produced by ecospace_eval_6a_nutrientsmatched.py) ----
+NU_OBS_BIWEEK_CSV = os.path.join(EVALOUT_P, f"ecospace_{ECOSPACE_SC}_nutrients_biweek_obs.csv")
+NU_MODEL_MATCHED_BIWEEK_CSV = os.path.join(EVALOUT_P, f"ecospace_{ECOSPACE_SC}_nutrients_biweek_model_matched.csv")
+NU_MODEL_BOX_BIWEEK_CSV = os.path.join(EVALOUT_P, f"ecospace_{ECOSPACE_SC}_nutrients_biweek_model_box.csv")
+
+
+# ---- Optional: overlay Ecosim series on Ecospace nutrient plots ----
+NU_OVERLAY_ECOSIM = True
+NU_ECOSIM_NUTRIENTS_CSV = os.path.join(EVALOUT_P, f"ecosim_{ECOSPACE_SC}_onerun_B_dates_seasons_nutrients.csv")
+NU_ECOSIM_MODEL_COL = "model_N_free_used_gN_m2"
+NU_ECOSIM_LABEL = "Ecosim (1D)"
+
+
+# =============================================================================
+# Evaluation 7 – Taylor plots
+# =============================================================================
+
 TY_STATS_FPAT_SPC_FMT = "ecospace_bloom_timing_stats_*.csv"
 TY_STATS_FPAT_SIM_FMT = "ecosim_bloom_eval_stats_*.csv"
 
 TY_STATS_F_SPC_FMT = r"^ecospace_bloom_timing_stats_(.+)\.csv$"
 TY_STATS_F_SIM_FMT = r"^ecosim_bloom_eval_stats_(.+)\.csv$"
-
-
-# Z_F_SEAS = "Zoopl_SofG_1996-2018_df_summary.csv" # this is output by long R script
-# Z_F_TOWLEV = "Zooplankton_B_C_gm2_EWEMODELGRP_Wide_NEMO3daymatch.csv" # this is output by short one
-# Z_P_PREPPED = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/4. Zooplankton/Zoop_Perryetal_2021/MODIFIED"
-#
-# # Mapping from obs column names to numeric column indices in the model output
-# Z_GROUP_MAP = {
-#     'ZF1-ICT': 4,
-#     'ZC1-EUP': 5,
-#     'ZC2-AMP': 6,
-#     'ZC3-DEC': 7,
-#     'ZC4-CLG': 8,
-#     'ZC5-CSM': 9,
-#     'ZS1-JEL': 10,
-#     'ZS2-CTH': 11,
-#     'ZS3-CHA': 12,
-#     'ZS4-LAR': 14,
-# }
-#
-# # USER SETTING: choose one season and plot type ('bar' or 'line')
-# ZP_SEASON_CHOICE = 'Spring'  # e.g., 'Winter','Spring','Summer','Fall'
-# ZP_PLOT_TYPE = 'bar'     # 'bar' or 'line'
-# # USER SETTING: toggle friendly labels
-# ZP_USE_FRIENDLY_LABELS = True  # set False to use cryptic codes
-# ZP_FRIENDLY_MAP_ZC = {
-#     'ZF1-ICT': 'Ichthyo',
-#     'ZC1-EUP': 'Euphausiids',
-#     'ZC2-AMP': 'Amphipods',
-#     'ZC3-DEC': 'Decapods',
-#     'ZC4-CLG': 'Lg. Calanoid Copepods',
-#     'ZC5-CSM': 'Other Copepods',
-#     'ZS1-JEL': 'Jellyfish',
-#     'ZS2-CTH': 'Ctenophores',
-#     'ZS3-CHA': 'Chaetognaths',
-#     'ZS4-LAR': 'Larvaceans',
-#     'ZF1-ICH': 'Ichthyoplankton',
-#     'misc': 'Other',
-#     'Total': 'Total'
-# }
-# ZP_LOG_TRANSFORM = True
-# ZP_YEAR_START = 2000
-# ZP_YEAR_END   = 2018
-#
-# ZP_SHOW_CNTS = False

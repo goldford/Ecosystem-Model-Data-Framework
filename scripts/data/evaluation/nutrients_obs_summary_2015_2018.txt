@@ -1,0 +1,15 @@
+Nutrients observation summary (0.1–20 m)
+Years: 2015–2018 (end-exclusive input)
+Depth window: 0.1–20.0 m
+Biweekly agg: median
+Pool-by-cell: False
+
+--- Annual mean (equal-weight across biweekly climatology bins) ---
+Annual mean conc: 12.20 umol/L
+Annual mean inventory: 3.401 g N m-2
+
+--- Winter baseline (configured WINTER_BINS) ---
+Winter mean conc: 19.49 umol/L
+Winter mean inventory: 5.433 g N m-2
+
+Note: If some biweekly bins are missing, annual means ignore NaNs.

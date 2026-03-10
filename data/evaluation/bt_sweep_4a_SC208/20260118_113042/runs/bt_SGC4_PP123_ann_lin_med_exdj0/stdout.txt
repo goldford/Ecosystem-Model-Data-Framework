@@ -1,0 +1,90 @@
+Saved 2D mask to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC208\20260118_113042\_cache\suchy_ecospace_mask_SGC4.nc
+1D index (row, col, depth): (np.int64(52), np.int64(100), np.float64(370.68523301071156))
+Loaded bloom timing from cached files: C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC208\20260118_113042\_cache\ecospace_bloom_timing_C09_SC208.csv
+computing bloom timing
+2003
+2004
+2005
+2006
+2007
+2008
+2009
+2010
+2011
+2012
+2013
+2014
+2015
+2016
+year 2003
+threshold 4.690191785618664
+4.105528667569161
+year 2004
+threshold 4.92159577365965
+5.098794788122175
+year 2005
+threshold 4.996908275038007
+5.185839414596561
+year 2006
+threshold 4.857995015010238
+4.622661605477334
+year 2007
+threshold 4.469320527277887
+5.409768447279931
+year 2008
+threshold 5.034148463420569
+5.1870338320732134
+year 2009
+threshold 3.9586138609796753
+4.355693504214291
+year 2010
+threshold 4.785891760513185
+4.2696632891893405
+year 2011
+threshold 4.114518707804382
+4.372750446200373
+year 2012
+threshold 4.202367179095741
+4.666083231568338
+year 2013
+threshold 4.280312145128843
+4.772044658660888
+year 2014
+threshold 4.329165610671043
+4.566459670662878
+year 2015
+threshold 4.776347246021034
+5.27935625612736
+year 2016
+threshold 4.494216349348425
+4.350001901388163
+Saved computed bloom timing for SSoG (sat) to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC208\20260118_113042\runs\bt_SGC4_PP123_ann_lin_med_exdj0\ecospace_bloom_timing_SSoG_SC208_bt_SGC4_PP123_ann_lin_med_exdj0.csv
+bloom doy mean, C09:
+84.35897435897436
+bloom doy early and late thresholds, CO9:
+72.51017433204031
+96.20777438590842
+Loaded bloom timing observation data:
+Satellite (sat et al): (14, 4)
+Satellite (Gower et al): (17, 4)
+C09: (39, 4)
+Ecospace (Satellite): (14, 4)
+Ecospace (C09): (39, 4)
+C09 1D Model
+late bloom DoY: 96.05488023807051
+average bloom DoY 84.35897435897436
+early bloom DoY: 72.66306847987822
+Satellite
+late bloom DoY: 106.56981125166013
+average bloom DoY 87.64285714285714
+early bloom DoY: 68.71590303405415
+
+Evaluation Statistics:
+sat: R = 0.662, RMSE = 14.64, MAE = 11.79, Bias = -0.36, Obs Ïƒ = 18.93, Model Ïƒ = 16.14, Willmott = 0.817
+C09: R = 0.360, RMSE = 13.26, MAE = 10.26, Bias = 0.41, Obs Ïƒ = 11.70, Model Ïƒ = 11.74, Willmott = 0.616
+Saved evaluation stats to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC208\20260118_113042\runs\bt_SGC4_PP123_ann_lin_med_exdj0\ecospace_bloom_timing_stats_SC208_bt_SGC4_PP123_ann_lin_med_exdj0.csv
+
+Categorical Agreement:
+Satellite: 12/14 years agree in category
+C09: 18/39 years agree in category
+Saved categorical/timing agreement stats to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC208\20260118_113042\runs\bt_SGC4_PP123_ann_lin_med_exdj0\ecospace_bloom_timing_agreement_SC208_bt_SGC4_PP123_ann_lin_med_exdj0.csv

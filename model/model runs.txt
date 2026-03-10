@@ -1,0 +1,5 @@
+Ecospace 202 - nutrients at 0.59
+Ecospace 203 - rel nutrient flux added
+Ecospace 204 - added wind
+Ecospace 205 - raised V
+Ecospace 206 - lowered V

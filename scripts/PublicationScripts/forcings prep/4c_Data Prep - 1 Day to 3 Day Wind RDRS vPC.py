@@ -1,6 +1,6 @@
 # Data Prep - 1 Day to 3 Day Wind RDRS
 # Author: G Oldford
-# Date: Aug 7-8, 2024 - updated May 2025
+# Date: Aug 7-8, 2024 - updated Jan 2026
 #
 # Purpose:
 #   Processes daily RDRS v2.1 wind data (10m u/v components) into 3-day MAX
@@ -31,7 +31,7 @@
 #   - Ecosim `.csv` files containing 3-day-interval time series (expanded to 12x for monthly format)
 #
 # Notes:
-#   - July 28, 2025 - I added a separate pipeline for prepping nutrient loading forcing from wind stress
+#   - July 28, 2025 - dded a separate pipeline for prepping nutrient loading forcing from wind stress
 #                   - the main difference is wind stress calculated by (1) hourly STRESS calc (2) avg
 #                   - instead of: calculate wind stress from MAX wind speed over three days
 #   - The script assumes 3-day blocks throughout the year, with a special case to lump the final days.
@@ -96,7 +96,9 @@ stress_ecosim_all = []
 stress_ecosim_ntrld_all = []
 
 for iyear in range(startyear, endyear + 1):
+
     print(iyear)
+
     ds_var = nc.Dataset(os.path.join(wind_daily_p, wind_daily_f.format(iyear)))
     speed = np.sqrt(ds_var['u10m'][:] ** 2 + ds_var['v10m'][:] ** 2)
     leap = is_leap_year(iyear)

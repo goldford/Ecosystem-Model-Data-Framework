@@ -1,0 +1,94 @@
+Loaded bloom timing from cached files: C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC208\20260118_113042\_cache\ecospace_bloom_timing_C09_SC208.csv
+computing bloom timing
+2003
+2004
+2005
+2006
+2007
+2008
+2009
+2010
+2011
+2012
+2013
+2014
+2015
+2016
+C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\scripts\helpers.py:836: SettingWithCopyWarning: 
+A value is trying to be set on a copy of a slice from a DataFrame.
+Try using .loc[row_indexer,col_indexer] = value instead
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+  df['Year'] = df['Date'].dt.year # redundant?
+year 2003
+threshold 1.363177314307955
+1.4342057702824218
+year 2004
+threshold 1.363177314307955
+1.380239684709553
+year 2005
+threshold 1.363177314307955
+1.4312260657909985
+year 2006
+threshold 1.363177314307955
+1.405137855189779
+year 2007
+threshold 1.363177314307955
+1.4852389359332347
+year 2008
+threshold 1.363177314307955
+1.4446660371833975
+year 2009
+threshold 1.363177314307955
+1.4704323268711632
+year 2010
+threshold 1.363177314307955
+1.4336755627822284
+year 2011
+threshold 1.363177314307955
+1.4537341081575916
+year 2012
+threshold 1.363177314307955
+1.4961001858757972
+year 2013
+threshold 1.363177314307955
+1.439727793528109
+year 2014
+threshold 1.363177314307955
+1.5019752994571185
+year 2015
+threshold 1.363177314307955
+1.543939626153399
+year 2016
+threshold 1.363177314307955
+1.3949508847840308
+Saved computed bloom timing for SSoG (sat) to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC208\20260118_113042\runs\bt_SGC2_PP123_all_log_med_exdj1\ecospace_bloom_timing_SSoG_SC208_bt_SGC2_PP123_all_log_med_exdj1.csv
+bloom doy mean, C09:
+84.35897435897436
+bloom doy early and late thresholds, CO9:
+72.51017433204031
+96.20777438590842
+Loaded bloom timing observation data:
+Satellite (sat et al): (14, 4)
+Satellite (Gower et al): (17, 4)
+C09: (39, 4)
+Ecospace (Satellite): (14, 4)
+Ecospace (C09): (39, 4)
+C09 1D Model
+late bloom DoY: 96.05488023807051
+average bloom DoY 84.35897435897436
+early bloom DoY: 72.66306847987822
+Satellite
+late bloom DoY: 106.56981125166013
+average bloom DoY 87.64285714285714
+early bloom DoY: 68.71590303405415
+
+Evaluation Statistics:
+sat: R = 0.722, RMSE = 14.87, MAE = 11.57, Bias = -7.00, Obs Ïƒ = 18.93, Model Ïƒ = 14.44, Willmott = 0.806
+C09: R = 0.360, RMSE = 13.26, MAE = 10.26, Bias = 0.41, Obs Ïƒ = 11.70, Model Ïƒ = 11.74, Willmott = 0.616
+Saved evaluation stats to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC208\20260118_113042\runs\bt_SGC2_PP123_all_log_med_exdj1\ecospace_bloom_timing_stats_SC208_bt_SGC2_PP123_all_log_med_exdj1.csv
+
+Categorical Agreement:
+Satellite: 10/14 years agree in category
+C09: 18/39 years agree in category
+Saved categorical/timing agreement stats to C:\Users\Greig\Documents\GitHub\Ecosystem-Model-Data-Framework\data\evaluation\bt_sweep_4a_SC208\20260118_113042\runs\bt_SGC2_PP123_all_log_med_exdj1\ecospace_bloom_timing_agreement_SC208_bt_SGC2_PP123_all_log_med_exdj1.csv

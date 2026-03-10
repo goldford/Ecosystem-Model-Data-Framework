@@ -163,51 +163,117 @@ wide_raw <- df_summarised %>%
 write.csv(wide_raw, paste0(path, "Zooplankton_B_C_gm2_EWEMODELGRP_Wide.csv"), row.names = FALSE)
 
 
+```
 
+```{r}
 
-# === Task 2: ICES-Style Seasonal Anomaly Calculation (CSOG only) ===
-df_csog <- df %>% filter(Region == "Central Strait of Georgia")
+# === Task 2: ICES/Perry-Style Seasonal Anomaly Calculation (CSOG only) ===
+# 2025-12-18 THIS REVISION CONSIDERED after thinking a bit about using the _df_ or 
+# _df_summarised_ in first lines
+# cross-checked original outputs - not a major difference
 
-seasonal_means <- df_csog %>%
+set.seed(1)
+
+df_csog_tows <- df_summarised %>%
+  filter(Region == "Central Strait of Georgia")
+
+# seasonal mean across tows (only where group exists in a tow)
+seasonal_means <- df_csog_tows %>%
   group_by(Year, Season, ModelGroup) %>%
-  summarise(BCarbon_g_m2 = mean(BCarbon_g_m2, na.rm = TRUE), .groups = "drop") %>%
+  summarise(BCarbon_g_m2 = mean(BCarbon_g_m2, na.rm = TRUE), .groups="drop")
+
+# Perry-style zero handling ONLY for true zeros that exist in the computed means
+# (this will be rare if absence is mostly missing rows)
+seasonal_means2 <- seasonal_means %>%
   group_by(ModelGroup) %>%
-  mutate(min_nonzero = min(BCarbon_g_m2[BCarbon_g_m2 > 0], na.rm = TRUE),
-         BCarbon_g_m2 = ifelse(BCarbon_g_m2 == 0,
-                                runif(n(), 0, 0.5 * min_nonzero),
-                                BCarbon_g_m2)) %>%
-  select(-min_nonzero) %>%
+  mutate(
+    min_pos = suppressWarnings(min(BCarbon_g_m2[BCarbon_g_m2 > 0], na.rm=TRUE)),
+    min_pos = ifelse(is.infinite(min_pos), NA_real_, min_pos),
+    BCarbon_g_m2_adj = ifelse(BCarbon_g_m2 == 0 & !is.na(min_pos),
+                             runif(n(), 0, 0.5 * min_pos),
+                             BCarbon_g_m2),
+    Log10_B = log10(BCarbon_g_m2_adj)
+  ) %>%
   ungroup() %>%
-  mutate(Log10_BCarbon_g_m2 = log10(BCarbon_g_m2))
+  select(-min_pos)
 
-seasonal_climatology <- seasonal_means %>%
+clim <- seasonal_means2 %>%
   group_by(ModelGroup, Season) %>%
-  summarise(Climatology = mean(Log10_BCarbon_g_m2, na.rm = TRUE), .groups = "drop")
+  summarise(Climatology = mean(Log10_B, na.rm=TRUE), .groups="drop")
 
-seasonal_anoms <- seasonal_means %>%
-  left_join(seasonal_climatology, by = c("ModelGroup", "Season")) %>%
-  mutate(SeasonalAnomaly = Log10_BCarbon_g_m2 - Climatology)
+seasonal_anoms <- seasonal_means2 %>%
+  left_join(clim, by=c("ModelGroup","Season")) %>%
+  mutate(SeasonalAnomaly = Log10_B - Climatology)
 
-# Export seasonal anomalies in wide format
 seasonal_wide <- seasonal_anoms %>%
   select(Year, Season, ModelGroup, SeasonalAnomaly) %>%
   pivot_wider(names_from = ModelGroup, values_from = SeasonalAnomaly)
 
-write.csv(seasonal_wide, paste0(path, "Zooplankton_Carbon_SeasonalAnomalies_CSoG_Wide.csv"), row.names = FALSE)
+write.csv(
+  seasonal_wide,
+  paste0(path, "Zooplankton_Carbon_SeasonalAnomalies_CSoG_Wide.csv"),
+  row.names = FALSE
+)
 
-# === Visual Diagnostic: Time Series Plot ===
-ggplot(seasonal_anoms, aes(x = Year + match(Season, c("Winter", "Spring", "Summer", "Fall")) / 5,
-                           y = SeasonalAnomaly, color = ModelGroup)) +
+# Visual diagnostic
+ggplot(seasonal_anoms, aes(
+  x = Year + match(Season, c("Winter", "Spring", "Summer", "Fall")) / 5,
+  y = SeasonalAnomaly,
+  color = ModelGroup
+)) +
   geom_line() + geom_point() +
   facet_wrap(~ModelGroup, scales = "free_y") +
   theme_minimal() +
-  labs(title = "Seasonal Carbon Biomass Anomalies - CSoG",
-       x = "Year", y = "Seasonal Anomaly (log10 scale, demeaned)")
-
-cat("Saved raw transformed biomass and seasonal anomalies (CSoG only). Diagnostic plot generated.\n")
+  labs(
+    title = "Seasonal Carbon Biomass Anomalies - CSoG (tow-mean, Perry-style zeros)",
+    x = "Year",
+    y = "Seasonal Anomaly (log10 biomass - seasonal climatology)"
+  )
+# 
+# # === Task 2: ICES-Style Seasonal Anomaly Calculation (CSOG only) ===
+# df_csog <- df %>% filter(Region == "Central Strait of Georgia")
+# 
+# seasonal_means <- df_csog %>%
+#   group_by(Year, Season, ModelGroup) %>%
+#   summarise(BCarbon_g_m2 = mean(BCarbon_g_m2, na.rm = TRUE), .groups = "drop") %>%
+#   group_by(ModelGroup) %>%
+#   mutate(min_nonzero = min(BCarbon_g_m2[BCarbon_g_m2 > 0], na.rm = TRUE),
+#          BCarbon_g_m2 = ifelse(BCarbon_g_m2 == 0,
+#                                 runif(n(), 0, 0.5 * min_nonzero),
+#                                 BCarbon_g_m2)) %>%
+#   select(-min_nonzero) %>%
+#   ungroup() %>%
+#   mutate(Log10_BCarbon_g_m2 = log10(BCarbon_g_m2))
+# 
+# seasonal_climatology <- seasonal_means %>%
+#   group_by(ModelGroup, Season) %>%
+#   summarise(Climatology = mean(Log10_BCarbon_g_m2, na.rm = TRUE), .groups = "drop")
+# 
+# seasonal_anoms <- seasonal_means %>%
+#   left_join(seasonal_climatology, by = c("ModelGroup", "Season")) %>%
+#   mutate(SeasonalAnomaly = Log10_BCarbon_g_m2 - Climatology)
+# 
+# # Export seasonal anomalies in wide format
+# seasonal_wide <- seasonal_anoms %>%
+#   select(Year, Season, ModelGroup, SeasonalAnomaly) %>%
+#   pivot_wider(names_from = ModelGroup, values_from = SeasonalAnomaly)
+# 
+# write.csv(seasonal_wide, paste0(path, "Zooplankton_Carbon_SeasonalAnomalies_CSoG_Wide.csv"), row.names = FALSE)
+# 
+# # === Visual Diagnostic: Time Series Plot ===
+# ggplot(seasonal_anoms, aes(x = Year + match(Season, c("Winter", "Spring", "Summer", "Fall")) / 5,
+#                            y = SeasonalAnomaly, color = ModelGroup)) +
+#   geom_line() + geom_point() +
+#   facet_wrap(~ModelGroup, scales = "free_y") +
+#   theme_minimal() +
+#   labs(title = "Seasonal Carbon Biomass Anomalies - CSoG",
+#        x = "Year", y = "Seasonal Anomaly (log10 scale, demeaned)")
+# 
+# cat("Saved raw transformed biomass and seasonal anomalies (CSoG only). Diagnostic plot generated.\n")
 
 
 ```
+
 
 
 
