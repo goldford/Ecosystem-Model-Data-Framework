@@ -322,10 +322,10 @@ ZP_FRIENDLY_MAP_ZC = {
     'Total': 'Total'
 }
 ZP_LOG_TRANSFORM = False
-ZP_SHOW_CNTS = True             # annotate n_tows
+ZP_SHOW_CNTS = False             # annotate n_tows
 ZP_ANOM_ALL_SEASONS = True     # True => loop Winter/Spring/Summer/Fall
 ZP_MAKE_SCATTER = True          # make scatter figs too
-ZP_SCATTER_LOG10 = False         # tow-level scatter uses log10 axes
+ZP_SCATTER_LOG10 = True         # tow-level scatter uses log10 axes
 
 ZP_YEAR_START = 2000
 ZP_YEAR_END   = 2018
@@ -333,7 +333,6 @@ ZP_YEAR_END   = 2018
 ZP_FULLRN_START = 1980
 ZP_FULLRN_END = 2018
 
-ZP_SHOW_CNTS = True
 
 # -------------------------------------------------------------------------
 # Anomaly climatology weighting (sampling-effort imbalance)

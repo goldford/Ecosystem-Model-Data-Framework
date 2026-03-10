@@ -346,15 +346,15 @@ def panel_seasonal_boxplots(
         sub = df_station[["Season", obs_col, mod_col]].copy()
 
         if cfg5.LOG_TRANSFORM:
-            sub["Obs"] = np.log10(sub[obs_col] + cfg5.LOG_OFFSET)
-            sub["Model"] = np.log10(sub[mod_col] + cfg5.LOG_OFFSET)
+            sub["Observations"] = np.log10(sub[obs_col] + cfg5.LOG_OFFSET)
+            sub["SOGEM-LTL"] = np.log10(sub[mod_col] + cfg5.LOG_OFFSET)
         else:
-            sub["Obs"] = sub[obs_col]
-            sub["Model"] = sub[mod_col]
+            sub["Observations"] = sub[obs_col]
+            sub["SOGEM-LTL"] = sub[mod_col]
 
         long = sub.melt(
             id_vars="Season",
-            value_vars=["Obs", "Model"],
+            value_vars=["Observations", "SOGEM-LTL"],
             var_name="Source",
             value_name="plot_value",
         )
@@ -398,7 +398,7 @@ def panel_seasonal_boxplots(
             showfliers=False,  # match Ecosim behaviour
             hue="Source",
             ax=ax,
-            palette={"Obs": "darkorange", "Model": "blue"},
+            palette={"Observations": "darkorange", "SOGEM-LTL": "blue"},
             medianprops={"color": "white", "linewidth": 0.8}
         )
 
@@ -527,7 +527,7 @@ def plot_seasonal_boxpanels(
             ordered=True,
         )
 
-        tmp["Source"] = tmp["Source"].map({group: "Obs", model_col: "Model"})
+        tmp["Source"] = tmp["Source"].map({group: "Observations", model_col: "SOGEM-LTL"})
 
         sns.boxplot(
             data=tmp,
@@ -536,7 +536,7 @@ def plot_seasonal_boxpanels(
             hue="Source",
             ax=ax,
             showfliers=False,
-            palette={"Obs": "darkorange", "Model": "blue"},
+            palette={"Observations": "darkorange", "SOGEM-LTL": "blue"},
             medianprops={"color": "white", "linewidth": 0.8}
         )
         # ax.set_yscale("log")
@@ -602,6 +602,110 @@ def plot_seasonal_boxpanels(
     plt.close(fig)
     print(f"[5d] Saved seasonal boxplot panels → {out_plt}")
 
+# added Mar 9 2026 by GO
+def plot_scatter_total_by_season(
+    paired_long: pd.DataFrame,
+    *,
+    cfg5: Eval5Config,
+    total_group: str = "Total",
+    seasons: Optional[List[str]] = None,
+    label: str = "zoop_crust_total",
+    outname: str = "scatter_tows_total4panel",
+    log10: bool = True,
+    title_text: str = "Total crustaceans",
+) -> str:
+    """
+    Publication-style tow-level scatter:
+    one subplot per season, for a single aggregate group
+    (e.g. crustacean Total from the crustacean pass).
+    """
+    seasons = seasons or cfg5.SEASON_ORDER
+
+    d = paired_long.copy()
+    d = d.dropna(subset=["group", "obs_biomass", "model_biomass"])
+    d = d[d["group"] == total_group].copy()
+
+    if d.empty:
+        raise ValueError(f"No paired tow-level values found for group '{total_group}'.")
+
+    if log10:
+        eps = 1e-12
+        d = d[(d["obs_biomass"] > 0) & (d["model_biomass"] > 0)].copy()
+        d["obs_x"] = np.log10(d["obs_biomass"] + eps)
+        d["mod_y"] = np.log10(d["model_biomass"] + eps)
+        xlab = "Obs (log10 g C m$^{-2}$)"
+        ylab = "Model (log10 g C m$^{-2}$)"
+    else:
+        d["obs_x"] = d["obs_biomass"]
+        d["mod_y"] = d["model_biomass"]
+        xlab = "Obs (g C m$^{-2}$)"
+        ylab = "Model (g C m$^{-2}$)"
+
+    fig, axes = plt.subplots(2, 2, figsize=(10, 9), sharex=False, sharey=False)
+    axes = axes.flatten()
+
+    for i, season in enumerate(seasons[:4]):
+        ax = axes[i]
+        g = d[d["season"] == season].copy()
+
+        ax.scatter(g["obs_x"], g["mod_y"], s=18, alpha=0.6)
+
+        if len(g) > 0:
+            lo = min(g["obs_x"].min(), g["mod_y"].min())
+            hi = max(g["obs_x"].max(), g["mod_y"].max())
+            pad = 0.05 * (hi - lo if hi > lo else 1.0)
+
+            ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "--", color="k", lw=1)
+            ax.set_xlim(lo - pad, hi + pad)
+            ax.set_ylim(lo - pad, hi + pad)
+
+            if len(g) > 1:
+                r = np.corrcoef(g["obs_x"], g["mod_y"])[0, 1]
+                ax.set_title(f"{season}  r={r:.2f}  n={len(g)}")
+            else:
+                ax.set_title(f"{season}  n={len(g)}")
+        else:
+            ax.set_title(f"{season}  n=0")
+
+        ax.set_xlabel(xlab)
+        ax.set_ylabel(ylab)
+        ax.grid(True, alpha=0.3)
+
+    st = None
+    if getattr(cfg5, "ADD_FIG_SUPTITLE", True):
+        log_state = "log10" if log10 else "raw"
+        st = fig.suptitle(
+            _fig_title(
+                cfg5,
+                kind="Tow-level scatter (Obs vs Model)",
+                suffix=title_text,
+                plot_type="scatter",
+                log_state=log_state,
+            ),
+            y=0.995,
+            fontsize=14,
+        )
+        fig.tight_layout(rect=[0, 0, 1, 0.95])
+    else:
+        fig.tight_layout()
+
+    os.makedirs(cfg5.FIGSOUT_P, exist_ok=True)
+    outpath = os.path.join(
+        cfg5.FIGSOUT_P,
+        f"ecospace_{cfg5.ecospace_code}_zoop_{outname}_{label}.png",
+    )
+    fig.savefig(
+        outpath,
+        dpi=300,
+        bbox_inches="tight",
+        pad_inches=0.2,
+        bbox_extra_artists=([st] if st is not None else None),
+    )
+    plt.show()
+    plt.close(fig)
+
+    print(f"[INFO] Saved total-by-season scatter plot: {outpath}")
+    return outpath
 
 
 def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
@@ -1223,11 +1327,11 @@ def plot_anomaly_panel_paired(
         ax.grid(True, which="major", axis="both", linestyle="-", alpha=0.5, zorder=1)
 
         if plot_type.lower() == "bar":
-            ax.bar(x - w / 2, y_obs, w, label="Obs", zorder=2)
-            ax.bar(x + w / 2, y_mod, w, label="Model", zorder=2)
+            ax.bar(x - w / 2, y_obs, w, label="Observations", zorder=2)
+            ax.bar(x + w / 2, y_mod, w, label="SOGEM-LTL", zorder=2)
         else:
-            ax.plot(years, y_obs, "-o", label="Obs", zorder=2)
-            ax.plot(years, y_mod, "-o", label="Model", zorder=2)
+            ax.plot(years, y_obs, "-o", label="Observations", zorder=2)
+            ax.plot(years, y_mod, "-o", label="SOGEM-LTL", zorder=2)
 
         # Optional NPGO overlay (same axis, like the current ecospace plot)
         if npgo_ann is not None:
@@ -1530,6 +1634,259 @@ def plot_scatter_anomalies(
     return outpath
 
 
+def plot_scatter_anomalies_total_by_season(
+    paired: pd.DataFrame,
+    *,
+    cfg5: Eval5Config,
+    seasons: Optional[list[str]] = None,
+    label: str = "zoop_ZC_total",
+    outname: str = "scatter_anoms_total4panel",
+    title_text: str = "Total crustaceans",
+) -> str:
+    """
+    2x2 panel of annual anomaly scatter plots (Obs vs Model),
+    one subplot per season, for the aggregate 'Total' group.
+    """
+
+    seasons = seasons or cfg5.SEASON_ORDER
+    season_annual = {}
+
+    # build annual anomaly table for each season
+    for season in seasons:
+        ann = compute_anomalies_paired(
+            paired,
+            season=season,
+            year_range=(cfg5.START_YEAR, cfg5.END_YEAR),
+            log_transform=cfg5.LOG_TRANSFORM,
+            clim_mode=cfg5.ANOM_CLIM_MODE,
+            log_offset=cfg5.LOG_OFFSET,
+            year_weight_power=cfg5.ANOM_CLIM_WEIGHT_POWER,
+            year_weight_cap=cfg5.ANOM_CLIM_WEIGHT_CAP,
+            min_tows_per_year=cfg5.ANOM_CLIM_MIN_TOWS_PER_YEAR,
+            eps_std=cfg5.ANOM_CLIM_EPS_STD,
+        )
+        ann = ann[ann["group"] == "Total"].copy()
+        season_annual[season] = ann
+
+    fig, axes = plt.subplots(2, 2, figsize=(10, 9))
+    axes = axes.flatten()
+
+    for i, season in enumerate(seasons[:4]):
+        ax = axes[i]
+        d = season_annual[season].dropna(subset=["obs_anom", "model_anom"]).copy()
+
+        ax.scatter(d["obs_anom"], d["model_anom"], s=22, alpha=0.7)
+
+        if len(d) > 0:
+            lo = min(d["obs_anom"].min(), d["model_anom"].min())
+            hi = max(d["obs_anom"].max(), d["model_anom"].max())
+            pad = 0.05 * (hi - lo if hi > lo else 1.0)
+
+            ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "--", color="k", lw=1)
+            ax.set_xlim(lo - pad, hi + pad)
+            ax.set_ylim(lo - pad, hi + pad)
+
+            if len(d) > 1:
+                r = np.corrcoef(d["obs_anom"], d["model_anom"])[0, 1]
+                ax.set_title(f"{season}  r={r:.2f}  n={len(d)}")
+            else:
+                ax.set_title(f"{season}  n={len(d)}")
+        else:
+            ax.set_title(f"{season}  n=0")
+
+        ax.set_xlabel("Obs anomaly (z-score)")
+        ax.set_ylabel("Model anomaly (z-score)")
+        ax.grid(True, alpha=0.3)
+
+    st = None
+    if getattr(cfg5, "ADD_FIG_SUPTITLE", True):
+        st = fig.suptitle(
+            _fig_title(
+                cfg5,
+                kind="Anomaly scatter (Obs vs Model)",
+                years=(cfg5.START_YEAR, cfg5.END_YEAR),
+                plot_type="scatter",
+                log_state="anom z-score",
+                suffix=title_text,
+            ),
+            y=0.995,
+            fontsize=14,
+        )
+        fig.tight_layout(rect=[0, 0, 1, 0.95])
+    else:
+        fig.tight_layout()
+
+    os.makedirs(cfg5.FIGSOUT_P, exist_ok=True)
+    outpath = os.path.join(
+        cfg5.FIGSOUT_P,
+        f"ecospace_{cfg5.ecospace_code}_zoop_{outname}_{label}.png",
+    )
+
+    fig.savefig(
+        outpath,
+        dpi=300,
+        bbox_inches="tight",
+        pad_inches=0.2,
+        bbox_extra_artists=([st] if st is not None else None),
+    )
+    plt.show()
+    plt.close(fig)
+
+    print(f"[INFO] Saved total anomaly scatter panel: {outpath}")
+    return outpath
+
+
+
+def plot_anomaly_bars_total_by_season(
+    paired: pd.DataFrame,
+    *,
+    cfg5: Eval5Config,
+    seasons: Optional[list[str]] = None,
+    label: str = "zoop_ZC_total",
+    outname: str = "anomaly_bars_total4panel",
+    title_text: str = "Total crustaceans",
+) -> str:
+    """
+    2x2 panel of annual anomaly bar plots (Obs vs Model),
+    one subplot per season, for the aggregate 'Total' group.
+    """
+
+    seasons = seasons or cfg5.SEASON_ORDER
+    season_data = {}
+    season_counts = {}
+
+    for season in seasons:
+        annual = compute_anomalies_paired(
+            paired,
+            season=season,
+            year_range=(cfg5.START_YEAR, cfg5.END_YEAR),
+            log_transform=cfg5.LOG_TRANSFORM,
+            clim_mode=cfg5.ANOM_CLIM_MODE,
+            log_offset=cfg5.LOG_OFFSET,
+            year_weight_power=cfg5.ANOM_CLIM_WEIGHT_POWER,
+            year_weight_cap=cfg5.ANOM_CLIM_WEIGHT_CAP,
+            min_tows_per_year=cfg5.ANOM_CLIM_MIN_TOWS_PER_YEAR,
+            eps_std=cfg5.ANOM_CLIM_EPS_STD,
+        )
+        annual = annual[annual["group"] == "Total"].copy()
+        season_data[season] = annual
+
+        counts = counts_by_season_year_from_paired(
+            paired,
+            season=season,
+            group_for_counts="Total",
+            unique_index=True,
+            valid_pairs_only=True,
+        )
+        season_counts[season] = counts
+
+    fig, axes = plt.subplots(2, 2, figsize=(14, 9), sharey=True)
+    axes = axes.flatten()
+    w = 0.36
+
+    # choose a common y-range across seasons
+    vals = []
+    for season in seasons:
+        d = season_data[season]
+        vals.extend(d["obs_anom"].dropna().tolist())
+        vals.extend(d["model_anom"].dropna().tolist())
+    if vals:
+        ymin = min(vals)
+        ymax = max(vals)
+        pad = 0.12 * (ymax - ymin if ymax > ymin else 1.0)
+        ylims = (ymin - pad, ymax + pad)
+    else:
+        ylims = (-2, 2)
+
+    for i, season in enumerate(seasons[:4]):
+        ax = axes[i]
+        d = season_data[season]
+        years = sorted(d["year"].unique().tolist())
+
+        if not years:
+            ax.set_title(f"{season}  n=0")
+            ax.axhline(0, lw=1, linestyle="--", alpha=0.6)
+            ax.set_ylim(*ylims)
+            continue
+
+        d_idx = d.set_index("year")
+        x = np.arange(len(years))
+        y_obs = [d_idx.loc[yr, "obs_anom"] if yr in d_idx.index else np.nan for yr in years]
+        y_mod = [d_idx.loc[yr, "model_anom"] if yr in d_idx.index else np.nan for yr in years]
+
+        ax.axhline(0, lw=1, linestyle="--", alpha=0.6, zorder=1)
+        ax.bar(x - w/2, y_obs, width=w, label="Observations", zorder=2)
+        ax.bar(x + w/2, y_mod, width=w, label="SOGEM-LTL", zorder=2)
+
+        ax.set_xticks(x)
+        ax.set_xticklabels([str(y) for y in years], rotation=45, ha="right")
+        ax.set_title(season)
+        ax.set_ylim(*ylims)
+        ax.grid(True, axis="both", alpha=0.3, zorder=0)
+
+        if i % 2 == 0:
+            ax.set_ylabel("Anomaly (z-score)")
+
+        if i == 0:
+            ax.legend()
+
+        # annotate tow counts
+        counts = season_counts[season]
+        if cfg5.SHOW_COUNTS and counts is not None and not counts.empty:
+            cmap = dict(zip(counts["year"].astype(int), counts["n_tows"]))
+            yrange = ylims[1] - ylims[0]
+            for j, yr in enumerate(years):
+                n = cmap.get(int(yr))
+                if n is None:
+                    continue
+                y_top = np.nanmax([y_obs[j], y_mod[j]])
+                ax.text(
+                    j,
+                    y_top + 0.04 * yrange,
+                    f"{int(n)}",
+                    ha="center",
+                    va="bottom",
+                    fontsize=8,
+                )
+
+    st = None
+    if getattr(cfg5, "ADD_FIG_SUPTITLE", True):
+        st = fig.suptitle(
+            _fig_title(
+                cfg5,
+                kind="Annual anomalies (Obs vs Model)",
+                years=(cfg5.START_YEAR, cfg5.END_YEAR),
+                plot_type="bar",
+                log_state="anom z-score",
+                suffix=title_text,
+            ),
+            y=0.995,
+            fontsize=14,
+        )
+        fig.tight_layout(rect=[0, 0, 1, 0.95])
+    else:
+        fig.tight_layout()
+
+    os.makedirs(cfg5.FIGSOUT_P, exist_ok=True)
+    outpath = os.path.join(
+        cfg5.FIGSOUT_P,
+        f"ecospace_{cfg5.ecospace_code}_zoop_{outname}_{label}.png",
+    )
+
+    fig.savefig(
+        outpath,
+        dpi=300,
+        bbox_inches="tight",
+        pad_inches=0.2,
+        bbox_extra_artists=([st] if st is not None else None),
+    )
+    plt.show()
+    plt.close(fig)
+
+    print(f"[INFO] Saved total anomaly 4-panel bar plot: {outpath}")
+    return outpath
+
+
 def anomaly_comparisons(
     cfg5: Eval5Config,
     groups: Optional[List[str]] = None,
@@ -1609,6 +1966,7 @@ def anomaly_comparisons(
     out_total_last: Optional[str] = None
 
     for pass_label, pass_groups in passes:
+
         # build paired long table (tow-level) for this pass (Total is computed from pass_groups)
         paired = build_paired_long_ecospace(df_match, groups=pass_groups)
 
@@ -1617,6 +1975,38 @@ def anomaly_comparisons(
             plot_groups.append("Total")
 
         seasons_plus_all = ["All"] + list(seasons_to_run)
+
+        if cfg5.MAKE_SCATTER and pass_label.lower().startswith("zc"):
+            plot_scatter_total_by_season(
+                paired,
+                cfg5=cfg5,
+                total_group="Total",  # in crustacean pass, Total == sum(ZC*)
+                seasons=cfg5.SEASON_ORDER,
+                label=f"zoop_{pass_label}",
+                outname="scatter_tows_total4panel",
+                log10=cfg5.SCATTER_LOG10,
+                title_text="Total crustaceans",
+            )
+
+        if cfg5.MAKE_SCATTER and pass_label == "ZC":
+            plot_scatter_anomalies_total_by_season(
+                paired,
+                cfg5=cfg5,
+                seasons=cfg5.SEASON_ORDER,
+                label=f"zoop_{pass_label}",
+                outname=f"scatter_anoms_total4panel_{pass_label}",
+                title_text="Total crustaceans",
+            )
+
+        if include_total and pass_label == "ZC":
+            plot_anomaly_bars_total_by_season(
+                paired,
+                cfg5=cfg5,
+                seasons=cfg5.SEASON_ORDER,
+                label=f"zoop_{pass_label}",
+                outname=f"anomaly_bars_total4panel_{pass_label}",
+                title_text="Total crustaceans",
+            )
 
         for season in seasons_plus_all:
             season_filter = None if str(season).lower() == "all" else season
@@ -1738,6 +2128,8 @@ def anomaly_comparisons(
                     season=season,
                 )
 
+
+
     return out_panel_last or "", out_total_last
 
 
@@ -1747,7 +2139,9 @@ def run_zoop_eval(
     make_anom: Optional[bool] = None,
     groups: Optional[List[str]] = None,
 ) -> None:
+
     cfg5 = Eval5Config()
+
     if recompute_match is not None:
         cfg5.RECOMPUTE_MATCH = recompute_match
     if make_viz is not None:
