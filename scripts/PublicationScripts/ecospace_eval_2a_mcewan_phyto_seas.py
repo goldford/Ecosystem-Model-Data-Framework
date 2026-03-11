@@ -284,7 +284,7 @@ def compute_ecosim_group_seasonal() -> pd.DataFrame:
             rows.append({
                 "Group": grp,
                 "Season": season,
-                "Source": "Ecosim",
+                "Source": "1-D",
                 "Mean": float(val),
             })
 
@@ -293,7 +293,7 @@ def compute_ecosim_group_seasonal() -> pd.DataFrame:
 
 def ecospace_stats_to_long(df_model: pd.DataFrame) -> pd.DataFrame:
     out = df_model.rename(columns={"ModelMean": "Mean"}).copy()
-    out["Source"] = "Ecospace"
+    out["Source"] = "2-D"
     return out[["Group", "Season", "Source", "Mean"]]
 
 
@@ -305,7 +305,7 @@ def obs_seasonal_to_long(obs_dict, domain_key: str) -> pd.DataFrame:
             rows.append({
                 "Group": grp,
                 "Season": season,
-                "Source": "McEwan",
+                "Source": "Data",
                 "Mean": float(dom[grp][season]),
             })
     return pd.DataFrame(rows)
@@ -313,26 +313,26 @@ def obs_seasonal_to_long(obs_dict, domain_key: str) -> pd.DataFrame:
 
 def plot_stacked_three_source(df_long: pd.DataFrame, domain_label: str, out_png: str) -> None:
     groups = list(GROUP_MAP.keys())
-    sources = ["Ecospace", "Ecosim", "McEwan"]
+    sources = ["1-D", "2-D", "Data"]
 
     source_hatch = {
-        "Ecospace": "",
-        "Ecosim": "//",
-        "McEwan": "xx",
+        "1-D": "//",
+        "2-D": "",
+         "Data": "xx"
     }
 
     source_edge = {
-        "Ecospace": "black",
-        "Ecosim": "0.25",
-        "McEwan": "0.25",
+        "1-D": "0.25",
+        "2-D": "black",
+        "Data": "0.25",
     }
 
     bar_width = 0.22
     group_spacing = 1.2
     offsets = {
-        "Ecospace": -0.28,
-        "Ecosim":    0.00,
-        "McEwan":    0.28,
+        "1-D":  -0.28,
+        "2-D":  0.00,
+        "Data":    0.28,
     }
 
     centers = [i * group_spacing for i in range(len(SEASONS_ORDER))]
@@ -375,7 +375,7 @@ def plot_stacked_three_source(df_long: pd.DataFrame, domain_label: str, out_png:
             xticklabels.append(src)
 
     ax.set_xticks(xticks)
-    ax.set_xticklabels(xticklabels, rotation=0, ha="right", fontsize=7)
+    ax.set_xticklabels(xticklabels, rotation=0, ha="right", fontsize=7.5)
 
     for i, season in enumerate(SEASONS_ORDER):
         ax.text(
