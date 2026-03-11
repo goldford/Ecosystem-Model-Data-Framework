@@ -327,6 +327,10 @@ ZP_ANOM_ALL_SEASONS = True     # True => loop Winter/Spring/Summer/Fall
 ZP_MAKE_SCATTER = True          # make scatter figs too
 ZP_SCATTER_LOG10 = True         # tow-level scatter uses log10 axes
 
+# for the two-panel plot for pub - GO
+ZP_MAKE_PUB_TOTAL_PANEL = True
+ZP_PUB_PANEL_A_MODE = "anomaly_scatter"   # "tow_scatter" or "anomaly_scatter"
+
 ZP_YEAR_START = 2000
 ZP_YEAR_END   = 2018
 

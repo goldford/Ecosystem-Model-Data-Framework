@@ -39,7 +39,7 @@ import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+import string
 import netCDF4 as nc
 from datetime import datetime
 
@@ -75,8 +75,8 @@ class Eval5Config:
     NPGO_CSV: str = getattr(cfg, "NPGO_CSV", "npgo.csv")
 
     # YEARS
-    START_YEAR: int = getattr(cfg, "ZP_START_YEAR", 1980)
-    END_YEAR: int = getattr(cfg, "ZP_END_YEAR", 2018)
+    START_YEAR: int = getattr(cfg, "ZP_YEAR_START", 1980)
+    END_YEAR: int = getattr(cfg, "ZP_YEAR_END", 2018)
 
     # GROUPS (consistent w/ 5b/5c/5d)
     ZOOP_GROUPS: List[str] = field(default_factory=lambda: ["ZC1-EUP", "ZC2-AMP", "ZC3-DEC", "ZC4-CLG", "ZC5-CSM",
@@ -123,6 +123,10 @@ class Eval5Config:
     TOW_MIN_PROP: float = float(getattr(cfg, "ZP_TOW_MIN_PROP", 0.7))
     TOW_MIN_START_DEPTH_M: float = float(getattr(cfg, "ZP_TOW_MIN_START_DEPTH_M", 150.0))
     TOW_MAX_BOTTOM_DEPTH_M: Optional[float] = getattr(cfg, "ZP_TOW_MAX_BOTTOM_DEPTH_M", None)
+
+    # options for the two panel plot of seasonal anoms
+    PUB_TOTAL_PANEL: bool = getattr(cfg, "ZP_MAKE_PUB_TOTAL_PANEL", False)
+    PUB_PANEL_A_MODE: str = getattr(cfg, "ZP_PUB_PANEL_A_MODE", "anomaly_scatter")
 
 # ============================================================
 # Stage 1 — Match Zooplankton obs to Ecospace (ex-5b)
@@ -411,6 +415,16 @@ def panel_seasonal_boxplots(
             title = g
 
         ax.set_title(title)
+
+        panel_lab = f"({string.ascii_lowercase[i]})"
+        ax.text(
+            0.02, 0.98, panel_lab,
+            transform=ax.transAxes,
+            ha="left", va="top",
+            fontsize=12,
+            fontweight="bold"
+        )
+
         ax.set_xlabel("Season")
         ylabel = (
             "log10(g C m$^{-2}$ + offset)"
@@ -707,6 +721,241 @@ def plot_scatter_total_by_season(
     print(f"[INFO] Saved total-by-season scatter plot: {outpath}")
     return outpath
 
+
+def plot_pub_panel_total_single_season(
+    paired: pd.DataFrame,
+    *,
+    cfg5: Eval5Config,
+    season: str,
+    total_group: str = "Total",
+    label: str = "zoop_ZC",
+    outname: str = "pub_total_single_season",
+    title_text: str = "Total crustaceans",
+    log10_scatter: bool = True,
+) -> str:
+    """
+    Publication-style 2-panel figure for a single season:
+      (a) tow-level OR seas-lev anom Obs vs Model scatter
+      (b) annual anomaly bar plot (Obs vs Model)
+    Intended for the crustacean pass, where Total == sum(ZC*).
+    """
+
+    panel_a_mode = str(getattr(cfg5, "PUB_PANEL_A_MODE", "anomaly_scatter")).strip().lower()
+
+    annual = compute_anomalies_paired(
+        paired,
+        season=season,
+        year_range=(cfg5.START_YEAR, cfg5.END_YEAR),
+        log_transform=cfg5.LOG_TRANSFORM,
+        clim_mode=cfg5.ANOM_CLIM_MODE,
+        log_offset=cfg5.LOG_OFFSET,
+        year_weight_power=cfg5.ANOM_CLIM_WEIGHT_POWER,
+        year_weight_cap=cfg5.ANOM_CLIM_WEIGHT_CAP,
+        min_tows_per_year=cfg5.ANOM_CLIM_MIN_TOWS_PER_YEAR,
+        eps_std=cfg5.ANOM_CLIM_EPS_STD,
+    )
+    annual = annual[annual["group"] == total_group].copy()
+
+    counts = counts_by_season_year_from_paired(
+        paired,
+        season=season,
+        group_for_counts=total_group,
+        unique_index=True,
+        valid_pairs_only=True,
+    )
+
+    # -----------------------------
+    # Figure
+    # -----------------------------
+    fig, axes = plt.subplots(
+        2, 1,
+        figsize=(8.5, 9.0),
+        gridspec_kw={"height_ratios": [1.0, 1.15]},
+        constrained_layout=False,
+    )
+    ax_scatter, ax_bar = axes
+
+    # =========================================================
+    # TOP PANEL: choose between tow-level scatter or anomaly scatter
+    # =========================================================
+    if panel_a_mode == "tow_scatter":
+        d = paired.copy()
+        d = d.dropna(subset=["group", "obs_biomass", "model_biomass"])
+        d = d[(d["group"] == total_group) & (d["season"] == season)].copy()
+
+        if log10_scatter:
+            eps = 1e-12
+            d = d[(d["obs_biomass"] > 0) & (d["model_biomass"] > 0)].copy()
+            d["x"] = np.log10(d["obs_biomass"] + eps)
+            d["y"] = np.log10(d["model_biomass"] + eps)
+            xlab = "Observed biomass (log10 g C m$^{-2}$)"
+            ylab = "Model biomass (log10 g C m$^{-2}$)"
+        else:
+            d["x"] = d["obs_biomass"]
+            d["y"] = d["model_biomass"]
+            xlab = "Observed biomass (g C m$^{-2}$)"
+            ylab = "Model biomass (g C m$^{-2}$)"
+
+        ax_scatter.scatter(d["x"], d["y"], s=22, alpha=0.7)
+
+        if len(d) > 0:
+            lo = min(d["x"].min(), d["y"].min())
+            hi = max(d["x"].max(), d["y"].max())
+            pad = 0.05 * (hi - lo if hi > lo else 1.0)
+            ax_scatter.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "--", color="k", lw=1)
+            ax_scatter.set_xlim(lo - pad, hi + pad)
+            ax_scatter.set_ylim(lo - pad, hi + pad)
+
+            if len(d) > 1:
+                r = np.corrcoef(d["x"], d["y"])[0, 1]
+                ax_scatter.set_title(f"{season}: tow-level scatter  (r = {r:.2f}, n = {len(d)})")
+            else:
+                ax_scatter.set_title(f"{season}: tow-level scatter  (n = {len(d)})")
+        else:
+            ax_scatter.set_title(f"{season}: tow-level scatter  (n = 0)")
+
+        ax_scatter.set_xlabel(xlab)
+        ax_scatter.set_ylabel(ylab)
+
+    elif panel_a_mode == "anomaly_scatter":
+        d = annual.dropna(subset=["obs_anom", "model_anom"]).copy()
+
+        ax_scatter.scatter(d["obs_anom"], d["model_anom"], s=28, alpha=0.8)
+
+        if len(d) > 0:
+            lo = min(d["obs_anom"].min(), d["model_anom"].min())
+            hi = max(d["obs_anom"].max(), d["model_anom"].max())
+            pad = 0.05 * (hi - lo if hi > lo else 1.0)
+
+            ax_scatter.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "--", color="k", lw=1)
+            ax_scatter.set_xlim(lo - pad, hi + pad)
+            ax_scatter.set_ylim(lo - pad, hi + pad)
+
+            if len(d) > 1:
+                r = np.corrcoef(d["obs_anom"], d["model_anom"])[0, 1]
+                ax_scatter.set_title(f"{season}: annual anomaly scatter  (r = {r:.2f}, n = {len(d)})")
+            else:
+                ax_scatter.set_title(f"{season}: annual anomaly scatter  (n = {len(d)})")
+        else:
+            ax_scatter.set_title(f"{season}: annual anomaly scatter  (n = 0)")
+
+        ax_scatter.set_xlabel("Observed anomaly (z-score)")
+        ax_scatter.set_ylabel("Model anomaly (z-score)")
+
+        # Optional: label points by year for publication clarity
+        for _, row in d.iterrows():
+            ax_scatter.text(
+                row["obs_anom"],
+                row["model_anom"],
+                str(int(row["year"])),
+                fontsize=7,
+                alpha=0.75,
+            )
+
+    else:
+        raise ValueError(
+            f"Unknown PUB_PANEL_A_MODE='{panel_a_mode}'. "
+            "Use 'tow_scatter' or 'anomaly_scatter'."
+        )
+
+    ax_scatter.grid(True, alpha=0.3)
+    ax_scatter.text(
+        0.01, 0.98, "(a)",
+        transform=ax_scatter.transAxes,
+        ha="left", va="top",
+        fontsize=12, fontweight="bold"
+    )
+    # =========================================================
+    # BOTTOM PANEL: annual anomaly bars
+    # =========================================================
+    years = sorted(annual["year"].unique().tolist())
+    w = 0.38
+
+    if len(years) > 0:
+        d_idx = annual.set_index("year")
+        x = np.arange(len(years))
+        y_obs = [d_idx.loc[yr, "obs_anom"] if yr in d_idx.index else np.nan for yr in years]
+        y_mod = [d_idx.loc[yr, "model_anom"] if yr in d_idx.index else np.nan for yr in years]
+
+        ax_bar.axhline(0, lw=1, linestyle="--", alpha=0.7, color="k", zorder=1)
+        ax_bar.bar(x - w/2, y_obs, width=w, label="Observations", zorder=2)
+        ax_bar.bar(x + w/2, y_mod, width=w, label="SOGEM-LTL", zorder=2)
+
+        ax_bar.set_xticks(x)
+        ax_bar.set_xticklabels([str(y) for y in years], rotation=45, ha="right")
+        ax_bar.set_ylabel("Anomaly (z-score)")
+        ax_bar.set_xlabel("Year")
+        ax_bar.set_title(f"{season}: annual anomalies")
+        ax_bar.grid(True, axis="y", alpha=0.3, zorder=0)
+        ax_bar.legend()
+
+        if cfg5.SHOW_COUNTS and counts is not None and not counts.empty:
+            cmap = dict(zip(counts["year"].astype(int), counts["n_tows"]))
+            ymin, ymax = ax_bar.get_ylim()
+            yrange = ymax - ymin if ymax > ymin else 1.0
+            for j, yr in enumerate(years):
+                n = cmap.get(int(yr))
+                if n is None:
+                    continue
+                vals = [v for v in [y_obs[j], y_mod[j]] if pd.notna(v)]
+                if not vals:
+                    continue
+                y_top = np.nanmax(vals)
+                ax_bar.text(
+                    j, y_top + 0.04 * yrange, f"{int(n)}",
+                    ha="center", va="bottom", fontsize=8
+                )
+    else:
+        ax_bar.set_title(f"{season}: annual anomalies  (no data)")
+        ax_bar.axhline(0, lw=1, linestyle="--", alpha=0.7, color="k")
+
+    ax_bar.text(
+        0.01, 0.98, "(b)",
+        transform=ax_bar.transAxes,
+        ha="left", va="top",
+        fontsize=12, fontweight="bold"
+    )
+
+    # -----------------------------
+    # Figure title and save
+    # -----------------------------
+    st = None
+    if getattr(cfg5, "ADD_FIG_SUPTITLE", True):
+        st = fig.suptitle(
+            _fig_title(
+                cfg5,
+                kind="Publication panel",
+                years=(cfg5.START_YEAR, cfg5.END_YEAR),
+                season=season,
+                suffix=title_text,
+                label=label,
+                plot_type="scatter + anomaly bars",
+            ),
+            y=0.995,
+            fontsize=14,
+        )
+        fig.tight_layout(rect=[0, 0, 1, 0.96])
+    else:
+        fig.tight_layout()
+
+    os.makedirs(cfg5.FIGSOUT_P, exist_ok=True)
+    outpath = os.path.join(
+        cfg5.FIGSOUT_P,
+        f"ecospace_{cfg5.ecospace_code}_zoop_{outname}_{season}_{label}.png",
+    )
+
+    fig.savefig(
+        outpath,
+        dpi=300,
+        bbox_inches="tight",
+        pad_inches=0.2,
+        bbox_extra_artists=([st] if st is not None else None),
+    )
+    plt.show()
+    plt.close(fig)
+
+    print(f"[INFO] Saved publication panel: {outpath}")
+    return outpath
 
 def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
     print("[5c] Visualizing & computing skill stats…")
@@ -2006,6 +2255,18 @@ def anomaly_comparisons(
                 label=f"zoop_{pass_label}",
                 outname=f"anomaly_bars_total4panel_{pass_label}",
                 title_text="Total crustaceans",
+            )
+
+        if pass_label == "ZC" and cfg5.PUB_TOTAL_PANEL:
+            plot_pub_panel_total_single_season(
+                paired,
+                cfg5=cfg5,
+                season=cfg5.ANOM_SEASON_CHOICE,
+                total_group="Total",
+                label=f"zoop_{pass_label}",
+                outname="pub_total_single_season",
+                title_text="Total crustaceans",
+                log10_scatter=cfg5.SCATTER_LOG10,
             )
 
         for season in seasons_plus_all:
