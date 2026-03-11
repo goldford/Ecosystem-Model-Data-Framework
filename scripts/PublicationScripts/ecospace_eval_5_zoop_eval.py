@@ -886,7 +886,7 @@ def plot_pub_panel_total_single_season(
         ax_bar.set_ylabel("Anomaly (z-score)")
         ax_bar.set_xlabel("Year")
         ax_bar.set_title(f"{season}: annual anomalies")
-        ax_bar.grid(True, axis="y", alpha=0.3, zorder=0)
+        ax_bar.grid(True, alpha=0.3, zorder=0)
         ax_bar.legend()
 
         if cfg5.SHOW_COUNTS and counts is not None and not counts.empty:
