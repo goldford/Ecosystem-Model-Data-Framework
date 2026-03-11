@@ -807,12 +807,20 @@ def plot_pub_panel_total_single_season(
             ax_scatter.set_ylim(lo - pad, hi + pad)
 
             if len(d) > 1:
-                r = np.corrcoef(d["x"], d["y"])[0, 1]
-                ax_scatter.set_title(f"{season}: tow-level scatter  (r = {r:.2f}, n = {len(d)})")
-            else:
-                ax_scatter.set_title(f"{season}: tow-level scatter  (n = {len(d)})")
+                stats_a = compute_stats(
+                    d.rename(columns={"x": "obs_tmp", "y": "mod_tmp"}),
+                    "obs_tmp", "mod_tmp",
+                    log_or_anom=log10_scatter,
+                )
+                stat_text_a = f"r = {stats_a['r']:.2f}\nN = {int(stats_a['N'])}"
+            elif len(d) == 1:
+                stat_text_a = "n = 1"
         else:
-            ax_scatter.set_title(f"{season}: tow-level scatter  (n = 0)")
+            stat_text_a = "n = 0"
+
+            # do not title for publication
+            # ax_scatter.set_title(...)
+        _add_statbox(ax_scatter, stat_text_a)
 
         ax_scatter.set_xlabel(xlab)
         ax_scatter.set_ylabel(ylab)
@@ -832,12 +840,14 @@ def plot_pub_panel_total_single_season(
             ax_scatter.set_ylim(lo - pad, hi + pad)
 
             if len(d) > 1:
-                r = np.corrcoef(d["obs_anom"], d["model_anom"])[0, 1]
-                ax_scatter.set_title(f"{season}: annual anomaly scatter  (r = {r:.2f}, n = {len(d)})")
-            else:
-                ax_scatter.set_title(f"{season}: annual anomaly scatter  (n = {len(d)})")
+                stats_a = compute_stats(d, "obs_anom", "model_anom", log_or_anom=True)
+                stat_text_a = f"r = {stats_a['r']:.2f}\nN = {int(stats_a['N'])}"
+            elif len(d) == 1:
+                stat_text_a = "n = 1"
         else:
-            ax_scatter.set_title(f"{season}: annual anomaly scatter  (n = 0)")
+            stat_text_a = "n = 0"
+
+        _add_statbox(ax_scatter, stat_text_a)
 
         ax_scatter.set_xlabel("Observed anomaly (z-score)")
         ax_scatter.set_ylabel("Model anomaly (z-score)")
@@ -889,7 +899,15 @@ def plot_pub_panel_total_single_season(
         ax_bar.set_xticklabels([str(y) for y in years], rotation=45, ha="right")
         ax_bar.set_ylabel("Anomaly (z-score)")
         ax_bar.set_xlabel("Year")
-        ax_bar.set_title(f"{season}: annual anomalies")
+
+        stats_b = compute_stats(annual, "obs_anom", "model_anom", log_or_anom=True)
+        if int(stats_b["N"]) > 0 and pd.notna(stats_b["WSS"]):
+            stat_text_b = f"WSS = {stats_b['WSS']:.2f}\nN = {int(stats_b['N'])}"
+        else:
+            stat_text_b = f"n = {int(stats_b['N'])}"
+
+        _add_statbox(ax_bar, stat_text_b)
+        # ax_bar.set_title(f"{season}: annual anomalies")
 
         ax_bar.grid(True, alpha=0.3, zorder=0)
         ax_bar.legend()
@@ -961,6 +979,22 @@ def plot_pub_panel_total_single_season(
 
     print(f"[INFO] Saved publication panel: {outpath}")
     return outpath
+
+
+def _add_statbox(ax, text: str, *, x=0.98, y=0.02):
+    ax.text(
+        x, y, text,
+        transform=ax.transAxes,
+        ha="right", va="bottom",
+        fontsize=9,
+        bbox=dict(
+            boxstyle="round,pad=0.25",
+            facecolor="white",
+            edgecolor="none",
+            alpha=0.75,
+        ),
+        zorder=10,
+    )
 
 def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
     print("[5c] Visualizing & computing skill stats…")
