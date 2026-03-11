@@ -375,7 +375,7 @@ def plot_stacked_three_source(df_long: pd.DataFrame, domain_label: str, out_png:
             xticklabels.append(src)
 
     ax.set_xticks(xticks)
-    ax.set_xticklabels(xticklabels, rotation=0, ha="right", fontsize=7)
+    ax.set_xticklabels(xticklabels, rotation=0, ha="right", fontsize=7.5)
 
     for i, season in enumerate(SEASONS_ORDER):
         ax.text(
