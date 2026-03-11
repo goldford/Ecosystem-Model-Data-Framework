@@ -40,7 +40,9 @@ mpl.rc('font', size=8)
 mpl.rc('font', family='sans-serif', weight='normal', style='normal')
 # %matplotlib inline
 
-with nc.Dataset('..//..//data//bathymetry//bathy_salishsea_1500m_20210706.nc') as b:
+rel_p = "..//..//..//..//HOTSSea_v1_NEMOandSupportCode//desktop//"
+
+with nc.Dataset(rel_p + 'data//bathymetry//bathy_salishsea_1500m_20210706.nc') as b:
     # print(mesh.variables)
     navlon = b.variables['nav_lon'][:]
     navlat = b.variables['nav_lat'][:]
@@ -49,7 +51,7 @@ with nc.Dataset('..//..//data//bathymetry//bathy_salishsea_1500m_20210706.nc') a
 
     tmask = b.variables['Bathymetry'][:, :]
 
-with nc.Dataset('..//..//data//grid//coordinates_salishsea_1500m.nc') as coord:
+with nc.Dataset(rel_p + 'data//grid//coordinates_salishsea_1500m.nc') as coord:
     navlon2 = coord.variables['nav_lon'][:]
     navlat2 = coord.variables['nav_lat'][:]
     e1t = coord.variables['e1t'][:]
@@ -61,7 +63,7 @@ with nc.Dataset('..//..//data//grid//coordinates_salishsea_1500m.nc') as coord:
 #     tmask=mesh.variables['Bathymetry'][:,:]
 e1t_2 = np.where(e1t > 0, 1, 0)
 
-mfile2 = sio.loadmat('..//..//data//reference//PNWrivers.mat')
+mfile2 = sio.loadmat(rel_p + 'data//reference//PNWrivers.mat')
 ncst2 = mfile2['ncst']
 
 
@@ -147,15 +149,15 @@ if imap == True:
     #                     lw=1, zorder=1)
     # p=ax0.add_geometries([poly,],crs=crt.crs.PlateCarree(),facecolor=(.9,.9,.9), color='None',
     #                     edgecolor="darkgray",lw=1, zorder=10)
-    p = ax0.add_geometries([poly_nemo, ], crs=crt.crs.PlateCarree(), facecolor=(.8, .8, .8), edgecolor=None,
-                           lw=1, zorder=2)
+    # p = ax0.add_geometries([poly_nemo, ], crs=crt.crs.PlateCarree(), facecolor=(.8, .8, .8), edgecolor=None,
+    #                        lw=1, zorder=2)
 
     # ecospace bounds
     verts_ecospace=[[ewe_navlon_TL, ewe_navlat_TL],[ewe_navlon_TR, ewe_navlat_TR],
                          [ewe_navlon_BR, ewe_navlat_BR],[ewe_navlon_BL, ewe_navlat_BL]]
     poly_ecospace = geometry.polygon.Polygon(verts_ecospace)
     p = ax0.add_geometries([poly_ecospace,],crs=crt.crs.PlateCarree(),
-                         facecolor=(.6,.6,.6), edgecolor=None,
+                         facecolor=(.8, .8, .8), edgecolor=None,
                          lw=1, zorder=2)
 
     # major lines of long and lat
@@ -193,32 +195,32 @@ if imap == True:
 
     arrow_w = 0.5
 
-    ax0.annotate('ECOSPACE\ndomain',xy=(-0.32e5,6.19e6),xytext=(-2e5,6.19e6),
+    ax0.annotate('SOGEM-LTL\ndomain',xy=(-0.32e5,6.19e6),xytext=(-2e5,6.19e6),
                 arrowprops=dict(facecolor='black', width=arrow_w,headwidth=5,headlength=6),fontsize=9, ha='center', va='center')
 
-    ax0.annotate('HOTSSea\ndomain', xy=(-0.84e5, 6.12e6), xytext=(-2.2e5, 6.12e6),
+    ax0.annotate('Salish\nSea\n(blue)', xy=(-0.84e5, 6.15e6), xytext=(-2.2e5, 6.10e6),
                  arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=9, ha='center',
                  va='center')
 
     ax0.annotate('Strait of\nGeorgia', xy=(-0.04e5, 6.28e6), xytext=(-.9e5, 6.23e6),
                  arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center')
 
-    ax0.annotate('Toba\nInlet', xy=(-0.58e5, 6.495e6), xytext=(0.05e5, 6.485e6),
-                 arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center')
+    # ax0.annotate('Toba\nInlet', xy=(-0.58e5, 6.495e6), xytext=(0.05e5, 6.485e6),
+    #              arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center')
 
-    ax0.annotate('Bute\nInlet', xy=(-1e5, 6.56e6), xytext=(-0.2e5, 6.56e6),
-                 arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center',
-                 va='center')
-
-    ax0.annotate('Jervis\nInlet', xy=(0.03e5, 6.44e6), xytext=(0.7e5, 6.46e6),
-                 arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center')
+    # ax0.annotate('Bute\nInlet', xy=(-1e5, 6.56e6), xytext=(-0.2e5, 6.56e6),
+    #              arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center',
+    #              va='center')
+    #
+    # ax0.annotate('Jervis\nInlet', xy=(0.03e5, 6.44e6), xytext=(0.7e5, 6.46e6),
+    #              arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center')
 
     ax0.annotate('Howe\nSound', xy=(0.7e5, 6.34e6), xytext=(1.3e5, 6.37e6),
                  arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center',
                  va='center')
 
-    ax0.annotate('Johnstone\nStrait', xy=(-2.35e5, 6.49e6), xytext=(-2.25e5, 6.56e6),
-                 arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center')
+    # ax0.annotate('Johnstone\nStrait', xy=(-2.35e5, 6.49e6), xytext=(-2.25e5, 6.56e6),
+    #              arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center')
 
     ax0.annotate('Strait of\nJuan de Fuca', xy=(-0.05e5, 6.125e6), xytext=(-0.02e5, 6.04e6),
                  arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center',
@@ -244,17 +246,17 @@ if imap == True:
     #             arrowprops=dict(facecolor='black',arrowstyle='<->'),
     #                  fontsize=8)
 
-    ax0.annotate('', xytext=(0.46e5, 5.884e6), xy=(2.8e5, 6.01e6), arrowprops=dict(arrowstyle='<->',
-                                                                                   linestyle='--',
-                                                                                   linewidth=0.6
-                                                                                   ))
-    ax0.annotate('200 km', xy=(1.44e5, 5.92e6), rotation=30)
-    ax0.annotate('', xytext=(0.46e5, 5.884e6), xy=(-2.85e5, 6.48e6), arrowprops=dict(arrowstyle='<->',
-                                                                                     linestyle='--',
-                                                                                     linewidth=0.6
-                                                                                     ))
+    # ax0.annotate('', xytext=(0.46e5, 5.884e6), xy=(2.8e5, 6.01e6), arrowprops=dict(arrowstyle='<->',
+    #                                                                                linestyle='--',
+    #                                                                                linewidth=0.6
+    #                                                                                ))
+    # ax0.annotate('200 km', xy=(1.44e5, 5.92e6), rotation=30)
+    # ax0.annotate('', xytext=(0.46e5, 5.884e6), xy=(-2.85e5, 6.48e6), arrowprops=dict(arrowstyle='<->',
+    #                                                                                  linestyle='--',
+    #                                                                                  linewidth=0.6
+    #                                                                                  ))
     #     ax0.annotate('450 km', xy=(-2.65e5,6.35e6), rotation=300)
-    ax0.annotate('450 km', xy=(-0.3e5, 5.92e6), rotation=300)
+    # ax0.annotate('450 km', xy=(-0.3e5, 5.92e6), rotation=300)
 
     temp = ax0.get_xlim()
     temp2 = ax0.get_ylim()
@@ -275,8 +277,11 @@ if imap == True:
     ax1.add_feature(feature.GSHHSFeature('low', edgecolor='k', facecolor='darkgray', linewidth=0.1))
     ax1.add_feature(feature.BORDERS, linewidth=0.1, zorder=10)
     ax1.add_feature(feature.STATES, linewidth=0.1, zorder=10)
-    ax1.add_patch(Rectangle((xlim[0], ylim[0]), int(np.diff(xlim)) + 1, int(np.diff(ylim)) + 1,
-                            transform=crt.crs.PlateCarree(), fill=False, edgecolor='r', zorder=10, linewidth=2))
+    ax1.add_patch(Rectangle((xlim[0], ylim[0]),
+                            xlim[1] - xlim[0],
+                            ylim[1] - ylim[0],
+                            transform=crt.crs.PlateCarree(),
+                            fill=False, edgecolor='r', zorder=10, linewidth=2))
     ax1.text(0.15, 0.47, 'Gulf of\nAlaska', transform=ax1.transAxes)
     ax1.text(0.7, 0.55, 'Canada', transform=ax1.transAxes)
     ax1.text(0.74, 0.1, 'USA', transform=ax1.transAxes)
@@ -301,8 +306,9 @@ if imap == True:
 
 
 # plt.tight_layout() # didn't help, added 2024-09
+
+plt.savefig('..//..//..//figs//Fig01_test.png', dpi=300)
 plt.show()
 
-plt.savefig('..//..//figs//Fig01_test.png', dpi=300)
 # plt.savefig('..//..//figs//Fig01_noecospace_test.pdf', dpi=300)
 imap2 = True
