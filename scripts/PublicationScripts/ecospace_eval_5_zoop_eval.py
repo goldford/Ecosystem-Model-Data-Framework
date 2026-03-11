@@ -769,7 +769,7 @@ def plot_pub_panel_total_single_season(
     # -----------------------------
     fig, axes = plt.subplots(
         2, 1,
-        figsize=(8.5, 9.0),
+        figsize=(5.3, 8),
         gridspec_kw={"height_ratios": [1.0, 1.15]},
         constrained_layout=False,
     )
@@ -865,11 +865,15 @@ def plot_pub_panel_total_single_season(
         ha="left", va="top",
         fontsize=12, fontweight="bold"
     )
+
+
     # =========================================================
     # BOTTOM PANEL: annual anomaly bars
     # =========================================================
     years = sorted(annual["year"].unique().tolist())
-    w = 0.38
+    pair_step = 1.18  # spacing between years
+    w = 0.28  # bar width
+    x = np.arange(len(years)) * pair_step
 
     if len(years) > 0:
         d_idx = annual.set_index("year")
@@ -878,14 +882,15 @@ def plot_pub_panel_total_single_season(
         y_mod = [d_idx.loc[yr, "model_anom"] if yr in d_idx.index else np.nan for yr in years]
 
         ax_bar.axhline(0, lw=1, linestyle="--", alpha=0.7, color="k", zorder=1)
-        ax_bar.bar(x - w/2, y_obs, width=w, label="Observations", zorder=2)
-        ax_bar.bar(x + w/2, y_mod, width=w, label="SOGEM-LTL", zorder=2)
+        ax_bar.bar(x - w / 2, y_obs, w, label="Observations", color="darkorange", zorder=2)
+        ax_bar.bar(x + w / 2, y_mod, w, label="SOGEM-LTL", color="blue", zorder=2)
 
         ax_bar.set_xticks(x)
         ax_bar.set_xticklabels([str(y) for y in years], rotation=45, ha="right")
         ax_bar.set_ylabel("Anomaly (z-score)")
         ax_bar.set_xlabel("Year")
         ax_bar.set_title(f"{season}: annual anomalies")
+
         ax_bar.grid(True, alpha=0.3, zorder=0)
         ax_bar.legend()
 
@@ -1560,7 +1565,9 @@ def plot_anomaly_panel_paired(
 
     annual_idx = annual.set_index(["group", "year"])
     x = np.arange(len(years))
-    w = 0.35
+    pair_step = 1.18  # spacing between years
+    w = 0.28  # bar width
+    x = np.arange(len(years)) * pair_step
 
     for i, grp in enumerate(plot_groups):
         ax = axes[i]
@@ -2031,7 +2038,10 @@ def plot_anomaly_bars_total_by_season(
 
     fig, axes = plt.subplots(2, 2, figsize=(14, 9), sharey=True)
     axes = axes.flatten()
-    w = 0.36
+
+    pair_step = 1.18  # spacing between years
+    w = 0.28  # bar width
+
 
     # choose a common y-range across seasons
     vals = []
@@ -2051,6 +2061,8 @@ def plot_anomaly_bars_total_by_season(
         ax = axes[i]
         d = season_data[season]
         years = sorted(d["year"].unique().tolist())
+
+        x = np.arange(len(years)) * pair_step
 
         if not years:
             ax.set_title(f"{season}  n=0")
