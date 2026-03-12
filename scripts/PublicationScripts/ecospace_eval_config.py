@@ -321,7 +321,7 @@ ZP_FRIENDLY_MAP_ZC = {
     'misc': 'Other',
     'Total': 'Total'
 }
-ZP_LOG_TRANSFORM = False
+ZP_LOG_TRANSFORM = True
 ZP_SHOW_CNTS = False             # annotate n_tows
 ZP_ANOM_ALL_SEASONS = True     # True => loop Winter/Spring/Summer/Fall
 ZP_MAKE_SCATTER = True          # make scatter figs too
@@ -354,10 +354,33 @@ ZP_FULLRN_END = 2018
 #   - "year_weighted": use annual means with year weights ~ (n_tows**power),
 #       optionally capped, and with a minimum tows-per-year threshold.
 # -------------------------------------------------------------------------
-ZP_ANOM_CLIM_MODE = "year_weighted"      # or "tow" / "year_equal"
-ZP_ANOM_CLIM_WEIGHT_POWER = 0.5         # sqrt(n) compromise
-ZP_ANOM_CLIM_WEIGHT_CAP = 25            # optional cap
+
+# --- revised anomaly-evaluation settings ---
+# Use the new season-year summary anomaly engine instead of the legacy tow-level anomaly engine
+ZP_ANOM_USE_SEASONAL_SUMMARY = True
+
+# Observation-side seasonal summary options:
+#   "mean_raw"     : arithmetic mean on raw biomass scale
+#   "log_of_mean"  : take arithmetic mean first, then log-transform that seasonal mean
+#   "mean_of_logs" : log-transform tow values first, then average in log space
+# Model-side options are the same, but for your intended test use "mean_raw".
+ZP_ANOM_OBS_SUMMARY = "mean_of_logs"
+ZP_ANOM_MODEL_SUMMARY = "mean_raw"
+ZP_ANOM_LOG_BASE = "log10"     # or "ln"
+
+# For the combined "All" anomaly, average available seasonal z-scores within each year
+ZP_ANOM_ALL_MIN_SEASONS = 1
+
+# Recommended simple climatology choice for clear write-up
+ZP_ANOM_CLIM_MODE = "year_equal"      # or "tow" / "year_equal" / "year_weighted"
 ZP_ANOM_CLIM_MIN_TOWS_PER_YEAR = 3      # years with <3 tows won’t define baseline
+P_ANOM_CLIM_WEIGHT_POWER = 0.5         # sqrt(n) compromise
+ZP_ANOM_CLIM_WEIGHT_CAP = 25            # optional cap
+
+# Turn this on to write side-by-side comparison CSVs for alternative observation summaries
+ZP_COMPARE_ANOM_SUMMARIES = True
+ZP_COMPARE_ANOM_OBS_SUMMARIES = ("log_of_mean", "mean_of_logs")
+
 
 # -------------------------------------------------------------------------
 # Optional tow-eligibility filter (to mirror Ecosim workflow)
@@ -370,9 +393,67 @@ ZP_TOW_MIN_PROP = 0.7
 ZP_TOW_MIN_START_DEPTH_M = 150.0
 ZP_TOW_MAX_BOTTOM_DEPTH_M = None   # optional additional cutoff
 
+ZP_RECOMPUTE_MATCH = False # WATCH THIS!!
+
+# -------------------------------------------
 
 
 # -------------------------------------------
+# ZP - model-only box anomaly
+# -------------------------------------------
+
+ZP_MODELONLY_DO = True
+
+ZP_MODELONLY_VERBOSE = True
+ZP_MODELONLY_PROGRESS_EVERY = 25   # print every N cells during extraction
+
+# Box bounds (edit these to your preferred CSoG rectangle)
+ZP_MODELONLY_LAT_MIN = 49.00
+ZP_MODELONLY_LAT_MAX = 49.90
+ZP_MODELONLY_LON_MIN = -124.20
+ZP_MODELONLY_LON_MAX = -123.10
+
+# Model-only anomaly year window
+ZP_MODELONLY_YEAR_START = ZP_FULLRN_START
+ZP_MODELONLY_YEAR_END   = ZP_FULLRN_END
+
+# Spatial reduction across selected wet cells
+ZP_MODELONLY_SPATIAL_REDUCER = "mean"   # "mean" or "median"
+
+# Reuse your anomaly-summary logic
+ZP_MODELONLY_ANOM_SUMMARY = "mean_raw"
+
+# None => combine all seasons within year using existing "All" logic
+# or set to "Winter", "Spring", "Summer", "Fall"
+ZP_MODELONLY_SEASON = 'Spring'
+
+# ------------------------------------------------------------------
+# Define exactly which model-only series to generate.
+#
+# Each key is the output series name that will appear in plots/csvs.
+# Each value is the list of Ecospace groups to sum.
+#
+# A single-item list gives an individual series.
+# A multi-item list gives a total / aggregate series.
+# ------------------------------------------------------------------
+ZP_MODELONLY_SERIES_DEF = {
+    "ZC2-AMP": ["ZC2-AMP"],
+    "Total":   ["ZC1-EUP", "ZC2-AMP", "ZC3-DEC", "ZC4-CLG", "ZC5-CSM"],
+}
+
+# Which of those named series to plot
+ZP_MODELONLY_PLOT_GROUP = "Total"
+
+# Optional pretty labels for figure titles / legends
+ZP_MODELONLY_LABELS = {
+    "ZC2-AMP": "Amphipods",
+    "Total": "Total crustaceans",
+}
+
+# Output filenames
+ZP_MODELONLY_SERIES_CSV = f"ecospace_zoop_model_box_series_{ECOSPACE_SC}.csv"
+ZP_MODELONLY_ANOM_CSV   = f"ecospace_zoop_model_box_anom_{ECOSPACE_SC}.csv"
+
 
 # =============================================================================
 # Evaluation 6 – nutrients (observations vs Ecospace; optional Ecosim overlay)
