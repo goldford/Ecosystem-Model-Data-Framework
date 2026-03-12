@@ -107,25 +107,6 @@ class Eval5Config:
     LAG_YEARS: int = getattr(cfg, "NPGO_LAG_YEARS", 0)
     LOG_TRANSFORM: bool = getattr(cfg, "ZP_LOG_TRANSFORM", True)
 
-    # New anomaly-summary controls for obs-vs-model evaluation
-    # These affect only the anomaly workflow, not the tow-level scatter/boxplot views.
-    ANOM_USE_SEASONAL_SUMMARY: bool = getattr(cfg, "ZP_ANOM_USE_SEASONAL_SUMMARY", True)
-    ANOM_OBS_SUMMARY: str = getattr(cfg, "ZP_ANOM_OBS_SUMMARY", "mean_of_logs")
-    ANOM_MODEL_SUMMARY: str = getattr(cfg, "ZP_ANOM_MODEL_SUMMARY", "mean_raw")
-    ANOM_LOG_BASE: str = getattr(cfg, "ZP_ANOM_LOG_BASE", "log10")
-    ANOM_ALL_MIN_SEASONS: int = int(getattr(cfg, "ZP_ANOM_ALL_MIN_SEASONS", 1))
-    COMPARE_ANOM_SUMMARIES: bool = getattr(cfg, "ZP_COMPARE_ANOM_SUMMARIES", False)
-    COMPARE_ANOM_OBS_SUMMARIES: tuple[str, ...] = field(
-        default_factory=lambda: tuple(
-            x.strip() for x in (
-                getattr(cfg, "ZP_COMPARE_ANOM_OBS_SUMMARIES", ("log_of_mean", "mean_of_logs"))
-                if not isinstance(getattr(cfg, "ZP_COMPARE_ANOM_OBS_SUMMARIES", ("log_of_mean", "mean_of_logs")), str)
-                else str(getattr(cfg, "ZP_COMPARE_ANOM_OBS_SUMMARIES", "log_of_mean,mean_of_logs")).split(",")
-            )
-            if str(x).strip()
-        )
-    )
-
     ADD_FIG_SUPTITLE: bool = getattr(cfg, "ZP_ADD_FIG_SUPTITLE", True)
     PREFIX_AX_TITLES_WITH_ECOSPACE: bool = getattr(cfg, "ZP_PREFIX_AX_TITLES_WITH_ECOSPACE", True)
 
@@ -761,10 +742,17 @@ def plot_pub_panel_total_single_season(
 
     panel_a_mode = str(getattr(cfg5, "PUB_PANEL_A_MODE", "anomaly_scatter")).strip().lower()
 
-    annual = compute_anomalies_for_eval(
+    annual = compute_anomalies_paired(
         paired,
-        cfg5=cfg5,
         season=season,
+        year_range=(cfg5.START_YEAR, cfg5.END_YEAR),
+        log_transform=cfg5.LOG_TRANSFORM,
+        clim_mode=cfg5.ANOM_CLIM_MODE,
+        log_offset=cfg5.LOG_OFFSET,
+        year_weight_power=cfg5.ANOM_CLIM_WEIGHT_POWER,
+        year_weight_cap=cfg5.ANOM_CLIM_WEIGHT_CAP,
+        min_tows_per_year=cfg5.ANOM_CLIM_MIN_TOWS_PER_YEAR,
+        eps_std=cfg5.ANOM_CLIM_EPS_STD,
     )
     annual = annual[annual["group"] == total_group].copy()
 
@@ -1314,266 +1302,6 @@ def _wstd_unbiased(x: np.ndarray, w: np.ndarray) -> float:
     return float(np.sqrt(var))
 
 
-def _log_array_base(x: pd.Series | np.ndarray, *, base: str, offset: float) -> np.ndarray:
-    arr = np.asarray(x, dtype=float)
-    if not np.all(np.isfinite(arr)):
-        arr = arr[np.isfinite(arr)]
-    if arr.size == 0:
-        return arr
-    z = arr + float(offset)
-    if np.any(z <= 0):
-        raise ValueError("Encountered non-positive values after applying anomaly log offset.")
-    base = str(base).strip().lower()
-    if base == "log10":
-        return np.log10(z)
-    if base in ("ln", "log", "natural"):
-        return np.log(z)
-    raise ValueError(f"Unknown anomaly log base: {base}")
-
-
-def _summarize_series_for_anom(values: pd.Series | np.ndarray, *, method: str, log_base: str, log_offset: float) -> float:
-    arr = np.asarray(values, dtype=float)
-    arr = arr[np.isfinite(arr)]
-    if arr.size == 0:
-        return np.nan
-
-    method = str(method).strip().lower()
-    if method == "mean_raw":
-        return float(np.mean(arr))
-    if method == "log_of_mean":
-        m = float(np.mean(arr))
-        return float(_log_array_base(np.array([m]), base=log_base, offset=log_offset)[0])
-    if method == "mean_of_logs":
-        return float(np.mean(_log_array_base(arr, base=log_base, offset=log_offset)))
-
-    raise ValueError(
-        f"Unknown anomaly summary method '{method}'. "
-        "Use 'mean_raw', 'log_of_mean', or 'mean_of_logs'."
-    )
-
-
-def _seasonal_summary_table(
-    paired: pd.DataFrame,
-    *,
-    season: Optional[str],
-    year_range: tuple[int, int],
-    obs_summary: str,
-    model_summary: str,
-    log_base: str,
-    log_offset: float,
-) -> pd.DataFrame:
-    """Build season-year summaries from the paired tow-level table."""
-    y0, y1 = year_range
-    df = paired.copy()
-    df = df.query("@y0 <= year <= @y1").copy()
-    if season is not None:
-        df = df.query("season == @season").copy()
-
-    if df.empty:
-        season_label = season if season is not None else "All"
-        raise ValueError(f"No paired data for season={season_label} and years {y0}-{y1}.")
-
-    df = df[np.isfinite(df["obs_biomass"]) & np.isfinite(df["model_biomass"])].copy()
-    if df.empty:
-        season_label = season if season is not None else "All"
-        raise ValueError(f"No finite paired biomass values for season={season_label} and years {y0}-{y1}.")
-
-    keys = ["year", "group"] if season is not None else ["year", "season", "group"]
-
-    def _agg(g: pd.DataFrame) -> pd.Series:
-        return pd.Series({
-            "obs_value": _summarize_series_for_anom(
-                g["obs_biomass"],
-                method=obs_summary,
-                log_base=log_base,
-                log_offset=log_offset,
-            ),
-            "model_value": _summarize_series_for_anom(
-                g["model_biomass"],
-                method=model_summary,
-                log_base=log_base,
-                log_offset=log_offset,
-            ),
-            "n_tows": int(g["Index"].nunique()) if "Index" in g.columns else int(len(g)),
-        })
-
-    out = df.groupby(keys, dropna=False).apply(_agg).reset_index()
-    return out
-
-
-def _group_climatology_from_summary(
-    summary: pd.DataFrame,
-    *,
-    value_obs_col: str = "obs_value",
-    value_mod_col: str = "model_value",
-    clim_mode: str = "year_equal",
-    year_weight_power: float = 0.5,
-    year_weight_cap: Optional[int] = None,
-    min_tows_per_year: int = 3,
-    eps_std: float = 1e-12,
-) -> pd.DataFrame:
-    """Compute climatological mean/std from season-year summaries."""
-    clim_mode = str(clim_mode).strip().lower()
-    rows: list[dict] = []
-
-    for grp, gdf in summary.groupby("group"):
-        good = gdf[gdf["n_tows"] >= int(min_tows_per_year)].copy()
-        xo = good[value_obs_col].to_numpy(dtype=float)
-        xm = good[value_mod_col].to_numpy(dtype=float)
-
-        if good.empty or np.isfinite(xo).sum() == 0 or np.isfinite(xm).sum() == 0:
-            rows.append(dict(group=grp, mean_obs=np.nan, std_obs=np.nan, mean_mod=np.nan, std_mod=np.nan))
-            continue
-
-        if clim_mode == "year_equal":
-            mean_obs = float(np.nanmean(xo))
-            std_obs = float(np.nanstd(xo, ddof=1)) if np.isfinite(xo).sum() > 1 else np.nan
-            mean_mod = float(np.nanmean(xm))
-            std_mod = float(np.nanstd(xm, ddof=1)) if np.isfinite(xm).sum() > 1 else np.nan
-        else:
-            ny = good["n_tows"].to_numpy(dtype=float)
-            if clim_mode == "tow":
-                w = ny
-            elif clim_mode == "year_weighted":
-                if year_weight_cap is not None:
-                    ny = np.minimum(ny, float(year_weight_cap))
-                w = np.power(ny, float(year_weight_power))
-            else:
-                raise ValueError(
-                    f"Unknown clim_mode='{clim_mode}'. Use 'tow', 'year_equal', or 'year_weighted'."
-                )
-            mean_obs = _wmean(xo, w)
-            std_obs = _wstd_unbiased(xo, w)
-            mean_mod = _wmean(xm, w)
-            std_mod = _wstd_unbiased(xm, w)
-
-        if np.isfinite(std_obs) and abs(std_obs) < eps_std:
-            std_obs = np.nan
-        if np.isfinite(std_mod) and abs(std_mod) < eps_std:
-            std_mod = np.nan
-
-        rows.append(dict(group=grp, mean_obs=mean_obs, std_obs=std_obs, mean_mod=mean_mod, std_mod=std_mod))
-
-    return pd.DataFrame(rows)
-
-
-def compute_anomalies_summary_paired(
-    paired: pd.DataFrame,
-    *,
-    season: Optional[str],
-    year_range: tuple[int, int],
-    obs_summary: str,
-    model_summary: str,
-    clim_mode: str = "year_equal",
-    log_base: str = "log10",
-    log_offset: float = 1e-6,
-    year_weight_power: float = 0.5,
-    year_weight_cap: Optional[int] = None,
-    min_tows_per_year: int = 3,
-    eps_std: float = 1e-12,
-    min_seasons_all: int = 1,
-) -> pd.DataFrame:
-    """Compute z-score anomalies from season-year summary values."""
-    if season is not None:
-        summ = _seasonal_summary_table(
-            paired,
-            season=season,
-            year_range=year_range,
-            obs_summary=obs_summary,
-            model_summary=model_summary,
-            log_base=log_base,
-            log_offset=log_offset,
-        )
-        clim = _group_climatology_from_summary(
-            summ,
-            clim_mode=clim_mode,
-            year_weight_power=year_weight_power,
-            year_weight_cap=year_weight_cap,
-            min_tows_per_year=min_tows_per_year,
-            eps_std=eps_std,
-        )
-        out = summ.merge(clim, on="group", how="left")
-        out["obs_anom"] = (out["obs_value"] - out["mean_obs"]) / out["std_obs"]
-        out["model_anom"] = (out["model_value"] - out["mean_mod"]) / out["std_mod"]
-        return out[["year", "group", "obs_anom", "model_anom"]].copy()
-
-    summ = _seasonal_summary_table(
-        paired,
-        season=None,
-        year_range=year_range,
-        obs_summary=obs_summary,
-        model_summary=model_summary,
-        log_base=log_base,
-        log_offset=log_offset,
-    )
-
-    seasonal_out = []
-    for seas, sdf in summ.groupby("season"):
-        clim = _group_climatology_from_summary(
-            sdf,
-            clim_mode=clim_mode,
-            year_weight_power=year_weight_power,
-            year_weight_cap=year_weight_cap,
-            min_tows_per_year=min_tows_per_year,
-            eps_std=eps_std,
-        )
-        tmp = sdf.merge(clim, on="group", how="left")
-        tmp["obs_anom"] = (tmp["obs_value"] - tmp["mean_obs"]) / tmp["std_obs"]
-        tmp["model_anom"] = (tmp["model_value"] - tmp["mean_mod"]) / tmp["std_mod"]
-        tmp["season"] = seas
-        seasonal_out.append(tmp[["year", "season", "group", "obs_anom", "model_anom"]])
-
-    seasonal_anom = pd.concat(seasonal_out, ignore_index=True)
-    annual = (
-        seasonal_anom.groupby(["year", "group"], as_index=False)
-        .agg(
-            obs_anom=("obs_anom", "mean"),
-            model_anom=("model_anom", "mean"),
-            n_seasons=("season", "nunique"),
-        )
-    )
-    annual = annual[annual["n_seasons"] >= int(min_seasons_all)].copy()
-    return annual[["year", "group", "obs_anom", "model_anom"]]
-
-
-def compute_anomalies_for_eval(
-    paired: pd.DataFrame,
-    *,
-    cfg5: Eval5Config,
-    season: Optional[str],
-) -> pd.DataFrame:
-    """Route anomaly calculation through the selected evaluation method."""
-    if getattr(cfg5, "ANOM_USE_SEASONAL_SUMMARY", False):
-        return compute_anomalies_summary_paired(
-            paired,
-            season=season,
-            year_range=(cfg5.START_YEAR, cfg5.END_YEAR),
-            obs_summary=cfg5.ANOM_OBS_SUMMARY,
-            model_summary=cfg5.ANOM_MODEL_SUMMARY,
-            clim_mode=cfg5.ANOM_CLIM_MODE,
-            log_base=cfg5.ANOM_LOG_BASE,
-            log_offset=cfg5.LOG_OFFSET,
-            year_weight_power=cfg5.ANOM_CLIM_WEIGHT_POWER,
-            year_weight_cap=cfg5.ANOM_CLIM_WEIGHT_CAP,
-            min_tows_per_year=cfg5.ANOM_CLIM_MIN_TOWS_PER_YEAR,
-            eps_std=cfg5.ANOM_CLIM_EPS_STD,
-            min_seasons_all=cfg5.ANOM_ALL_MIN_SEASONS,
-        )
-
-    return compute_anomalies_paired(
-        paired,
-        season=season,
-        year_range=(cfg5.START_YEAR, cfg5.END_YEAR),
-        log_transform=cfg5.LOG_TRANSFORM,
-        clim_mode=cfg5.ANOM_CLIM_MODE,
-        log_offset=cfg5.LOG_OFFSET,
-        year_weight_power=cfg5.ANOM_CLIM_WEIGHT_POWER,
-        year_weight_cap=cfg5.ANOM_CLIM_WEIGHT_CAP,
-        min_tows_per_year=cfg5.ANOM_CLIM_MIN_TOWS_PER_YEAR,
-        eps_std=cfg5.ANOM_CLIM_EPS_STD,
-    )
-
-
 def compute_anomalies_paired(
     paired: pd.DataFrame,
     *,
@@ -1770,93 +1498,6 @@ def skill_metrics_by_group(annual: pd.DataFrame, *, groups: List[str], log_or_an
             s["Group"] = g
             rows.append(s)
     return pd.DataFrame(rows)
-
-
-def compare_anomaly_obs_summaries(
-    cfg5: Eval5Config,
-    groups: Optional[List[str]] = None,
-    *,
-    include_total: bool = True,
-    seasons: Optional[List[str]] = None,
-) -> tuple[str, str]:
-    """Compare alternative observation-side seasonal summary methods."""
-    matched_csv = os.path.join(cfg5.EVALOUT_P, cfg5.ZOOP_CSV_MATCH)
-    if not os.path.exists(matched_csv):
-        raise FileNotFoundError(f"Matched CSV not found: {matched_csv}")
-
-    df_match = pd.read_csv(matched_csv)
-    candidate = groups or cfg5.ZOOP_GROUPS
-    groups_present = [g for g in candidate if g in df_match.columns and f"EWE-{g}" in df_match.columns]
-    if not groups_present:
-        raise ValueError("No zooplankton group columns found in matched CSV for anomaly comparison.")
-
-    crust_groups = [g for g in groups_present if str(g).startswith("ZC")]
-    zs_groups = [g for g in groups_present if str(g).startswith(("ZS2", "ZS3", "ZS4"))]
-
-    passes: list[tuple[str, list[str]]] = []
-    if crust_groups:
-        passes.append(("ZC", crust_groups))
-    if zs_groups:
-        passes.append(("ZS", zs_groups))
-    if not passes:
-        passes.append(("ALL", groups_present))
-
-    seasons_to_run = seasons if seasons is not None else (cfg5.SEASON_ORDER if cfg5.ANOM_ALL_SEASONS else [cfg5.ANOM_SEASON_CHOICE])
-    seasons_plus_all = ["All"] + list(seasons_to_run)
-
-    methods = [m for m in cfg5.COMPARE_ANOM_OBS_SUMMARIES if str(m).strip()]
-    if not methods:
-        methods = [cfg5.ANOM_OBS_SUMMARY]
-
-    annual_rows: list[pd.DataFrame] = []
-    metric_rows: list[pd.DataFrame] = []
-
-    for pass_label, pass_groups in passes:
-        paired = build_paired_long_ecospace(df_match, groups=pass_groups)
-        plot_groups = list(pass_groups) + (["Total"] if include_total else [])
-
-        for season_name in seasons_plus_all:
-            season_filter = None if str(season_name).lower() == "all" else season_name
-            for obs_method in methods:
-                annual = compute_anomalies_summary_paired(
-                    paired,
-                    season=season_filter,
-                    year_range=(cfg5.START_YEAR, cfg5.END_YEAR),
-                    obs_summary=obs_method,
-                    model_summary=cfg5.ANOM_MODEL_SUMMARY,
-                    clim_mode=cfg5.ANOM_CLIM_MODE,
-                    log_base=cfg5.ANOM_LOG_BASE,
-                    log_offset=cfg5.LOG_OFFSET,
-                    year_weight_power=cfg5.ANOM_CLIM_WEIGHT_POWER,
-                    year_weight_cap=cfg5.ANOM_CLIM_WEIGHT_CAP,
-                    min_tows_per_year=cfg5.ANOM_CLIM_MIN_TOWS_PER_YEAR,
-                    eps_std=cfg5.ANOM_CLIM_EPS_STD,
-                    min_seasons_all=cfg5.ANOM_ALL_MIN_SEASONS,
-                ).copy()
-                annual["Pass"] = pass_label
-                annual["Season"] = season_name
-                annual["ObsSummary"] = obs_method
-                annual_rows.append(annual)
-
-                stats_df = skill_metrics_by_group(annual, groups=plot_groups, log_or_anom=True)
-                if not stats_df.empty:
-                    stats_df["Pass"] = pass_label
-                    stats_df["Season"] = season_name
-                    stats_df["ObsSummary"] = obs_method
-                    metric_rows.append(stats_df)
-
-    annual_out = pd.concat(annual_rows, ignore_index=True) if annual_rows else pd.DataFrame()
-    metrics_out = pd.concat(metric_rows, ignore_index=True) if metric_rows else pd.DataFrame()
-
-    annual_path = os.path.join(cfg5.EVALOUT_P, f"ecospace_zoop_anom_compare_annual_{cfg5.ecospace_code}.csv")
-    metrics_path = os.path.join(cfg5.EVALOUT_P, f"ecospace_zoop_anom_compare_metrics_{cfg5.ecospace_code}.csv")
-
-    annual_out.to_csv(annual_path, index=False)
-    metrics_out.to_csv(metrics_path, index=False)
-
-    print(f"[5d] Saved anomaly-summary annual comparison: {annual_path}")
-    print(f"[5d] Saved anomaly-summary metric comparison: {metrics_path}")
-    return annual_path, metrics_path
 
 
 def counts_by_season_year_from_paired(
@@ -2302,10 +1943,17 @@ def plot_scatter_anomalies_total_by_season(
 
     # build annual anomaly table for each season
     for season in seasons:
-        ann = compute_anomalies_for_eval(
+        ann = compute_anomalies_paired(
             paired,
-            cfg5=cfg5,
             season=season,
+            year_range=(cfg5.START_YEAR, cfg5.END_YEAR),
+            log_transform=cfg5.LOG_TRANSFORM,
+            clim_mode=cfg5.ANOM_CLIM_MODE,
+            log_offset=cfg5.LOG_OFFSET,
+            year_weight_power=cfg5.ANOM_CLIM_WEIGHT_POWER,
+            year_weight_cap=cfg5.ANOM_CLIM_WEIGHT_CAP,
+            min_tows_per_year=cfg5.ANOM_CLIM_MIN_TOWS_PER_YEAR,
+            eps_std=cfg5.ANOM_CLIM_EPS_STD,
         )
         ann = ann[ann["group"] == "Total"].copy()
         season_annual[season] = ann
@@ -2398,10 +2046,17 @@ def plot_anomaly_bars_total_by_season(
     season_counts = {}
 
     for season in seasons:
-        annual = compute_anomalies_for_eval(
+        annual = compute_anomalies_paired(
             paired,
-            cfg5=cfg5,
             season=season,
+            year_range=(cfg5.START_YEAR, cfg5.END_YEAR),
+            log_transform=cfg5.LOG_TRANSFORM,
+            clim_mode=cfg5.ANOM_CLIM_MODE,
+            log_offset=cfg5.LOG_OFFSET,
+            year_weight_power=cfg5.ANOM_CLIM_WEIGHT_POWER,
+            year_weight_cap=cfg5.ANOM_CLIM_WEIGHT_CAP,
+            min_tows_per_year=cfg5.ANOM_CLIM_MIN_TOWS_PER_YEAR,
+            eps_std=cfg5.ANOM_CLIM_EPS_STD,
         )
         annual = annual[annual["group"] == "Total"].copy()
         season_data[season] = annual
@@ -2663,10 +2318,17 @@ def anomaly_comparisons(
         for season in seasons_plus_all:
             season_filter = None if str(season).lower() == "all" else season
             # Annual anomalies
-            annual = compute_anomalies_for_eval(
+            annual = compute_anomalies_paired(
                 paired,
-                cfg5=cfg5,
                 season=season_filter,
+                year_range=(cfg5.START_YEAR, cfg5.END_YEAR),
+                log_transform=cfg5.LOG_TRANSFORM,
+                clim_mode=cfg5.ANOM_CLIM_MODE,
+                log_offset=cfg5.LOG_OFFSET,
+                year_weight_power=cfg5.ANOM_CLIM_WEIGHT_POWER,
+                year_weight_cap=cfg5.ANOM_CLIM_WEIGHT_CAP,
+                min_tows_per_year=cfg5.ANOM_CLIM_MIN_TOWS_PER_YEAR,
+                eps_std=cfg5.ANOM_CLIM_EPS_STD,
             )
 
             # Counts for labels (use Total by default)
@@ -2800,10 +2462,8 @@ def run_zoop_eval(
     # Stage 2: viz & stats
     skill_csv = visualize_and_stats(matched, cfg5)
 
-    # Stage 3: anomaly panels / method comparisons
+    # Stage 3: anomaly panels
     if cfg5.MAKE_ANOM:
-        if cfg5.COMPARE_ANOM_SUMMARIES:
-            compare_anomaly_obs_summaries(cfg5, groups=groups)
         anomaly_comparisons(cfg5, groups=groups)
 
     print("[5] DONE.")

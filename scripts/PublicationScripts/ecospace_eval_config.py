@@ -321,7 +321,7 @@ ZP_FRIENDLY_MAP_ZC = {
     'misc': 'Other',
     'Total': 'Total'
 }
-ZP_LOG_TRANSFORM = False
+ZP_LOG_TRANSFORM = True
 ZP_SHOW_CNTS = False             # annotate n_tows
 ZP_ANOM_ALL_SEASONS = True     # True => loop Winter/Spring/Summer/Fall
 ZP_MAKE_SCATTER = True          # make scatter figs too
@@ -354,10 +354,36 @@ ZP_FULLRN_END = 2018
 #   - "year_weighted": use annual means with year weights ~ (n_tows**power),
 #       optionally capped, and with a minimum tows-per-year threshold.
 # -------------------------------------------------------------------------
-ZP_ANOM_CLIM_MODE = "year_weighted"      # or "tow" / "year_equal"
 ZP_ANOM_CLIM_WEIGHT_POWER = 0.5         # sqrt(n) compromise
 ZP_ANOM_CLIM_WEIGHT_CAP = 25            # optional cap
+
+
+
+
+# --- revised anomaly-evaluation settings ---
+# Use the new season-year summary anomaly engine instead of the legacy tow-level anomaly engine
+ZP_ANOM_USE_SEASONAL_SUMMARY = True
+
+# Observation-side seasonal summary options:
+#   "mean_raw"     : arithmetic mean on raw biomass scale
+#   "log_of_mean"  : take arithmetic mean first, then log-transform that seasonal mean
+#   "mean_of_logs" : log-transform tow values first, then average in log space
+# Model-side options are the same, but for your intended test use "mean_raw".
+ZP_ANOM_OBS_SUMMARY = "mean_of_logs"
+ZP_ANOM_MODEL_SUMMARY = "mean_raw"
+ZP_ANOM_LOG_BASE = "log10"     # or "ln"
+
+# For the combined "All" anomaly, average available seasonal z-scores within each year
+ZP_ANOM_ALL_MIN_SEASONS = 1
+
+# Recommended simple climatology choice for clear write-up
+ZP_ANOM_CLIM_MODE = "year_equal"      # or "tow" / "year_equal" / "year_weighted"
 ZP_ANOM_CLIM_MIN_TOWS_PER_YEAR = 3      # years with <3 tows won’t define baseline
+
+# Turn this on to write side-by-side comparison CSVs for alternative observation summaries
+ZP_COMPARE_ANOM_SUMMARIES = True
+ZP_COMPARE_ANOM_OBS_SUMMARIES = ("log_of_mean", "mean_of_logs")
+
 
 # -------------------------------------------------------------------------
 # Optional tow-eligibility filter (to mirror Ecosim workflow)
@@ -370,7 +396,7 @@ ZP_TOW_MIN_PROP = 0.7
 ZP_TOW_MIN_START_DEPTH_M = 150.0
 ZP_TOW_MAX_BOTTOM_DEPTH_M = None   # optional additional cutoff
 
-
+ZP_RECOMPUTE_MATCH = True
 
 # -------------------------------------------
 
