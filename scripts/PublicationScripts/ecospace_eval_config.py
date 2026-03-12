@@ -354,11 +354,6 @@ ZP_FULLRN_END = 2018
 #   - "year_weighted": use annual means with year weights ~ (n_tows**power),
 #       optionally capped, and with a minimum tows-per-year threshold.
 # -------------------------------------------------------------------------
-ZP_ANOM_CLIM_WEIGHT_POWER = 0.5         # sqrt(n) compromise
-ZP_ANOM_CLIM_WEIGHT_CAP = 25            # optional cap
-
-
-
 
 # --- revised anomaly-evaluation settings ---
 # Use the new season-year summary anomaly engine instead of the legacy tow-level anomaly engine
@@ -379,6 +374,8 @@ ZP_ANOM_ALL_MIN_SEASONS = 1
 # Recommended simple climatology choice for clear write-up
 ZP_ANOM_CLIM_MODE = "year_equal"      # or "tow" / "year_equal" / "year_weighted"
 ZP_ANOM_CLIM_MIN_TOWS_PER_YEAR = 3      # years with <3 tows won’t define baseline
+P_ANOM_CLIM_WEIGHT_POWER = 0.5         # sqrt(n) compromise
+ZP_ANOM_CLIM_WEIGHT_CAP = 25            # optional cap
 
 # Turn this on to write side-by-side comparison CSVs for alternative observation summaries
 ZP_COMPARE_ANOM_SUMMARIES = True

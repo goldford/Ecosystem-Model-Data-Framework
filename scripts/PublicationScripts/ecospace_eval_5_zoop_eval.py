@@ -782,7 +782,7 @@ def plot_pub_panel_total_single_season(
     fig, axes = plt.subplots(
         2, 1,
         figsize=(5.3, 8),
-        gridspec_kw={"height_ratios": [1.0, 1.15]},
+        gridspec_kw={"height_ratios": [1.3, 1.0]},
         constrained_layout=False,
     )
     ax_scatter, ax_bar = axes
@@ -915,6 +915,7 @@ def plot_pub_panel_total_single_season(
         stats_b = compute_stats(annual, "obs_anom", "model_anom", log_or_anom=True)
         if int(stats_b["N"]) > 0 and pd.notna(stats_b["WSS"]):
             stat_text_b = f"WSS = {stats_b['WSS']:.2f}\nN = {int(stats_b['N'])}"
+            stat_text_b = f"WSS = {stats_b['WSS']:.2f}"
         else:
             stat_text_b = f"n = {int(stats_b['N'])}"
 
