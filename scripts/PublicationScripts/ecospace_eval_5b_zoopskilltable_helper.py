@@ -144,7 +144,7 @@ def export_forpub_zoop_skill_tables(
     scenario: str,
     in_dir: str | Path,
     *,
-    include_all: bool = False,
+    include_all: bool = True,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Convenience wrapper:
