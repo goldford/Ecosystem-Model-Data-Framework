@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+import argparse
 import pandas as pd
 import re
 
-
+SCENARIO = "SC215"
 SEASON_ORDER = ["Winter", "Spring", "Summer", "Fall", "All"]
-
+TAB_P = "..//..//data//evaluation//"
 
 def _parse_filename(path: Path) -> tuple[str, str, str]:
     """
@@ -31,10 +32,27 @@ def _season_sort(df: pd.DataFrame, season_col: str = "season") -> pd.DataFrame:
     order_map = {s: i for i, s in enumerate(SEASON_ORDER)}
     return (
         df.assign(_season_order=df[season_col].map(order_map).fillna(999))
-          .sort_values(["_season_order"] + [c for c in df.columns if c != season_col and c != "_season_order"])
+          .sort_values(["_season_order"] + [c for c in df.columns if c not in {season_col, "_season_order"}])
           .drop(columns="_season_order")
           .reset_index(drop=True)
     )
+
+
+def _round_numeric(df: pd.DataFrame, decimals: int | None) -> pd.DataFrame:
+    out = df.copy()
+    if decimals is None:
+        return out
+    num_cols = out.select_dtypes(include="number").columns
+    out[num_cols] = out[num_cols].round(decimals)
+    return out
+
+
+def _save_csv(df: pd.DataFrame, out_csv: str | Path, decimals: int | None) -> None:
+    out_csv = Path(out_csv)
+    if decimals is None:
+        df.to_csv(out_csv, index=False)
+    else:
+        df.to_csv(out_csv, index=False, float_format=f"%.{decimals}f")
 
 
 def build_manuscript_skill_table(
@@ -43,6 +61,7 @@ def build_manuscript_skill_table(
     *,
     out_csv: str | Path | None = None,
     include_all: bool = True,
+    decimals: int | None = 2,
     total_name_in_source: str = "Total",
 ) -> pd.DataFrame:
     """
@@ -70,15 +89,18 @@ def build_manuscript_skill_table(
         rows.append(sub)
 
     if not rows:
-        raise ValueError(f"No matching ZC seasonal files with Group == '{total_name_in_source}' found for scenario {scenario}.")
+        raise ValueError(
+            f"No matching ZC seasonal files with Group == '{total_name_in_source}' found for scenario {scenario}."
+        )
 
     out = pd.concat(rows, ignore_index=True)
     out = _season_sort(out, "season")
+    out = _round_numeric(out, decimals)
 
     if out_csv is None:
         out_csv = in_dir / f"ecospace_forpub_zoop_skill_{scenario}_ZC.csv"
 
-    out.to_csv(out_csv, index=False)
+    _save_csv(out, out_csv, decimals)
     print(f"Saved manuscript table: {out_csv}")
     return out
 
@@ -89,6 +111,7 @@ def build_supplement_skill_table(
     *,
     out_csv: str | Path | None = None,
     include_all: bool = True,
+    decimals: int | None = 2,
     passes: tuple[str, ...] = ("ZC", "ZS"),
     total_name_in_source: str = "Total",
     total_name_fmt: str = "{pass_name}-TOTAL",
@@ -132,10 +155,12 @@ def build_supplement_skill_table(
            .reset_index(drop=True)
     )
 
+    out = _round_numeric(out, decimals)
+
     if out_csv is None:
         out_csv = in_dir / f"ecospace_forpub_zoop_skill_{scenario}_ALLGROUPS.csv"
 
-    out.to_csv(out_csv, index=False)
+    _save_csv(out, out_csv, decimals)
     print(f"Saved supplement table: {out_csv}")
     return out
 
@@ -145,28 +170,69 @@ def export_forpub_zoop_skill_tables(
     in_dir: str | Path,
     *,
     include_all: bool = True,
+    decimals: int | None = 2,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Convenience wrapper:
       1) manuscript table from ZC total rows
       2) supplement table from ZC + ZS seasonal files
+
+    Defaults now include:
+      - include_all=True
+      - decimals=2
     """
     ms = build_manuscript_skill_table(
         scenario=scenario,
         in_dir=in_dir,
         include_all=include_all,
+        decimals=decimals,
     )
     supp = build_supplement_skill_table(
         scenario=scenario,
         in_dir=in_dir,
         include_all=include_all,
+        decimals=decimals,
     )
     return ms, supp
 
 
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Build manuscript and supplement zooplankton skill tables from seasonal performance CSVs."
+    )
+    parser.add_argument(
+        "--scenario",
+        default=SCENARIO,
+        help="Scenario name used in the filenames, e.g. SC215",
+    )
+    parser.add_argument(
+        "--in-dir",
+        default=TAB_P,
+        help="Directory containing ecospace_zoop_performance_<scenario>_*.csv files",
+    )
+    parser.add_argument(
+        "--exclude-all",
+        action="store_true",
+        help="Exclude the All-season summary rows/files",
+    )
+    parser.add_argument(
+        "--decimals",
+        type=int,
+        default=2,
+        help="Number of decimal places for numeric columns; use -1 for no rounding",
+    )
+
+    args = parser.parse_args()
+
+    decimals = None if args.decimals < 0 else args.decimals
+
+    export_forpub_zoop_skill_tables(
+        scenario=args.scenario,
+        in_dir=Path(args.in_dir),
+        include_all=not args.exclude_all,
+        decimals=decimals,
+    )
+
+
 if __name__ == "__main__":
-    # Example:
-    #   python zoop_skill_table_helper.py
-    scenario = "SC215"
-    in_dir = Path("..//..//data//evaluation//")
-    export_forpub_zoop_skill_tables(scenario=scenario, in_dir=in_dir, include_all=True)
+    main()
