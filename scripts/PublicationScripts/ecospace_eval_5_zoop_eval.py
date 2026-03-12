@@ -41,7 +41,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import string
 import netCDF4 as nc
+import time
 from datetime import datetime
+from dataclasses import dataclass, field
 
 # Local helpers & config (same approach as 4a)
 from helpers import (
@@ -146,6 +148,61 @@ class Eval5Config:
     # options for the two panel plot of seasonal anoms
     PUB_TOTAL_PANEL: bool = getattr(cfg, "ZP_MAKE_PUB_TOTAL_PANEL", False)
     PUB_PANEL_A_MODE: str = getattr(cfg, "ZP_PUB_PANEL_A_MODE", "anomaly_scatter")
+
+    # Model-only box anomaly workflow
+    MODELONLY_DO: bool = getattr(cfg, "ZP_MODELONLY_DO", False)
+    MODELONLY_YEAR_START: int = int(getattr(cfg, "ZP_MODELONLY_YEAR_START", getattr(cfg, "ZP_FULLRN_START", 1980)))
+    MODELONLY_YEAR_END: int = int(getattr(cfg, "ZP_MODELONLY_YEAR_END", getattr(cfg, "ZP_FULLRN_END", 2018)))
+
+    MODELONLY_LAT_MIN: float = float(getattr(cfg, "ZP_MODELONLY_LAT_MIN", 49.00))
+    MODELONLY_LAT_MAX: float = float(getattr(cfg, "ZP_MODELONLY_LAT_MAX", 49.90))
+    MODELONLY_LON_MIN: float = float(getattr(cfg, "ZP_MODELONLY_LON_MIN", -124.20))
+    MODELONLY_LON_MAX: float = float(getattr(cfg, "ZP_MODELONLY_LON_MAX", -123.10))
+
+    MODELONLY_SPATIAL_REDUCER: str = getattr(cfg, "ZP_MODELONLY_SPATIAL_REDUCER", "mean")
+    MODELONLY_ANOM_SUMMARY: str = getattr(cfg, "ZP_MODELONLY_ANOM_SUMMARY", "mean_raw")
+    MODELONLY_SEASON: Optional[str] = getattr(cfg, "ZP_MODELONLY_SEASON", None)
+
+    MODELONLY_VERBOSE: bool = bool(getattr(cfg, "ZP_MODELONLY_VERBOSE", True))
+    MODELONLY_PROGRESS_EVERY: int = int(getattr(cfg, "ZP_MODELONLY_PROGRESS_EVERY", 25))
+    MODELONLY_BOX_STRIDE: int = int(getattr(cfg, "ZP_MODELONLY_BOX_STRIDE", 1))
+
+    MODELONLY_SERIES_DEF: dict = field(
+        default_factory=lambda: getattr(
+            cfg,
+            "ZP_MODELONLY_SERIES_DEF",
+            {
+                "ZC2-AMP": ["ZC2-AMP"],
+                "Total": ["ZC1-EUP", "ZC2-AMP", "ZC3-DEC", "ZC4-CLG", "ZC5-CSM"],
+            },
+        )
+    )
+
+    MODELONLY_PLOT_GROUP: str = getattr(cfg, "ZP_MODELONLY_PLOT_GROUP", "Total")
+
+    MODELONLY_LABELS: dict = field(
+        default_factory=lambda: getattr(
+            cfg,
+            "ZP_MODELONLY_LABELS",
+            {
+                "ZC2-AMP": "Amphipods",
+                "Total": "Total crustaceans",
+            },
+        )
+    )
+
+    MODELONLY_SERIES_CSV: str = getattr(
+        cfg,
+        "ZP_MODELONLY_SERIES_CSV",
+        f"ecospace_zoop_model_box_series_{getattr(cfg, 'ECOSPACE_SC', 'run')}.csv"
+    )
+    MODELONLY_ANOM_CSV: str = getattr(
+        cfg,
+        "ZP_MODELONLY_ANOM_CSV",
+        f"ecospace_zoop_model_box_anom_{getattr(cfg, 'ECOSPACE_SC', 'run')}.csv"
+    )
+
+
 
 # ============================================================
 # Stage 1 — Match Zooplankton obs to Ecospace (ex-5b)
@@ -1167,7 +1224,596 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
 
     return out_skill
 
+# ============================================================
+# Model-only box extraction + anomaly plotting
+# ============================================================
 
+def _month_to_season(month: int) -> str:
+    if month in (12, 1, 2):
+        return "Winter"
+    if month in (3, 4, 5):
+        return "Spring"
+    if month in (6, 7, 8):
+        return "Summer"
+    return "Fall"
+
+
+def _spatial_reduce_2d(arr2d: np.ndarray, reducer: str) -> np.ndarray:
+    """
+    Reduce array shaped (n_cells, n_times) across cells.
+    Returns shape (n_times,).
+    """
+    reducer = str(reducer).strip().lower()
+    if reducer == "mean":
+        return np.nanmean(arr2d, axis=0)
+    if reducer == "median":
+        return np.nanmedian(arr2d, axis=0)
+    raise ValueError(f"Unknown spatial reducer: {reducer}. Use 'mean' or 'median'.")
+
+
+def _get_modelonly_series_def(cfg5: Eval5Config) -> dict[str, list[str]]:
+    """
+    Returns mapping:
+        output_series_name -> list of Ecospace groups to sum
+    """
+    series_def = getattr(cfg, "ZP_MODELONLY_SERIES_DEF", None)
+    if not series_def:
+        # safe fallback
+        series_def = {
+            "ZC2-AMP": ["ZC2-AMP"],
+            "Total": ["ZC1-EUP", "ZC2-AMP", "ZC3-DEC", "ZC4-CLG", "ZC5-CSM"],
+        }
+
+    clean = {}
+    for k, v in series_def.items():
+        if isinstance(v, str):
+            clean[str(k)] = [v]
+        else:
+            clean[str(k)] = [str(x) for x in v]
+    return clean
+
+
+def extract_model_box_base_groups(
+    cfg5: Eval5Config,
+    *,
+    base_groups: list[str],
+    lat_min: Optional[float] = None,
+    lat_max: Optional[float] = None,
+    lon_min: Optional[float] = None,
+    lon_max: Optional[float] = None,
+    spatial_reducer: Optional[str] = None,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Faster version:
+    - select wet cells inside lat/lon box
+    - compute bounding row/col rectangle
+    - read one contiguous NC block per variable
+    - apply boolean mask to keep only selected cells
+    """
+    t0 = time.perf_counter()
+    verbose = bool(getattr(cfg, "ZP_MODELONLY_VERBOSE", True))
+    progress_every = int(getattr(cfg, "ZP_MODELONLY_PROGRESS_EVERY", 25))
+
+    lat_min = float(getattr(cfg, "ZP_MODELONLY_LAT_MIN", lat_min))
+    lat_max = float(getattr(cfg, "ZP_MODELONLY_LAT_MAX", lat_max))
+    lon_min = float(getattr(cfg, "ZP_MODELONLY_LON_MIN", lon_min))
+    lon_max = float(getattr(cfg, "ZP_MODELONLY_LON_MAX", lon_max))
+    spatial_reducer = spatial_reducer or getattr(cfg, "ZP_MODELONLY_SPATIAL_REDUCER", "mean")
+
+    lat_lo, lat_hi = sorted([lat_min, lat_max])
+    lon_lo, lon_hi = sorted([lon_min, lon_max])
+
+    ecospace_nc = os.path.join(cfg5.NC_PATH_OUT, cfg5.ecospace_nc_name)
+    grid_csv = os.path.join(cfg5.BASEMAP_P, cfg5.GRID_MAP_CSV)
+
+    if verbose:
+        print("[5m] --------------------------------------------------")
+        print("[5m] Model-only box extraction (fast block-read version)")
+        print(f"[5m] NC file:   {ecospace_nc}")
+        print(f"[5m] Grid file: {grid_csv}")
+        print(f"[5m] Lat box:   {lat_lo:.4f} .. {lat_hi:.4f}")
+        print(f"[5m] Lon box:   {lon_lo:.4f} .. {lon_hi:.4f}")
+        print(f"[5m] Reducer:   {spatial_reducer}")
+        print(f"[5m] Base groups requested ({len(base_groups)}): {base_groups}")
+
+    grid_df = pd.read_csv(grid_csv)
+    n_grid = len(grid_df)
+    n_wet = int((grid_df["depth"] != 0).sum())
+
+    sel = (
+        (grid_df["depth"] != 0) &
+        (grid_df["lat"] >= lat_lo) & (grid_df["lat"] <= lat_hi) &
+        (grid_df["lon"] >= lon_lo) & (grid_df["lon"] <= lon_hi)
+    )
+
+    cells = (
+        grid_df.loc[sel, ["EWE_row", "EWE_col", "lat", "lon", "depth"]]
+        .dropna()
+        .drop_duplicates(subset=["EWE_row", "EWE_col"])
+        .copy()
+    )
+
+    if verbose:
+        print(f"[5m] Grid cells in CSV: {n_grid}")
+        print(f"[5m] Wet cells in grid: {n_wet}")
+        print(f"[5m] Wet cells in box:  {len(cells)}")
+
+    if cells.empty:
+        raise ValueError(
+            "No wet Ecospace cells found inside the requested lat/lon box. "
+            "Check the bounds against the grid map."
+        )
+
+    rows = cells["EWE_row"].astype(int).to_numpy()
+    cols = cells["EWE_col"].astype(int).to_numpy()
+
+    rmin, rmax = int(rows.min()), int(rows.max())
+    cmin, cmax = int(cols.min()), int(cols.max())
+
+    nr = rmax - rmin + 1
+    nc_ = cmax - cmin + 1
+
+    if verbose:
+        print(
+            f"[5m] Selected row range: {rmin} .. {rmax} ({nr} rows) | "
+            f"col range: {cmin} .. {cmax} ({nc_} cols)"
+        )
+        print(
+            f"[5m] Selected cell lat range: {cells['lat'].min():.4f} .. {cells['lat'].max():.4f} | "
+            f"lon range: {cells['lon'].min():.4f} .. {cells['lon'].max():.4f}"
+        )
+        print(
+            f"[5m] Depth range in box: {cells['depth'].min():.2f} .. {cells['depth'].max():.2f}"
+        )
+        print("[5m] First few selected cells:")
+        print(cells.head(8).to_string(index=False))
+
+    # Build a boolean mask over the rectangular row/col block
+    # True where a selected wet cell exists
+    cell_mask_2d = np.zeros((nr, nc_), dtype=bool)
+    rr = rows - rmin
+    cc = cols - cmin
+    cell_mask_2d[rr, cc] = True
+
+    n_rect = nr * nc_
+    fill_frac = len(cells) / n_rect if n_rect > 0 else np.nan
+
+    if verbose:
+        print(f"[5m] Bounding rectangle size: {nr} x {nc_} = {n_rect} cells")
+        print(f"[5m] Selected-cell fill fraction inside rectangle: {fill_frac:.1%}")
+
+    _, ecospace_times = _load_ecospace_times(ecospace_nc)
+
+    model_ts = pd.DataFrame({
+        "date": pd.to_datetime(ecospace_times)
+    })
+    model_ts["year"] = model_ts["date"].dt.year
+    model_ts["month"] = model_ts["date"].dt.month
+    model_ts["season"] = model_ts["month"].apply(_month_to_season)
+
+    if verbose:
+        print(
+            f"[5m] Time slices in NC: {len(model_ts)} | "
+            f"{model_ts['date'].min().date()} .. {model_ts['date'].max().date()}"
+        )
+
+    present_groups = []
+
+    with nc.Dataset(ecospace_nc, "r") as eco_ds:
+        nc_vars = set(eco_ds.variables.keys())
+
+        if verbose:
+            missing_now = [g for g in base_groups if g not in nc_vars]
+            present_now = [g for g in base_groups if g in nc_vars]
+            print(f"[5m] Requested groups present in NC: {present_now}")
+            if missing_now:
+                print(f"[5m][WARN] Requested groups missing in NC: {missing_now}")
+
+        for gi, var in enumerate(base_groups, start=1):
+            if var not in eco_ds.variables:
+                print(f"[5m][WARN] Variable '{var}' not found in NC. Skipping.")
+                continue
+
+            g0 = time.perf_counter()
+            if verbose:
+                print(
+                    f"[5m] [{gi}/{len(base_groups)}] Extracting '{var}' "
+                    f"using one block read: [:, {rmin}:{rmax+1}, {cmin}:{cmax+1}] ..."
+                )
+
+            # Read one contiguous block: shape = (time, nr, nc_)
+            block = np.asarray(
+                np.ma.filled(
+                    eco_ds.variables[var][:, rmin:rmax+1, cmin:cmax+1],
+                    np.nan
+                ),
+                dtype=float
+            )
+
+            if verbose:
+                n_mb = block.nbytes / (1024 ** 2)
+                print(f"[5m]     block shape={block.shape}, approx memory={n_mb:.1f} MB")
+
+            # Reshape to (time, nr*nc_) and keep only selected cells
+            block2 = block.reshape(block.shape[0], -1)
+            mask1d = cell_mask_2d.reshape(-1)
+            selected = block2[:, mask1d]   # shape = (time, n_selected_cells)
+
+            if verbose:
+                print(f"[5m]     selected matrix shape after mask: {selected.shape}")
+
+            # Reduce across selected cells for each time
+            if spatial_reducer == "mean":
+                series = np.nanmean(selected, axis=1)
+            elif spatial_reducer == "median":
+                series = np.nanmedian(selected, axis=1)
+            else:
+                raise ValueError(f"Unknown spatial reducer: {spatial_reducer}")
+
+            model_ts[var] = series
+            present_groups.append(var)
+
+            if verbose:
+                s = model_ts[var]
+                n_nan = int(s.isna().sum())
+                print(
+                    f"[5m]     finished '{var}' in {_fmt_elapsed(g0)} | "
+                    f"min={np.nanmin(s.values):.6g}, mean={np.nanmean(s.values):.6g}, "
+                    f"max={np.nanmax(s.values):.6g}, n_nan={n_nan}"
+                )
+
+            # free memory before next variable
+            del block, block2, selected
+
+    if not present_groups:
+        raise ValueError("None of the requested base groups were found in the NetCDF.")
+
+    print(
+        f"[5m] Box extraction complete: {len(cells)} wet cells, "
+        f"{len(present_groups)} groups extracted, elapsed={_fmt_elapsed(t0)}."
+    )
+
+    return model_ts, cells
+
+
+def build_modelonly_named_series(
+    model_ts_base: pd.DataFrame,
+    *,
+    series_def: dict[str, list[str]],
+) -> pd.DataFrame:
+    """
+    Build named output series from base-group columns.
+
+    Example:
+        "ZC2-AMP" -> ["ZC2-AMP"]
+        "Total"   -> ["ZC1-EUP","ZC2-AMP",...]
+    """
+    verbose = bool(getattr(cfg, "ZP_MODELONLY_VERBOSE", True))
+
+    out = model_ts_base[["date", "year", "month", "season"]].copy()
+
+    if verbose:
+        print(f"[5m] Building named output series ({len(series_def)} definitions) ...")
+
+    for out_name, members in series_def.items():
+        missing = [g for g in members if g not in model_ts_base.columns]
+        present = [g for g in members if g in model_ts_base.columns]
+
+        if not present:
+            print(f"[5m][WARN] No members present for series '{out_name}'. Skipping.")
+            continue
+
+        if missing:
+            print(f"[5m][WARN] Series '{out_name}' missing members: {missing}")
+
+        out[out_name] = model_ts_base[present].sum(axis=1)
+
+        if verbose:
+            s = out[out_name]
+            print(
+                f"[5m]   built '{out_name}' from {present} | "
+                f"min={np.nanmin(s.values):.6g}, mean={np.nanmean(s.values):.6g}, "
+                f"max={np.nanmax(s.values):.6g}"
+            )
+
+    series_cols = [c for c in out.columns if c not in ("date", "year", "month", "season")]
+    if not series_cols:
+        raise ValueError("No named output series could be built from the extracted base groups.")
+
+    if verbose:
+        print(f"[5m] Named series available: {series_cols}")
+
+    return out
+
+def build_model_only_long_from_named_series(
+    model_ts_named: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Build a paired-like long table so the existing anomaly engine can be reused.
+
+    obs_biomass and model_biomass are intentionally duplicated from the same
+    model-only series; final output uses model_anom only.
+    """
+    series_cols = [c for c in model_ts_named.columns if c not in ("date", "year", "month", "season")]
+
+    d = model_ts_named.copy()
+    d["Index"] = np.arange(len(d), dtype=int)
+
+    recs = []
+    for g in series_cols:
+        tmp = pd.DataFrame({
+            "date": d["date"],
+            "season": d["season"],
+            "Index": d["Index"],
+            "obs_biomass": d[g].astype(float),
+            "model_biomass": d[g].astype(float),
+            "group": g,
+        })
+        recs.append(tmp)
+
+    out = pd.concat(recs, ignore_index=True)
+    out["year"] = pd.to_datetime(out["date"]).dt.year
+    return out
+
+
+def compute_model_only_box_anomalies(
+    cfg5: Eval5Config,
+    *,
+    season: Optional[str] = None,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    End-to-end:
+      1) extract requested base groups from lat/lon box
+      2) build named series (individuals and/or totals)
+      3) compute annual model-only anomalies
+
+    Returns
+    -------
+    annual_anom : DataFrame with columns [year, group, anom]
+    model_ts_named : wide time-series DataFrame of named series
+    cells : selected cell table
+    """
+    t0 = time.perf_counter()
+    verbose = bool(getattr(cfg, "ZP_MODELONLY_VERBOSE", True))
+
+    series_def = _get_modelonly_series_def(cfg5)
+    base_groups = sorted(set(g for members in series_def.values() for g in members))
+    season = getattr(cfg, "ZP_MODELONLY_SEASON", season)
+
+    y0 = int(getattr(cfg, "ZP_MODELONLY_YEAR_START", getattr(cfg, "ZP_FULLRN_START", cfg5.START_YEAR)))
+    y1 = int(getattr(cfg, "ZP_MODELONLY_YEAR_END",   getattr(cfg, "ZP_FULLRN_END",   cfg5.END_YEAR)))
+    summary_method = getattr(cfg, "ZP_MODELONLY_ANOM_SUMMARY", cfg5.ANOM_MODEL_SUMMARY)
+
+    if verbose:
+        print("[5m] --------------------------------------------------")
+        print("[5m] Computing model-only box anomalies")
+        print(f"[5m] Series definition keys: {list(series_def.keys())}")
+        print(f"[5m] Unique base groups needed: {base_groups}")
+        print(f"[5m] Year window: {y0} .. {y1}")
+        print(f"[5m] Season filter: {season if season is not None else 'All seasons'}")
+        print(f"[5m] Summary method: {summary_method}")
+        print(f"[5m] Climatology mode: {cfg5.ANOM_CLIM_MODE}")
+
+    model_ts_base, cells = extract_model_box_base_groups(
+        cfg5,
+        base_groups=base_groups,
+        lat_min=getattr(cfg, "ZP_MODELONLY_LAT_MIN", None),
+        lat_max=getattr(cfg, "ZP_MODELONLY_LAT_MAX", None),
+        lon_min=getattr(cfg, "ZP_MODELONLY_LON_MIN", None),
+        lon_max=getattr(cfg, "ZP_MODELONLY_LON_MAX", None),
+        spatial_reducer=getattr(cfg, "ZP_MODELONLY_SPATIAL_REDUCER", "mean"),
+    )
+
+    model_ts_named = build_modelonly_named_series(
+        model_ts_base,
+        series_def=series_def,
+    )
+
+    paired_like = build_model_only_long_from_named_series(model_ts_named)
+
+    if verbose:
+        print(
+            f"[5m] Long table for anomaly engine: {len(paired_like)} rows | "
+            f"groups={sorted(paired_like['group'].dropna().unique().tolist())}"
+        )
+        if "year" in paired_like.columns and paired_like["year"].notna().any():
+            print(
+                f"[5m] Long table year coverage: "
+                f"{int(paired_like['year'].min())} .. {int(paired_like['year'].max())}"
+            )
+
+    annual = compute_anomalies_summary_paired(
+        paired_like,
+        season=season,
+        year_range=(y0, y1),
+        obs_summary=summary_method,
+        model_summary=summary_method,
+        clim_mode=cfg5.ANOM_CLIM_MODE,
+        log_base=cfg5.ANOM_LOG_BASE,
+        log_offset=cfg5.LOG_OFFSET,
+        year_weight_power=cfg5.ANOM_CLIM_WEIGHT_POWER,
+        year_weight_cap=cfg5.ANOM_CLIM_WEIGHT_CAP,
+        min_tows_per_year=cfg5.ANOM_CLIM_MIN_TOWS_PER_YEAR,
+        eps_std=cfg5.ANOM_CLIM_EPS_STD,
+        min_seasons_all=cfg5.ANOM_ALL_MIN_SEASONS,
+    ).copy()
+
+    annual["anom"] = annual["model_anom"]
+    annual = annual[["year", "group", "anom"]].copy()
+
+    if verbose:
+        print(f"[5m] Annual anomaly rows: {len(annual)}")
+        for g in sorted(annual["group"].dropna().unique()):
+            dg = annual[annual["group"] == g].sort_values("year")
+            if dg.empty:
+                continue
+            print(
+                f"[5m]   {g}: years={int(dg['year'].min())}..{int(dg['year'].max())}, "
+                f"n={len(dg)}, anom_min={np.nanmin(dg['anom'].values):.4f}, "
+                f"anom_max={np.nanmax(dg['anom'].values):.4f}"
+            )
+
+    print(f"[5m] Model-only anomaly computation complete in {_fmt_elapsed(t0)}.")
+    return annual, model_ts_named, cells
+
+def _fmt_elapsed(t0: float) -> str:
+    return f"{time.perf_counter() - t0:.1f}s"
+
+def plot_model_only_anomaly_bars(
+    annual_anom: pd.DataFrame,
+    *,
+    cfg5: Eval5Config,
+    group: str = "Total",
+    season: Optional[str] = None,
+    label: str = "zoop_model_box",
+    outname: str = "model_box_anomaly_bars",
+    title_text: Optional[str] = None,
+) -> str:
+    """
+    Single-series annual anomaly bar plot for one named model-only series.
+    """
+    d = annual_anom.copy()
+    d = d[d["group"] == group].copy()
+
+    if d.empty:
+        raise ValueError(f"No anomaly values found for group '{group}'.")
+
+    pretty = getattr(cfg, "ZP_MODELONLY_LABELS", {}).get(group, group)
+    title_text = title_text or pretty
+
+    d = d.sort_values("year")
+    years = d["year"].astype(int).tolist()
+    vals = d["anom"].astype(float).tolist()
+
+    fig, ax = plt.subplots(figsize=(12, 4.8))
+
+    x = np.arange(len(years))
+    ax.axhline(0, lw=1, linestyle="--", alpha=0.7, color="k", zorder=1)
+    ax.bar(x, vals, width=0.82, zorder=2)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([str(y) for y in years], rotation=45, ha="right")
+    ax.set_ylabel("Anomaly (z-score)")
+    ax.set_xlabel("Year")
+    ax.grid(True, axis="y", alpha=0.3, zorder=0)
+
+    st = None
+    if getattr(cfg5, "ADD_FIG_SUPTITLE", True):
+        y0 = int(getattr(cfg, "ZP_MODELONLY_YEAR_START", getattr(cfg, "ZP_FULLRN_START", cfg5.START_YEAR)))
+        y1 = int(getattr(cfg, "ZP_MODELONLY_YEAR_END",   getattr(cfg, "ZP_FULLRN_END",   cfg5.END_YEAR)))
+        season_text = season if season is not None else "All seasons"
+        st = fig.suptitle(
+            _fig_title(
+                cfg5,
+                kind="Model-only annual anomalies",
+                years=(y0, y1),
+                season=season_text,
+                suffix=title_text,
+                plot_type="bar",
+                log_state="anom z-score",
+            ),
+            y=0.995,
+            fontsize=14,
+        )
+        fig.tight_layout(rect=[0, 0, 1, 0.95])
+    else:
+        fig.tight_layout()
+
+    os.makedirs(cfg5.FIGSOUT_P, exist_ok=True)
+    outpath = os.path.join(
+        cfg5.FIGSOUT_P,
+        f"ecospace_{cfg5.ecospace_code}_zoop_{outname}_{label}_{group}.png",
+    )
+
+    fig.savefig(
+        outpath,
+        dpi=300,
+        bbox_inches="tight",
+        pad_inches=0.2,
+        bbox_extra_artists=([st] if st is not None else None),
+    )
+    plt.show()
+    plt.close(fig)
+
+    print(f"[5m] Saved model-only anomaly bar plot: {outpath}")
+    return outpath
+
+
+def run_model_only_box_anomaly(cfg5: Optional[Eval5Config] = None) -> tuple[str, str, str]:
+    """
+    Convenience runner for model-only box anomaly workflow.
+
+    Returns
+    -------
+    model_series_csv, anomaly_csv, figure_path
+    """
+    t0 = time.perf_counter()
+    cfg5 = cfg5 or Eval5Config()
+
+    verbose = bool(getattr(cfg, "ZP_MODELONLY_VERBOSE", True))
+    plot_group = getattr(cfg, "ZP_MODELONLY_PLOT_GROUP", "Total")
+    season = getattr(cfg, "ZP_MODELONLY_SEASON", None)
+
+    print("[5m] ==================================================")
+    print("[5m] Starting model-only anomaly time series workflow")
+    print(f"[5m] Ecospace code: {cfg5.ecospace_code}")
+    print(f"[5m] Plot group:    {plot_group}")
+    print(f"[5m] Season:        {season if season is not None else 'All seasons'}")
+    print(f"[5m] Verbose:       {verbose}")
+
+    annual_anom, model_ts_named, cells = compute_model_only_box_anomalies(cfg5)
+
+    series_csv = os.path.join(
+        cfg5.EVALOUT_P,
+        getattr(cfg, "ZP_MODELONLY_SERIES_CSV", f"ecospace_zoop_model_box_series_{cfg5.ecospace_code}.csv")
+    )
+    anom_csv = os.path.join(
+        cfg5.EVALOUT_P,
+        getattr(cfg, "ZP_MODELONLY_ANOM_CSV", f"ecospace_zoop_model_box_anom_{cfg5.ecospace_code}.csv")
+    )
+    cells_csv = os.path.join(
+        cfg5.EVALOUT_P,
+        f"ecospace_zoop_model_box_cells_{cfg5.ecospace_code}.csv"
+    )
+
+    if verbose:
+        print("[5m] Writing outputs ...")
+
+    model_ts_named.to_csv(series_csv, index=False)
+    annual_anom.to_csv(anom_csv, index=False)
+    cells.to_csv(cells_csv, index=False)
+
+    if verbose:
+        print(f"[5m]   model series rows x cols: {model_ts_named.shape}")
+        print(f"[5m]   annual anomaly rows x cols: {annual_anom.shape}")
+        print(f"[5m]   selected cells rows x cols: {cells.shape}")
+
+    plot_groups = list(model_ts_named.columns)
+    plot_groups = [c for c in plot_groups if c not in ("date", "year", "month", "season")]
+
+    fig_paths = []
+    for plot_group in plot_groups:
+        fig_path = plot_model_only_anomaly_bars(
+            annual_anom,
+            cfg5=cfg5,
+            group=plot_group,
+            season=getattr(cfg, "ZP_MODELONLY_SEASON", None),
+            label="zoop_model_box",
+            outname="model_box_anomaly_bars",
+            title_text=getattr(cfg, "ZP_MODELONLY_LABELS", {}).get(plot_group, plot_group),
+        )
+        fig_paths.append(fig_path)
+
+    print(f"[5m] Saved {len(fig_paths)} model-only figure(s).")
+
+    print(f"[5m] Saved model-only box time series: {series_csv}")
+    print(f"[5m] Saved model-only annual anomalies: {anom_csv}")
+    print(f"[5m] Saved selected box cells: {cells_csv}")
+    print(f"[5m] Saved model-only figure: {fig_path}")
+    print(f"[5m] Workflow complete in {_fmt_elapsed(t0)}")
+    print("[5m] ==================================================")
+
+    return series_csv, anom_csv, fig_path
 # ============================================================
 # Stage 3 — Anomaly comparison & NPGO (ex-5d)
 # ============================================================
@@ -2783,6 +3429,7 @@ def run_zoop_eval(
     recompute_match: Optional[bool] = None,
     make_viz: Optional[bool] = None,
     make_anom: Optional[bool] = None,
+    make_modelonly_box: Optional[bool] = None,
     groups: Optional[List[str]] = None,
 ) -> None:
 
@@ -2794,18 +3441,30 @@ def run_zoop_eval(
         cfg5.MAKE_VIZ = make_viz
     if make_anom is not None:
         cfg5.MAKE_ANOM = make_anom
+    if make_modelonly_box is not None:
+        cfg5.MODELONLY_DO = make_modelonly_box
 
-    # Stage 1: matching
-    matched = match_zoop_to_ecospace(cfg5)
+    # ---------------------------------------------------------
+    #  obs-vs-model workflow
+    # ---------------------------------------------------------
+    need_obs_model_path = bool(cfg5.MAKE_VIZ or cfg5.MAKE_ANOM or cfg5.PUB_TOTAL_PANEL)
 
-    # Stage 2: viz & stats
-    skill_csv = visualize_and_stats(matched, cfg5)
+    if need_obs_model_path:
+        matched = match_zoop_to_ecospace(cfg5)
 
-    # Stage 3: anomaly panels / method comparisons
-    if cfg5.MAKE_ANOM:
-        if cfg5.COMPARE_ANOM_SUMMARIES:
-            compare_anomaly_obs_summaries(cfg5, groups=groups)
-        anomaly_comparisons(cfg5, groups=groups)
+        if cfg5.MAKE_VIZ:
+            visualize_and_stats(matched, cfg5)
+
+        if cfg5.MAKE_ANOM:
+            if cfg5.COMPARE_ANOM_SUMMARIES:
+                compare_anomaly_obs_summaries(cfg5, groups=groups)
+            anomaly_comparisons(cfg5, groups=groups)
+
+    # ---------------------------------------------------------
+    # New model-only box workflow
+    # ---------------------------------------------------------
+    if cfg5.MODELONLY_DO:
+        run_model_only_box_anomaly(cfg5)
 
     print("[5] DONE.")
 
@@ -2814,14 +3473,32 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--recompute-match", action="store_true",
-                        help="Force recomputation of obs–model match")
-    parser.add_argument("--no-viz", action="store_true",
-                        help="Skip making figures")
-    parser.add_argument("--no-anom", action="store_true",
-                        help="Skip anomaly calculations")
-    parser.add_argument("--groups", nargs="*", default=None,
-                        help="Subset of zoop groups to include (e.g. ZC4-CLG ZC5-CSM)")
+    parser.add_argument(
+        "--recompute-match",
+        action="store_true",
+        help="Force recomputation of obs–model match"
+    )
+    parser.add_argument(
+        "--no-viz",
+        action="store_true",
+        help="Skip making obs-vs-model figures"
+    )
+    parser.add_argument(
+        "--no-anom",
+        action="store_true",
+        help="Skip obs-vs-model anomaly calculations"
+    )
+    parser.add_argument(
+        "--model-box",
+        action="store_true",
+        help="Run model-only box anomaly workflow"
+    )
+    parser.add_argument(
+        "--groups",
+        nargs="*",
+        default=None,
+        help="Subset of zoop groups to include in obs-vs-model anomaly comparisons"
+    )
 
     args = parser.parse_args()
 
@@ -2829,5 +3506,6 @@ if __name__ == "__main__":
         recompute_match=True if args.recompute_match else None,
         make_viz=not args.no_viz,
         make_anom=not args.no_anom,
+        make_modelonly_box=True if args.model_box else None,
         groups=args.groups,
     )
