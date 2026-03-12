@@ -42,7 +42,7 @@ def build_manuscript_skill_table(
     in_dir: str | Path,
     *,
     out_csv: str | Path | None = None,
-    include_all: bool = False,
+    include_all: bool = True,
     total_name_in_source: str = "Total",
 ) -> pd.DataFrame:
     """
@@ -88,7 +88,7 @@ def build_supplement_skill_table(
     in_dir: str | Path,
     *,
     out_csv: str | Path | None = None,
-    include_all: bool = False,
+    include_all: bool = True,
     passes: tuple[str, ...] = ("ZC", "ZS"),
     total_name_in_source: str = "Total",
     total_name_fmt: str = "{pass_name}-TOTAL",
@@ -169,4 +169,4 @@ if __name__ == "__main__":
     #   python zoop_skill_table_helper.py
     scenario = "SC215"
     in_dir = Path("..//..//data//evaluation//")
-    export_forpub_zoop_skill_tables(scenario=scenario, in_dir=in_dir, include_all=False)
+    export_forpub_zoop_skill_tables(scenario=scenario, in_dir=in_dir, include_all=True)
