@@ -2529,6 +2529,47 @@ def _add_statbox(ax, text: str, *, x=0.98, y=0.02):
         zorder=10,
     )
 
+def _add_colored_statbox(ax, lines, *, x=0.98, y=0.02, lineheight=0.055):
+    """
+    lines: list of (text, color) tuples
+    Places a multi-line stats box in axes coordinates.
+    """
+    if not lines:
+        return
+
+    # crude box height estimate in axes coordinates
+    n = len(lines)
+    box_h = lineheight * n + 0.02
+    box_w = 0.34  # adjust if needed
+
+    # draw background box
+    rect = plt.Rectangle(
+        (x - box_w, y),
+        box_w,
+        box_h,
+        transform=ax.transAxes,
+        facecolor="white",
+        edgecolor="none",
+        alpha=0.75,
+        zorder=9,
+    )
+    ax.add_patch(rect)
+
+    # draw each line, top to bottom
+    for j, (txt, color) in enumerate(lines):
+        yy = y + box_h - 0.015 - j * lineheight
+        ax.text(
+            x - 0.01,
+            yy,
+            txt,
+            transform=ax.transAxes,
+            ha="right",
+            va="top",
+            fontsize=9,
+            color=color,
+            zorder=10,
+        )
+
 def plot_pub_panel_total_single_season(
     paired: pd.DataFrame,
     *,
@@ -3102,35 +3143,113 @@ def plot_scatter_matched_tows(
     fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4 * nrows))
     axes = np.atleast_1d(axes).flatten()
 
+    season_order = ["Winter", "Spring", "Summer", "Fall"]
+    season_colors = {
+        "Winter": "tab:blue",
+        "Spring": "tab:green",
+        "Summer": "tab:orange",
+        "Fall": "tab:red",
+    }
+    season_short = {
+        "Winter": "Wi",
+        "Spring": "Sp",
+        "Summer": "Su",
+        "Fall": "Fa",
+    }
+
     for i, grp in enumerate(groups):
         ax = axes[i]
-        g = d[d["group"] == grp]
-        ax.scatter(g["obs_x"], g["mod_y"], s=12, alpha=0.6)
+        g = d[d["group"] == grp].copy()
 
-        if len(g) > 0:
-            lo = min(g["obs_x"].min(), g["mod_y"].min())
-            hi = max(g["obs_x"].max(), g["mod_y"].max())
-            ax.plot([lo, hi], [lo, hi], "-")
+        if g.empty:
+            ax.set_title(grp)
+            ax.set_xlabel(xlab)
+            ax.set_ylabel(ylab)
+            ax.grid(True, alpha=0.3)
+            continue
 
-            _add_best_fit_line(
-                ax,
-                g["obs_x"].values,
-                g["mod_y"].values,
-                color="k",
-                linestyle="--",
-                linewidth=1,
-                show_eq=False,
+        # axis limits from all seasons pooled within this group
+        lo = min(g["obs_x"].min(), g["mod_y"].min())
+        hi = max(g["obs_x"].max(), g["mod_y"].max())
+        pad = 0.05 * (hi - lo if hi > lo else 1.0)
+
+        ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "-", color="#808080", lw=1)
+        ax.set_xlim(lo - pad, hi + pad)
+        ax.set_ylim(lo - pad, hi + pad)
+
+        stat_lines = []
+
+        for season in season_order:
+            gs = g[g["season"] == season].copy()
+            color = season_colors[season]
+
+            if gs.empty:
+                stat_lines.append((f"{season_short[season]}: n=0", color))
+                continue
+
+            ax.scatter(
+                gs["obs_x"], gs["mod_y"],
+                s=12, alpha=0.6,
+                color=color,
+                label=season if i == 0 else None,
             )
 
-            if len(g) > 1:
-                r = np.corrcoef(g["obs_x"], g["mod_y"])[0, 1]
-                ax.set_title(f"{grp}  r={r:.2f}")
-            else:
-                ax.set_title(grp)
+            if len(gs) >= 2:
+                _add_best_fit_line(
+                    ax,
+                    gs["obs_x"].values,
+                    gs["mod_y"].values,
+                    color=color,
+                    linestyle="--",
+                    linewidth=1,
+                    show_eq=False,
+                )
 
+            stats = compute_stats(gs, "obs_x", "mod_y", log_or_anom=log10)
+            if stats["N"] >= 2 and np.isfinite(stats["r"]):
+                stat_lines.append((f"{season_short[season]}: n={int(stats['N'])}, r={stats['r']:.2f}", color))
+            else:
+                stat_lines.append((f"{season_short[season]}: n={int(stats['N'])}", color))
+
+
+        ax.set_title(grp)
         ax.set_xlabel(xlab)
         ax.set_ylabel(ylab)
         ax.grid(True, alpha=0.3)
+
+        # overlay stats box
+        _add_colored_statbox(ax, stat_lines)
+
+    #
+    # for i, grp in enumerate(groups):
+    #     ax = axes[i]
+    #     g = d[d["group"] == grp]
+    #     ax.scatter(g["obs_x"], g["mod_y"], s=12, alpha=0.6)
+    #
+    #     if len(g) > 0:
+    #         lo = min(g["obs_x"].min(), g["mod_y"].min())
+    #         hi = max(g["obs_x"].max(), g["mod_y"].max())
+    #         ax.plot([lo, hi], [lo, hi], "-")
+    #
+    #         _add_best_fit_line(
+    #             ax,
+    #             g["obs_x"].values,
+    #             g["mod_y"].values,
+    #             color="k",
+    #             linestyle="--",
+    #             linewidth=1,
+    #             show_eq=False,
+    #         )
+    #
+    #         if len(g) > 1:
+    #             r = np.corrcoef(g["obs_x"], g["mod_y"])[0, 1]
+    #             ax.set_title(f"{grp}  r={r:.2f}")
+    #         else:
+    #             ax.set_title(grp)
+    #
+    #     ax.set_xlabel(xlab)
+    #     ax.set_ylabel(ylab)
+    #     ax.grid(True, alpha=0.3)
 
     for j in range(len(groups), len(axes)):
         axes[j].axis("off")
@@ -3140,11 +3259,16 @@ def plot_scatter_matched_tows(
     if getattr(cfg5, "ADD_FIG_SUPTITLE", True):
         log_state = "log10" if log10 else "raw"
 
+        if len(season) > 1:
+            season_title = "All"
+        else:
+            season_title = season
+
         st = fig.suptitle(
             _fig_title(
                 cfg5,
                 kind="Tow-level scatter (Obs vs Model)",
-                season=season,           # <-- ADD THIS
+                season=season_title,           # <-- ADD THIS
                 plot_type="scatter",
                 log_state=log_state,
                 suffix=label,            # keep label as suffix for consistency
@@ -3173,6 +3297,8 @@ def plot_scatter_matched_tows(
     plt.close(fig)
     print(f"[INFO] Saved scatter plot: {outpath}")
     return outpath
+
+
 
 def plot_scatter_anomalies(
     annual: pd.DataFrame,
