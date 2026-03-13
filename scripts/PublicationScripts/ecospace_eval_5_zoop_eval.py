@@ -207,10 +207,103 @@ class Eval5Config:
         f"ecospace_zoop_model_box_anom_{getattr(cfg, 'ECOSPACE_SC', 'run')}.csv"
     )
 
+    ANOM_EXCLUDE_STATIONS: List[str] = field(
+        default_factory=lambda: list(getattr(cfg, "ZP_ANOM_EXCLUDE_STATIONS", []))
+    )
+
 
 # =============================================================================
 # SHARED UTILITIES
 # =============================================================================
+
+def _add_best_fit_line(
+    ax,
+    x,
+    y,
+    *,
+    color="k",
+    linestyle="-",
+    linewidth=1.5,
+    alpha=0.9,
+    show_eq=False,
+    eq_loc=(0.98, 0.10),
+):
+    """
+    Add an ordinary least-squares best-fit line to a scatter plot.
+
+    Parameters
+    ----------
+    ax : matplotlib Axes
+    x, y : array-like
+        Data already on the plotting scale (raw, log10, anomaly, etc.)
+    show_eq : bool
+        If True, annotate slope/intercept/R^2 in axes coordinates.
+    eq_loc : tuple
+        Axes-fraction location for the annotation text.
+    """
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    m = np.isfinite(x) & np.isfinite(y)
+    x = x[m]
+    y = y[m]
+
+    if len(x) < 2:
+        return None
+
+    # fit y = a*x + b
+    a, b = np.polyfit(x, y, 1)
+
+    # use visible plotting range
+    xmin, xmax = ax.get_xlim()
+    xx = np.linspace(xmin, xmax, 200)
+    yy = a * xx + b
+    ax.plot(xx, yy, color=color, linestyle=linestyle, linewidth=linewidth, alpha=alpha)
+
+    # stats
+    r = np.corrcoef(x, y)[0, 1] if len(x) > 1 else np.nan
+    r2 = r ** 2 if np.isfinite(r) else np.nan
+
+    if show_eq:
+        txt = f"fit: y = {a:.2f}x + {b:.2f}\n$R^2$ = {r2:.2f}"
+        ax.text(
+            eq_loc[0], eq_loc[1], txt,
+            transform=ax.transAxes,
+            ha="right", va="bottom",
+            fontsize=9,
+            bbox=dict(boxstyle="round,pad=0.25", facecolor="white", edgecolor="none", alpha=0.75),
+            zorder=10,
+        )
+
+    return {"slope": a, "intercept": b, "r2": r2}
+
+
+def _exclude_stations(df: pd.DataFrame, stations_to_exclude) -> pd.DataFrame:
+    """
+    Exclude named stations from a matched table before anomaly building.
+    Matching is case-insensitive and trims whitespace.
+    """
+    if not stations_to_exclude:
+        return df
+
+    if "Station" not in df.columns:
+        print("[5d][WARN] No 'Station' column found; station exclusion skipped.")
+        return df
+
+    bad = {str(s).strip().lower() for s in stations_to_exclude if str(s).strip()}
+    if not bad:
+        return df
+
+    before = len(df)
+    keep = ~df["Station"].astype(str).str.strip().str.lower().isin(bad)
+    out = df.loc[keep].copy()
+    after = len(out)
+
+    removed_stations = sorted(df.loc[~keep, "Station"].astype(str).unique())
+    print(
+        f"[5d] Station exclusion: removed {before - after} matched rows "
+        f"from stations: {removed_stations}"
+    )
+    return out
 
 def _load_ecospace_times(nc_path: str) -> Tuple[Dict, np.ndarray]:
     with nc.Dataset(nc_path, 'r') as ds:
@@ -583,6 +676,14 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
     print("[5c] Visualizing & computing station-level skill stats…")
     df = pd.read_csv(matched_csv)
 
+    # summary table
+    summarize_tow_replication_for_supplement(
+        matched_csv,
+        cfg5=cfg5,
+        include_all_year=True,
+        include_grand_total=True,
+    )
+
     obs_cols = [c for c in cfg5.ZOOP_GROUPS if c in df.columns]
     if not obs_cols:
         raise ValueError("No configured zooplankton observation columns found in matched_csv.")
@@ -656,7 +757,19 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
         hi = np.nanmax(np.r_[x.values, y.values])
         pad = 0.05 * (hi - lo if hi > lo else 1.0)
 
-        ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "k--", lw=1)
+        ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "k-", lw=1)
+
+        _add_best_fit_line(
+            ax,
+            x.values,
+            y.values,
+            color="k",
+            linestyle="--",
+            linewidth=1,
+            show_eq=False,
+            eq_loc=(0.98, 0.08),
+        )
+
         ax.set_xlim(lo - pad, hi + pad)
         ax.set_ylim(lo - pad, hi + pad)
 
@@ -766,8 +879,8 @@ def export_station_skill_long(
             s = compute_stats(sub, "obs", "mod", log_or_anom=log_or_anom)
             s.update({
                 "assessment": "station",
-                "season": season,
                 "group": group,
+                "season": season,
                 "obs_mean": float(np.nanmean(sub["obs"])),
                 "mod_mean": float(np.nanmean(sub["mod"])),
                 "obs_std": float(np.nanstd(sub["obs"])),
@@ -780,7 +893,7 @@ def export_station_skill_long(
     out = pd.DataFrame(rows)
 
     round_cols = [
-        "r", "RMSE", "MAE", "WSS", "Bias",
+        "r", "RMSE", "MAE", "WSS", "Bias", "MB",
         "obs_mean", "mod_mean", "obs_std", "mod_std"
     ]
     round_cols = [c for c in round_cols if c in out.columns]
@@ -789,11 +902,12 @@ def export_station_skill_long(
     # I don't need all these stats so keep only some
     first_cols = [
         "assessment", "scale", "aggregation",
-        "season", "group",
+        "group", "season",
         "N",
         "obs_mean", "mod_mean",
         "obs_std", "mod_std",
-        "MB", "MAE", "RMSE", #"NRMSE",
+        #"MB",
+        "MAE", "RMSE", #"NRMSE",
          "r",
         # #"R2", "MAPE", "NSE",
         "WSS"
@@ -807,6 +921,216 @@ def export_station_skill_long(
     out.to_csv(out_csv, index=False)
     print(f"[5c] Saved station skill table: {out_csv}")
     return out_csv
+
+
+
+
+def summarize_tow_replication_for_supplement(
+    matched_csv: str,
+    cfg5=None,
+    *,
+    out_csv: str | None = None,
+    include_all_year: bool = True,
+    include_grand_total: bool = True,
+    max_station_list: int = 12,
+) -> str:
+    """
+    Summarize whether multiple tows occur within a given Station-Year-Season.
+
+    Output:
+        One CSV with one row per Year x Season, plus optional:
+          - one 'All' row per Year
+          - one grand-total row
+
+    Key columns:
+        Year
+        Season
+        n_rows
+        n_unique_tows
+        n_stations
+        mean_tows_per_station
+        median_tows_per_station
+        max_tows_per_station
+        n_station_groups_with_multi_tows
+        pct_station_groups_with_multi_tows
+        n_extra_tows_beyond_first
+        stations_with_multi_tows
+
+    Notes:
+        - Uses unique 'Index' as tow ID, matching your anomaly workflow.
+        - Uses 'Station' as the spatial sampling unit, matching your boxplot workflow.
+        - If 'Year' is absent but 'Date'/'date' exists, Year is derived from that.
+    """
+
+    df = pd.read_csv(matched_csv).copy()
+
+    # -----------------------------
+    # Normalize core column names
+    # -----------------------------
+    if "Station" not in df.columns:
+        raise ValueError("Expected a 'Station' column in matched_csv.")
+
+    if "Season" in df.columns:
+        df["Season"] = df["Season"].astype(str).str.capitalize()
+    elif "season" in df.columns:
+        df["Season"] = df["season"].astype(str).str.capitalize()
+    else:
+        raise ValueError("Expected a 'Season' or 'season' column in matched_csv.")
+
+    if "Year" not in df.columns:
+        if "year" in df.columns:
+            df["Year"] = df["year"]
+        elif "Date" in df.columns:
+            df["Year"] = pd.to_datetime(df["Date"]).dt.year
+        elif "date" in df.columns:
+            df["Year"] = pd.to_datetime(df["date"]).dt.year
+        else:
+            raise ValueError("Expected 'Year', 'year', 'Date', or 'date' in matched_csv.")
+
+    if "Index" not in df.columns:
+        raise ValueError("Expected an 'Index' column in matched_csv (tow ID).")
+
+    # keep only needed columns and drop obvious missing keys
+    keep_cols = ["Station", "Year", "Season", "Index"]
+    if "Region" in df.columns:
+        keep_cols.append("Region")
+
+    work = df[keep_cols].dropna(subset=["Station", "Year", "Season", "Index"]).copy()
+
+    # -----------------------------
+    # Station-Year-Season counts
+    # -----------------------------
+    station_counts = (
+        work.groupby(["Year", "Season", "Station"], as_index=False)
+            .agg(
+                n_rows=("Index", "size"),
+                n_unique_tows=("Index", "nunique"),
+            )
+    )
+
+    station_counts["has_multi_tows"] = station_counts["n_unique_tows"] > 1
+    station_counts["extra_tows_beyond_first"] = np.maximum(
+        station_counts["n_unique_tows"] - 1, 0
+    )
+
+    # -----------------------------
+    # Helper to collapse one subset
+    # -----------------------------
+    def _collapse(sub: pd.DataFrame, year_val, season_val) -> dict:
+        if sub.empty:
+            return {
+                "Year": year_val,
+                "Season": season_val,
+                "n_station_groups": 0,
+                "n_stations": 0,
+                "n_rows": 0,
+                "n_unique_tows": 0,
+                "mean_tows_per_station": np.nan,
+                "median_tows_per_station": np.nan,
+                "max_tows_per_station": np.nan,
+                "min_tows_per_station": np.nan,
+                "n_station_groups_with_multi_tows": 0,
+                "pct_station_groups_with_multi_tows": np.nan,
+                "n_extra_tows_beyond_first": 0,
+                "stations_with_multi_tows": "",
+            }
+
+        multi = sub[sub["has_multi_tows"]].copy()
+
+        if len(multi) == 0:
+            multi_txt = ""
+        else:
+            parts = [
+                f"{row.Station} ({int(row.n_unique_tows)})"
+                for row in multi.sort_values(
+                    ["n_unique_tows", "Station"], ascending=[False, True]
+                ).itertuples(index=False)
+            ]
+            if len(parts) > max_station_list:
+                shown = parts[:max_station_list]
+                multi_txt = "; ".join(shown) + f"; ... +{len(parts) - max_station_list} more"
+            else:
+                multi_txt = "; ".join(parts)
+
+        return {
+            "Year": year_val,
+            "Season": season_val,
+            "n_station_groups": int(len(sub)),
+            "n_stations": int(sub["Station"].nunique()),
+            "n_rows": int(sub["n_rows"].sum()),
+            "n_unique_tows": int(sub["n_unique_tows"].sum()),
+            "mean_tows_per_station": float(sub["n_unique_tows"].mean()),
+            "median_tows_per_station": float(sub["n_unique_tows"].median()),
+            "max_tows_per_station": int(sub["n_unique_tows"].max()),
+            "min_tows_per_station": int(sub["n_unique_tows"].min()),
+            "n_station_groups_with_multi_tows": int(multi["has_multi_tows"].sum()),
+            "pct_station_groups_with_multi_tows": float(100.0 * multi["has_multi_tows"].sum() / len(sub)),
+            "n_extra_tows_beyond_first": int(sub["extra_tows_beyond_first"].sum()),
+            "stations_with_multi_tows": multi_txt,
+        }
+
+    # -----------------------------
+    # Main rows: one row per Year x Season
+    # -----------------------------
+    rows = []
+
+    for (yr, seas), sub in station_counts.groupby(["Year", "Season"], sort=True):
+        rows.append(_collapse(sub, yr, seas))
+
+    # -----------------------------
+    # Optional 'All' row per year
+    # -----------------------------
+    if include_all_year:
+        for yr, sub in station_counts.groupby("Year", sort=True):
+            rows.append(_collapse(sub, yr, "All"))
+
+    # -----------------------------
+    # Optional grand-total row
+    # -----------------------------
+    if include_grand_total:
+        rows.append(_collapse(station_counts, "All", "All"))
+
+    out = pd.DataFrame(rows)
+
+    # season ordering
+    season_order = {
+        "Winter": 0,
+        "Spring": 1,
+        "Summer": 2,
+        "Fall": 3,
+        "All": 4,
+    }
+    out["_year_sort"] = pd.to_numeric(out["Year"], errors="coerce").fillna(999999)
+    out["_season_sort"] = out["Season"].map(season_order).fillna(999)
+    out = (
+        out.sort_values(["_year_sort", "_season_sort"])
+           .drop(columns=["_year_sort", "_season_sort"])
+           .reset_index(drop=True)
+    )
+
+    # rounding
+    round_cols = [
+        "mean_tows_per_station",
+        "median_tows_per_station",
+        "pct_station_groups_with_multi_tows",
+    ]
+    for c in round_cols:
+        if c in out.columns:
+            out[c] = out[c].round(2)
+
+    if out_csv is None:
+        if cfg5 is not None and hasattr(cfg5, "EVALOUT_P") and hasattr(cfg5, "ecospace_code"):
+            out_csv = os.path.join(
+                cfg5.EVALOUT_P,
+                f"ecospace_tow_replication_summary_{cfg5.ecospace_code}.csv",
+            )
+        else:
+            out_csv = str(Path(matched_csv).with_name("tow_replication_summary.csv"))
+
+    out.to_csv(out_csv, index=False)
+    print(f"Saved tow replication summary: {out_csv}")
+    return out_csv
+
 
 # =============================================================================
 # ANOMALY DATA BUILD + COMPUTATION
@@ -1259,6 +1583,10 @@ def compare_anomaly_obs_summaries(
         raise FileNotFoundError(f"Matched CSV not found: {matched_csv}")
 
     df_match = pd.read_csv(matched_csv)
+    df_match = _exclude_stations(
+        df_match,
+        getattr(cfg5, "ANOM_EXCLUDE_STATIONS", []),
+    )
     candidate = groups or cfg5.ZOOP_GROUPS
     groups_present = [g for g in candidate if g in df_match.columns and f"EWE-{g}" in df_match.columns]
     if not groups_present:
@@ -2123,7 +2451,18 @@ def plot_scatter_total_by_season(
             hi = max(g["obs_x"].max(), g["mod_y"].max())
             pad = 0.05 * (hi - lo if hi > lo else 1.0)
 
-            ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "--", color="k", lw=1)
+            ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "-", color="#808080", lw=1)
+
+            _add_best_fit_line(
+                ax,
+                g["obs_x"].values,
+                g["mod_y"].values,
+                color="k",
+                linestyle="--",
+                linewidth=1,
+                show_eq=False,
+            )
+
             ax.set_xlim(lo - pad, hi + pad)
             ax.set_ylim(lo - pad, hi + pad)
 
@@ -2263,7 +2602,19 @@ def plot_pub_panel_total_single_season(
             lo = min(d["x"].min(), d["y"].min())
             hi = max(d["x"].max(), d["y"].max())
             pad = 0.05 * (hi - lo if hi > lo else 1.0)
-            ax_scatter.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "--", color="k", lw=1)
+
+            ax_scatter.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "-", color="#808080", lw=1)
+
+            _add_best_fit_line(
+                ax_scatter,
+                d["x"].values,
+                d["y"].values,
+                color="k",
+                linestyle="--",
+                linewidth=1,
+                show_eq=False,
+            )
+
             ax_scatter.set_xlim(lo - pad, hi + pad)
             ax_scatter.set_ylim(lo - pad, hi + pad)
 
@@ -2296,7 +2647,18 @@ def plot_pub_panel_total_single_season(
             hi = max(d["obs_anom"].max(), d["model_anom"].max())
             pad = 0.05 * (hi - lo if hi > lo else 1.0)
 
-            ax_scatter.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "--", color="k", lw=1)
+            ax_scatter.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "-", color="#808080", lw=1)
+
+            _add_best_fit_line(
+                ax_scatter,
+                d["obs_anom"].values,
+                d["model_anom"].values,
+                color="k",
+                linestyle="--",
+                linewidth=1,
+                show_eq=False,
+            )
+
             ax_scatter.set_xlim(lo - pad, hi + pad)
             ax_scatter.set_ylim(lo - pad, hi + pad)
 
@@ -2471,8 +2833,10 @@ def plot_model_only_anomaly_bars(
     fig, ax = plt.subplots(figsize=(12, 4.8))
 
     x = np.arange(len(years))
+    colors = ["tab:blue" if v >= 0 else "tab:red" for v in vals]
+
     ax.axhline(0, lw=1, linestyle="--", alpha=0.7, color="k", zorder=1)
-    ax.bar(x, vals, width=0.82, zorder=2)
+    ax.bar(x, vals, width=0.82, color=colors, zorder=2)
 
     ax.set_xticks(x)
     ax.set_xticklabels([str(y) for y in years], rotation=45, ha="right")
@@ -2746,7 +3110,17 @@ def plot_scatter_matched_tows(
         if len(g) > 0:
             lo = min(g["obs_x"].min(), g["mod_y"].min())
             hi = max(g["obs_x"].max(), g["mod_y"].max())
-            ax.plot([lo, hi], [lo, hi], "--")
+            ax.plot([lo, hi], [lo, hi], "-")
+
+            _add_best_fit_line(
+                ax,
+                g["obs_x"].values,
+                g["mod_y"].values,
+                color="k",
+                linestyle="--",
+                linewidth=1,
+                show_eq=False,
+            )
 
             if len(g) > 1:
                 r = np.corrcoef(g["obs_x"], g["mod_y"])[0, 1]
@@ -2832,7 +3206,16 @@ def plot_scatter_anomalies(
         if len(g) > 0:
             lo = min(g["obs_anom"].min(), g["model_anom"].min())
             hi = max(g["obs_anom"].max(), g["model_anom"].max())
-            ax.plot([lo, hi], [lo, hi], "--")
+            ax.plot([lo, hi], [lo, hi], "-")
+            _add_best_fit_line(
+                ax,
+                g["obs_anom"].values,
+                g["model_anom"].values,
+                color="k",
+                linestyle="--",
+                linewidth=1,
+                show_eq=False,
+            )
 
             if len(g) > 1:
                 r = np.corrcoef(g["obs_anom"], g["model_anom"])[0, 1]
@@ -2941,7 +3324,16 @@ def plot_scatter_anomalies_total_by_season(
             hi = max(d["obs_anom"].max(), d["model_anom"].max())
             pad = 0.05 * (hi - lo if hi > lo else 1.0)
 
-            ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "--", color="k", lw=1)
+            ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "-", color="k", lw=1)
+            _add_best_fit_line(
+                ax,
+                d["obs_anom"].values,
+                d["model_anom"].values,
+                color="k",
+                linestyle="--",
+                linewidth=1,
+                show_eq=False,
+            )
             ax.set_xlim(lo - pad, hi + pad)
             ax.set_ylim(lo - pad, hi + pad)
 
@@ -3358,6 +3750,10 @@ def anomaly_comparisons(
         )
 
     df_match = pd.read_csv(matched_csv)
+    df_match = _exclude_stations(
+        df_match,
+        getattr(cfg5, "ANOM_EXCLUDE_STATIONS", []),
+    )
 
     # Determine which groups are actually present in the matched file
     candidate = groups or cfg5.ZOOP_GROUPS
