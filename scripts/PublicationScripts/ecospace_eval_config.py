@@ -295,7 +295,7 @@ BT_MIN_Y_TICK = 38
 # -------------------------------------------
 # evaluation 5 - zooplankton eval
 # -------------------------------------------
-ZP_RECOMPUTE_MATCH = False # WATCH THIS!!
+ZP_RECOMPUTE_MATCH = True # WATCH THIS!!
 
 Z_F_SEAS = "Zoopl_SofG_1996-2018_df_summary.csv" # this is output by long R script
 Z_F_TOWLEV = "Zooplankton_B_C_gm2_EWEMODELGRP_Wide_NEMO3daymatch.csv" # this is output by short one
@@ -322,7 +322,7 @@ ZP_FRIENDLY_MAP_ZC = {
     'misc': 'Other',
     'Total': 'Total'
 }
-ZP_LOG_TRANSFORM = True
+ZP_LOG_TRANSFORM = True         # not anomalies
 ZP_SHOW_CNTS = False             # annotate n_tows
 ZP_ANOM_ALL_SEASONS = True     # True => loop Winter/Spring/Summer/Fall
 ZP_MAKE_SCATTER = True          # make scatter figs too
@@ -335,7 +335,7 @@ ZP_PUB_PANEL_A_MODE = "anomaly_scatter"   # "tow_scatter" or "anomaly_scatter"
 ZP_YEAR_START = 2000
 ZP_YEAR_END   = 2018
 
-ZP_FULLRN_START = 1980
+ZP_FULLRN_START = 1980 # used for model-only anoms
 ZP_FULLRN_END = 2018
 
 
@@ -369,6 +369,8 @@ ZP_ANOM_OBS_SUMMARY = "mean_of_logs"
 ZP_ANOM_MODEL_SUMMARY = "mean_raw"
 ZP_ANOM_LOG_BASE = "log10"     # or "ln"
 
+ZP_ANOM_EXCLUDE_STATIONS = [] # experimental
+
 # For the combined "All" anomaly, average available seasonal z-scores within each year
 ZP_ANOM_ALL_MIN_SEASONS = 1
 
@@ -389,7 +391,7 @@ ZP_COMPARE_ANOM_OBS_SUMMARIES = ("log_of_mean", "mean_of_logs")
 #   - "none": keep all tows
 # NOTE: if changed, set RECOMPUTE_MATCH=True! or delete the old matched CSV.
 # -------------------------------------------------------------------------
-ZP_TOW_FILTER_MODE = "none"   # {"deep_or_complete", "none"}
+ZP_TOW_FILTER_MODE = "deep_or_complete"   # {"deep_or_complete", "none"} data from perry's set are already filtered somewhat
 ZP_TOW_MIN_PROP = 0.7
 ZP_TOW_MIN_START_DEPTH_M = 150.0
 ZP_TOW_MAX_BOTTOM_DEPTH_M = None   # optional additional cutoff
@@ -454,6 +456,8 @@ ZP_MODELONLY_LABELS = {
 # Output filenames
 ZP_MODELONLY_SERIES_CSV = f"ecospace_zoop_model_box_series_{ECOSPACE_SC}.csv"
 ZP_MODELONLY_ANOM_CSV   = f"ecospace_zoop_model_box_anom_{ECOSPACE_SC}.csv"
+
+
 
 
 # =============================================================================
