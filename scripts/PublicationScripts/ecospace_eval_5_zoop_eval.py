@@ -211,10 +211,28 @@ class Eval5Config:
         default_factory=lambda: list(getattr(cfg, "ZP_ANOM_EXCLUDE_STATIONS", []))
     )
 
+# show-plot toggles
+    SHOW_PLTS: bool = getattr(cfg, "ZP_SHOW_PLTS", False)
+    SHOW_MODOBS_TOTAL_SCATTER: bool = getattr(cfg, "ZP_SHOW_MODOBS_TOTAL_SCATTER", False)
+    SHOW_SEASONAL_BOXPANELS: bool = getattr(cfg, "ZP_SHOW_SEASONAL_BOXPANELS", False)
+    SHOW_TOTAL_BY_SEASON_SCATTER: bool = getattr(cfg, "ZP_SHOW_TOTAL_BY_SEASON_SCATTER", False)
+    SHOW_PUB_TOTAL_PANEL: bool = getattr(cfg, "ZP_SHOW_PUB_TOTAL_PANEL", False)
+    SHOW_MODELONLY_ANOM_BARS: bool = getattr(cfg, "ZP_SHOW_MODELONLY_ANOM_BARS", False)
+    SHOW_ANOM_PAIRED_PANEL: bool = getattr(cfg, "ZP_SHOW_ANOM_PAIRED_PANEL", False)
+    SHOW_SCATTER_TOWS: bool = getattr(cfg, "ZP_SHOW_SCATTER_TOWS", False)
+    SHOW_SCATTER_ANOMS: bool = getattr(cfg, "ZP_SHOW_SCATTER_ANOMS", False)
+    SHOW_SCATTER_ANOMS_TOTAL4: bool = getattr(cfg, "ZP_SHOW_SCATTER_ANOMS_TOTAL4", False)
+    SHOW_ANOM_BARS_TOTAL4: bool = getattr(cfg, "ZP_SHOW_ANOM_BARS_TOTAL4", False)
+    SHOW_ANOM_TOTAL_SINGLE: bool = getattr(cfg, "ZP_SHOW_ANOM_TOTAL_SINGLE", False)
+
 
 # =============================================================================
 # SHARED UTILITIES
 # =============================================================================
+def _maybe_show(fig, show_plot: bool) -> None:
+    if show_plot:
+        plt.show()
+    plt.close(fig)
 
 def _add_best_fit_line(
     ax,
@@ -441,10 +459,10 @@ def _get_modelonly_series_def(cfg5: Eval5Config) -> dict[str, list[str]]:
 def _fmt_elapsed(t0: float) -> str:
     return f"{time.perf_counter() - t0:.1f}s"
 
-def _finalize_and_save(fig, outpath: str, *, cfg5, st=None):
+def _finalize_and_save(fig, outpath: str, *, cfg5, st=None, show_plot: bool | None = None):
     """
     Standard figure finalization to avoid suptitle clipping.
-    Save first, then show/close.
+    Save first, then optionally show, then close.
     """
     if st is not None:
         fig.tight_layout(rect=[0, 0, 1, 0.95])
@@ -458,8 +476,9 @@ def _finalize_and_save(fig, outpath: str, *, cfg5, st=None):
         pad_inches=0.2,
         bbox_extra_artists=([st] if st is not None else None),
     )
-    plt.show()
-    plt.close(fig)
+
+    do_show = cfg5.SHOW_PLTS if show_plot is None else bool(show_plot)
+    _maybe_show(fig, do_show)
 
 def _fig_title(cfg5, *, kind: str, years: tuple[int, int] | None = None,
                season: str | None = None, suffix: str | None = None,
@@ -786,8 +805,7 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
             f"ecospace_{cfg5.ecospace_code}_scatter_modobs_total.png",
         )
         plt.savefig(out_plt)
-        plt.show()
-        plt.close()
+        _maybe_show(fig, cfg5.SHOW_MODOBS_TOTAL_SCATTER or cfg5.SHOW_PLTS)
 
         # Seasonal boxplots
         # (a) ZC groups + total ZC
@@ -2268,8 +2286,8 @@ def panel_seasonal_boxplots(
         bbox_extra_artists=([st] if st is not None else None),
     )
 
-    plt.show()
-    plt.close(fig)
+    _maybe_show(fig, cfg5.SHOW_SEASONAL_BOXPANELS or cfg5.SHOW_PLTS)
+
     print(f"[5c] Saved seasonal panel boxplots: {out_plt}")
 
 def plot_seasonal_boxpanels(
@@ -2395,8 +2413,10 @@ def plot_seasonal_boxpanels(
         cfg5.FIGSOUT_P,
         f"ecospace_{cfg5.ecospace_code}_seasB_modobs_panel_{suffix}.png",
     )
+
     fig.savefig(out_plt, dpi=300, bbox_inches="tight")
-    plt.close(fig)
+    _maybe_show(fig, cfg5.SHOW_SEASONAL_BOXPANELS or cfg5.SHOW_PLTS)
+
     print(f"[5d] Saved seasonal boxplot panels → {out_plt}")
 
 def plot_scatter_total_by_season(
@@ -2508,8 +2528,8 @@ def plot_scatter_total_by_season(
         pad_inches=0.2,
         bbox_extra_artists=([st] if st is not None else None),
     )
-    plt.show()
-    plt.close(fig)
+
+    _maybe_show(fig, cfg5.SHOW_TOTAL_BY_SEASON_SCATTER or cfg5.SHOW_PLTS)
 
     print(f"[INFO] Saved total-by-season scatter plot: {outpath}")
     return outpath
@@ -2839,8 +2859,8 @@ def plot_pub_panel_total_single_season(
         pad_inches=0.2,
         bbox_extra_artists=([st] if st is not None else None),
     )
-    plt.show()
-    plt.close(fig)
+
+    _maybe_show(fig, cfg5.SHOW_PUB_TOTAL_PANEL or cfg5.SHOW_PLTS)
 
     print(f"[INFO] Saved publication panel: {outpath}")
     return outpath
@@ -2920,8 +2940,8 @@ def plot_model_only_anomaly_bars(
         pad_inches=0.2,
         bbox_extra_artists=([st] if st is not None else None),
     )
-    plt.show()
-    plt.close(fig)
+
+    _maybe_show(fig, cfg5.SHOW_MODELONLY_ANOM_BARS or cfg5.SHOW_PLTS)
 
     print(f"[5m] Saved model-only anomaly bar plot: {outpath}")
     return outpath
@@ -3098,8 +3118,7 @@ def plot_anomaly_panel_paired(
         pad_inches=0.2,
         bbox_extra_artists=([st] if st is not None else None),
     )
-    plt.show()
-    plt.close(fig)
+    _maybe_show(fig, cfg5.SHOW_ANOM_PAIRED_PANEL or cfg5.SHOW_PLTS)
 
     print(f"[INFO] Saved anomaly panel: {out_panel}")
     return out_panel
@@ -3138,9 +3157,9 @@ def plot_scatter_matched_tows(
         xlab = "Obs (g C m$^{-2}$)"
         ylab = "Model (g C m$^{-2}$)"
 
-    ncols = 3
+    ncols = 2
     nrows = int(np.ceil(len(groups) / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(5 * ncols, 4 * nrows))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 4 * nrows))
     axes = np.atleast_1d(axes).flatten()
 
     season_order = ["Winter", "Spring", "Summer", "Fall"]
@@ -3165,7 +3184,7 @@ def plot_scatter_matched_tows(
             ax.set_title(grp)
             ax.set_xlabel(xlab)
             ax.set_ylabel(ylab)
-            ax.grid(True, alpha=0.3)
+            ax.grid(True, alpha=0.5)
             continue
 
         # axis limits from all seasons pooled within this group
@@ -3189,7 +3208,7 @@ def plot_scatter_matched_tows(
 
             ax.scatter(
                 gs["obs_x"], gs["mod_y"],
-                s=12, alpha=0.6,
+                s=6, alpha=0.2,
                 color=color,
                 label=season if i == 0 else None,
             )
@@ -3201,7 +3220,7 @@ def plot_scatter_matched_tows(
                     gs["mod_y"].values,
                     color=color,
                     linestyle="--",
-                    linewidth=1,
+                    linewidth=1.2,
                     show_eq=False,
                 )
 
@@ -3293,8 +3312,7 @@ def plot_scatter_matched_tows(
         pad_inches=0.2,
         bbox_extra_artists=([st] if st is not None else None),
     )
-    plt.show()
-    plt.close(fig)
+    _maybe_show(fig, cfg5.SHOW_SCATTER_TOWS or cfg5.SHOW_PLTS)
     print(f"[INFO] Saved scatter plot: {outpath}")
     return outpath
 
@@ -3404,8 +3422,7 @@ def plot_scatter_anomalies(
         pad_inches=0.2,
         bbox_extra_artists=([st] if st is not None else None),
     )
-    plt.show()
-    plt.close(fig)
+    _maybe_show(fig, cfg5.SHOW_SCATTER_ANOMS or cfg5.SHOW_PLTS)
     print(f"[INFO] Saved anomaly scatter plot: {outpath}")
     return outpath
 
@@ -3506,8 +3523,7 @@ def plot_scatter_anomalies_total_by_season(
         pad_inches=0.2,
         bbox_extra_artists=([st] if st is not None else None),
     )
-    plt.show()
-    plt.close(fig)
+    _maybe_show(fig, cfg5.SHOW_SCATTER_ANOMS_TOTAL4 or cfg5.SHOW_PLTS)
 
     print(f"[INFO] Saved total anomaly scatter panel: {outpath}")
     return outpath
@@ -3653,8 +3669,7 @@ def plot_anomaly_bars_total_by_season(
         pad_inches=0.2,
         bbox_extra_artists=([st] if st is not None else None),
     )
-    plt.show()
-    plt.close(fig)
+    _maybe_show(fig, cfg5.SHOW_ANOM_BARS_TOTAL4 or cfg5.SHOW_PLTS)
 
     print(f"[INFO] Saved total anomaly 4-panel bar plot: {outpath}")
     return outpath
@@ -4053,9 +4068,11 @@ def anomaly_comparisons(
                     cfg5.FIGSOUT_P,
                     f"ecospace_{cfg5.ecospace_code}_zoop_anomalies_total_{pass_label}_{season}.png",
                 )
-                plt.show()
+
                 fig.savefig(out_total_last, dpi=300)
-                plt.close(fig)
+                _maybe_show(fig, cfg5.SHOW_MODELONLY_ANOM_BARS or cfg5.SHOW_PLTS)
+
+
                 print(f"[INFO] Saved total anomaly plot: {out_total_last}")
 
             # Skill metric summary (print + CSV), like Ecosim
