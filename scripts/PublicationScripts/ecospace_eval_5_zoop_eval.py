@@ -382,6 +382,7 @@ def _compute_skill_statistics(obs: np.ndarray, mod: np.ndarray) -> Dict[str, flo
     return {"obs_std": obs_std, "mod_std": mod_std, "R": R, "RMSE": RMSE, "Bias": Bias, "WSS": WSS}
 
 
+
 def panel_seasonal_boxplots(
     df_station: pd.DataFrame,
     *,
@@ -1067,100 +1068,61 @@ def _add_statbox(ax, text: str, *, x=0.98, y=0.02):
     )
 
 def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
-    print("[5c] Visualizing & computing skill stats…")
+    print("[5c] Visualizing & computing station-level skill stats…")
     df = pd.read_csv(matched_csv)
 
     obs_cols = [c for c in cfg5.ZOOP_GROUPS if c in df.columns]
+    if not obs_cols:
+        raise ValueError("No configured zooplankton observation columns found in matched_csv.")
+
     model_cols = [f"EWE-{c}" for c in obs_cols]
 
+    # Perry-style zero replacement is applied at the matched-record level
+    # before station-year-season-region aggregation.
     _perry_zero_replacement(df, obs_cols)
 
-    # Aggregate by closest_ecospace_time + Index
-    df_agg = df.groupby(['closest_ecospace_time', 'Index'])[obs_cols + model_cols].mean().reset_index()
-
-    # Totals
-    df_agg['TOT'] = df_agg[obs_cols].sum(axis=1)
-    df_agg['EWE-TOT'] = df_agg[model_cols].sum(axis=1)
-
-    # Station-level aggregation
-    df_station = df.groupby(['Station', 'Year', 'Season', 'Region'])[obs_cols + model_cols].mean().reset_index()
-    df_station['TOT'] = df_station[obs_cols].sum(axis=1)
-    df_station['EWE-TOT'] = df_station[model_cols].sum(axis=1)
-
-    # --- NEW: ZC vs soft-bodied/group splits -----------------------------
-    crust_cols = [g for g in obs_cols if g.startswith("ZC")]
-    soft_cols = [g for g in obs_cols if not g.startswith("ZC")]
-
-    if crust_cols:
-        df_station["TOT_ZC"] = df_station[crust_cols].sum(axis=1)
-        df_station["EWE-TOT_ZC"] = df_station[[f"EWE-{g}" for g in crust_cols]].sum(axis=1)
-
-    if soft_cols:
-        df_station["TOT_SOFT"] = df_station[soft_cols].sum(axis=1)
-        df_station["EWE-TOT_SOFT"] = df_station[[f"EWE-{g}" for g in soft_cols]].sum(axis=1)
-
-    # Values used for skill stats (log or raw, controlled by cfg5.LOG_TRANSFORM)
-    for col in obs_cols + ["TOT"]:
-        mcol = f"EWE-{col}" if col != "TOT" else "EWE-TOT"
-
-        if cfg5.LOG_TRANSFORM:
-            df_station[f"skill_obs_{col}"] = np.log10(df_station[col] + cfg5.LOG_OFFSET)
-            df_station[f"skill_mod_{col}"] = np.log10(df_station[mcol] + cfg5.LOG_OFFSET)
-        else:
-            df_station[f"skill_obs_{col}"] = df_station[col]
-            df_station[f"skill_mod_{col}"] = df_station[mcol]
-
-    # (Optional) Perry-style climatology on the same transformed scale
-    # Only needed  for station-level anomalies for something later.
-    if cfg5.LOG_TRANSFORM:
-        value_cols_obs = [f"skill_obs_{c}" for c in obs_cols + ["TOT"]]
-        value_cols_mod = [f"skill_mod_{c}" for c in obs_cols + ["TOT"]]
-
-        seasonal_means = (
-            df_station
-            .groupby("Season")[value_cols_obs + value_cols_mod]
-            .mean()
-            .reset_index()
-        )
-        annual_means = seasonal_means.mean(numeric_only=True)
-
-        df_clim_anom = df_station.copy()
-        for col in obs_cols + ["TOT"]:
-            ocol = f"skill_obs_{col}"
-            mcol = f"skill_mod_{col}"
-            df_clim_anom[f"anom_annmean_{ocol}"] = df_clim_anom[ocol] - annual_means[ocol]
-            df_clim_anom[f"anom_annmean_{mcol}"] = df_clim_anom[mcol] - annual_means[mcol]
-    else:
-        df_clim_anom = df_station.copy()  # placeholder, not used further
-
-
-    # Compute skill
-    rows = []
-    for col in obs_cols + ["TOT"]:
-        ovals = df_station[f"skill_obs_{col}"].values
-        mvals = df_station[f"skill_mod_{col}"].values
-        s = _compute_skill_statistics(ovals, mvals)
-        s["Group"] = col
-        rows.append(s)
-    skill_df = pd.DataFrame(rows).sort_values("WSS", ascending=False)
-
-    suffix = "log10" if cfg5.LOG_TRANSFORM else "raw"
-    out_skill = os.path.join(
-        cfg5.EVALOUT_P,
-        f"model_skill_stats_{suffix}_{cfg5.ecospace_code}.csv",
+    # Station-level aggregation used for boxplots and station skill assessment
+    df_station = (
+        df.groupby(["Station", "Year", "Season", "Region"], as_index=False)[obs_cols + model_cols]
+        .mean()
     )
-    skill_df.to_csv(out_skill, index=False)
-    print(f"[5c] Saved skill stats: {out_skill}")
 
+    # Overall total across all included zooplankton groups
+    df_station["TOT"] = df_station[obs_cols].sum(axis=1)
+    df_station["EWE-TOT"] = df_station[model_cols].sum(axis=1)
 
-    # figures
+    # Group splits
+    zc_cols = [g for g in obs_cols if g.startswith("ZC")]
+    zs_cols = [g for g in obs_cols if g.startswith("ZS")]
+    zf_cols = [g for g in obs_cols if g.startswith("ZF")]
+
+    # Totals for ZC and ZS only
+    if zc_cols:
+        df_station["TOT_ZC"] = df_station[zc_cols].sum(axis=1)
+        df_station["EWE-TOT_ZC"] = df_station[[f"EWE-{g}" for g in zc_cols]].sum(axis=1)
+
+    if zs_cols:
+        df_station["TOT_ZS"] = df_station[zs_cols].sum(axis=1)
+        df_station["EWE-TOT_ZS"] = df_station[[f"EWE-{g}" for g in zs_cols]].sum(axis=1)
+
+    # Export one long-format station skill table using the same station-level
+    # data that feed the seasonal boxplots.
+    out_station_skill = export_station_skill_long(
+        df_station,
+        cfg5=cfg5,
+        obs_groups=obs_cols,
+        seasons=cfg5.SEASON_ORDER,
+    )
+    print(f"[5c] Saved station skill stats: {out_station_skill}")
+
+    # Figures
     if cfg5.MAKE_VIZ:
         # Total scatter by Region
         fig, ax = plt.subplots(figsize=(6, 6))
 
         if cfg5.LOG_TRANSFORM:
-            x = df_station["skill_obs_TOT"]
-            y = df_station["skill_mod_TOT"]
+            x = np.log10(df_station["TOT"] + cfg5.LOG_OFFSET)
+            y = np.log10(df_station["EWE-TOT"] + cfg5.LOG_OFFSET)
             xlab = "log10(Observed + offset)"
             ylab = "log10(Modelled + offset)"
         else:
@@ -1178,9 +1140,10 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
         )
 
         # 1:1 line + sensible limits
-        lo = np.nanmin([x.min(), y.min()])
-        hi = np.nanmax([x.max(), y.max()])
+        lo = np.nanmin(np.r_[x.values, y.values])
+        hi = np.nanmax(np.r_[x.values, y.values])
         pad = 0.05 * (hi - lo if hi > lo else 1.0)
+
         ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "k--", lw=1)
         ax.set_xlim(lo - pad, hi + pad)
         ax.set_ylim(lo - pad, hi + pad)
@@ -1188,9 +1151,10 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
         ax.set_xlabel(xlab)
         ax.set_ylabel(ylab)
         ax.set_title(
-            f"Ecospace {cfg5.ecospace_code}- Model vs. Obs Total Biomass by Station"
+            f"Ecospace {cfg5.ecospace_code} - Model vs. Obs Total Biomass by Station"
             + (" (log10)" if cfg5.LOG_TRANSFORM else "")
         )
+
         plt.tight_layout()
         out_plt = os.path.join(
             cfg5.FIGSOUT_P,
@@ -1200,29 +1164,39 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
         plt.show()
         plt.close()
 
-        # NEW: multi-panel seasonal boxplots (log scale), same aesthetics
-        # NEW: multi-panel seasonal boxplots (log10), split into
-        #      (a) crustacean ZC groups + Total ZC
-        #      (b) soft-bodied/other groups + Total soft
-        if crust_cols:
+        # Seasonal boxplots
+        # (a) ZC groups + total ZC
+        if zc_cols:
             panel_seasonal_boxplots(
                 df_station,
-                groups=crust_cols,
+                groups=zc_cols,
                 cfg5=cfg5,
                 extra_total="TOT_ZC",
                 suffix="ZC",
             )
 
-        if soft_cols:
+        # (b) ZS groups + total ZS
+        if zs_cols:
             panel_seasonal_boxplots(
                 df_station,
-                groups=soft_cols,
+                groups=zs_cols,
                 cfg5=cfg5,
-                extra_total="TOT_SOFT",
-                suffix="soft",
+                extra_total="TOT_ZS",
+                suffix="ZS",
             )
 
-    return out_skill
+        # (c) Optional ZF panel, if present
+        # Remove this block if you do not want ZF groups plotted separately.
+        if zf_cols:
+            panel_seasonal_boxplots(
+                df_station,
+                groups=zf_cols,
+                cfg5=cfg5,
+                suffix="ZF",
+            )
+
+    return out_station_skill
+
 
 # ============================================================
 # Model-only box extraction + anomaly plotting
@@ -3423,6 +3397,92 @@ def anomaly_comparisons(
 
 
     return out_panel_last or "", out_total_last
+
+
+def export_station_skill_long(
+    df_station: pd.DataFrame,
+    *,
+    cfg5: Eval5Config,
+    obs_groups: list[str],
+    seasons: list[str] | None = None,
+) -> str:
+    rows = []
+    seasons = seasons or cfg5.SEASON_ORDER
+
+    export_groups = list(obs_groups)
+    for extra in ["TOT", "TOT_ZC", "TOT_ZS"]:
+        if extra in df_station.columns:
+            export_groups.append(extra)
+
+    for group in export_groups:
+        mod_group = f"EWE-{group}"
+
+        if group not in df_station.columns or mod_group not in df_station.columns:
+            continue
+
+        work = df_station[["Season", group, mod_group]].copy()
+
+        if cfg5.LOG_TRANSFORM:
+            work["obs"] = np.log10(work[group] + cfg5.LOG_OFFSET)
+            work["mod"] = np.log10(work[mod_group] + cfg5.LOG_OFFSET)
+            scale = "log10"
+            log_or_anom = True
+        else:
+            work["obs"] = work[group]
+            work["mod"] = work[mod_group]
+            scale = "raw"
+            log_or_anom = False
+
+        # all seasons pooled
+        s = compute_stats(work, "obs", "mod", log_or_anom=log_or_anom)
+        s.update({
+            "assessment": "station",
+            "season": "All",
+            "group": group,
+            "obs_mean": float(np.nanmean(work["obs"])),
+            "mod_mean": float(np.nanmean(work["mod"])),
+            "obs_std": float(np.nanstd(work["obs"])),
+            "mod_std": float(np.nanstd(work["mod"])),
+            "scale": scale,
+            "aggregation": "station_year_season_region",
+        })
+        rows.append(s)
+
+        # season-specific
+        for season in seasons:
+            sub = work[work["Season"] == season].copy()
+            if sub.empty:
+                continue
+            s = compute_stats(sub, "obs", "mod", log_or_anom=log_or_anom)
+            s.update({
+                "assessment": "station",
+                "season": season,
+                "group": group,
+                "obs_mean": float(np.nanmean(sub["obs"])),
+                "mod_mean": float(np.nanmean(sub["mod"])),
+                "obs_std": float(np.nanstd(sub["obs"])),
+                "mod_std": float(np.nanstd(sub["mod"])),
+                "scale": scale,
+                "aggregation": "station_year_season_region",
+            })
+            rows.append(s)
+
+    out = pd.DataFrame(rows)
+
+    first_cols = [
+        "assessment", "season", "group", "scale", "aggregation",
+        "N", "obs_mean", "mod_mean", "obs_std", "mod_std",
+        "MB", "MAE", "RMSE", "NRMSE", "r", "R2", "MAPE", "NSE", "WSS"
+    ]
+    out = out[[c for c in first_cols if c in out.columns]]
+
+    out_csv = os.path.join(
+        cfg5.EVALOUT_P,
+        f"ecospace_zoop_station_skill_{scale}_{cfg5.ecospace_code}.csv",
+    )
+    out.to_csv(out_csv, index=False)
+    print(f"[5c] Saved station skill table: {out_csv}")
+    return out_csv
 
 
 def run_zoop_eval(
