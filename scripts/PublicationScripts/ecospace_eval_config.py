@@ -297,6 +297,22 @@ BT_MIN_Y_TICK = 38
 # -------------------------------------------
 ZP_RECOMPUTE_MATCH = False # WATCH THIS!!
 
+# master show toggle
+ZP_SHOW_PLTS = False # SHOWS ALL IF TRUE
+
+# per-plot-type show toggles
+ZP_SHOW_MODOBS_TOTAL_SCATTER = False
+ZP_SHOW_SCATTER_TOWS = True # colorful ones
+ZP_SHOW_SEASONAL_BOXPANELS = False
+ZP_SHOW_TOTAL_BY_SEASON_SCATTER = False
+ZP_SHOW_PUB_TOTAL_PANEL = False
+ZP_SHOW_MODELONLY_ANOM_BARS = False
+ZP_SHOW_ANOM_PAIRED_PANEL = False
+ZP_SHOW_SCATTER_ANOMS = False
+ZP_SHOW_SCATTER_ANOMS_TOTAL4 = False
+ZP_SHOW_ANOM_BARS_TOTAL4 = False
+ZP_SHOW_ANOM_TOTAL_SINGLE = False
+
 Z_F_SEAS = "Zoopl_SofG_1996-2018_df_summary.csv" # this is output by long R script
 Z_F_TOWLEV = "Zooplankton_B_C_gm2_EWEMODELGRP_Wide_NEMO3daymatch.csv" # this is output by short one
 Z_P_PREPPED = "C:/Users/Greig/Sync/6. SSMSP Model/Model Greig/Data/4. Zooplankton/Zoop_Perryetal_2021/MODIFIED"
