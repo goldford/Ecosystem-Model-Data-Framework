@@ -779,10 +779,24 @@ def export_station_skill_long(
 
     out = pd.DataFrame(rows)
 
+    round_cols = [
+        "r", "RMSE", "MAE", "WSS", "Bias",
+        "obs_mean", "mod_mean", "obs_std", "mod_std"
+    ]
+    round_cols = [c for c in round_cols if c in out.columns]
+    out[round_cols] = out[round_cols].round(2)
+
+    # I don't need all these stats so keep only some
     first_cols = [
-        "assessment", "season", "group", "scale", "aggregation",
-        "N", "obs_mean", "mod_mean", "obs_std", "mod_std",
-        "MB", "MAE", "RMSE", "NRMSE", "r", "R2", "MAPE", "NSE", "WSS"
+        "assessment", "scale", "aggregation",
+        "season", "group",
+        "N",
+        "obs_mean", "mod_mean",
+        "obs_std", "mod_std",
+        "MB", "MAE", "RMSE", #"NRMSE",
+         "r",
+        # #"R2", "MAPE", "NSE",
+        "WSS"
     ]
     out = out[[c for c in first_cols if c in out.columns]]
 
