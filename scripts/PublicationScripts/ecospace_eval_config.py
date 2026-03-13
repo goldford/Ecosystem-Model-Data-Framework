@@ -295,7 +295,7 @@ BT_MIN_Y_TICK = 38
 # -------------------------------------------
 # evaluation 5 - zooplankton eval
 # -------------------------------------------
-ZP_RECOMPUTE_MATCH = True # WATCH THIS!!
+ZP_RECOMPUTE_MATCH = False # WATCH THIS!!
 
 Z_F_SEAS = "Zoopl_SofG_1996-2018_df_summary.csv" # this is output by long R script
 Z_F_TOWLEV = "Zooplankton_B_C_gm2_EWEMODELGRP_Wide_NEMO3daymatch.csv" # this is output by short one
