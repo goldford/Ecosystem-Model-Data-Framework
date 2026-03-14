@@ -753,15 +753,34 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
     )
     print(f"[5c] Saved station skill stats: {out_station_skill}")
 
-    paired = build_paired_long_ecospace(df, groups=obs_cols)
-    paired = paired.query("@cfg5.START_YEAR <= year <= @cfg5.END_YEAR").copy()
+    # Tow-level skill tables, exported separately for ZC and ZS
+    if zc_cols:
+        paired_zc = build_paired_long_ecospace(df, groups=zc_cols)
+        paired_zc = paired_zc.query("@cfg5.START_YEAR <= year <= @cfg5.END_YEAR").copy()
+        out_tow_zc = export_tow_skill_long(
+            paired_zc,
+            cfg5=cfg5,
+            seasons=cfg5.SEASON_ORDER,
+            out_csv=os.path.join(
+                cfg5.EVALOUT_P,
+                f"ecospace_zoop_tow_skill_forpub_{cfg5.ecospace_code}_ZC.csv",
+            ),
+        )
+        print(f"[5c] Saved tow-level ZC skill stats: {out_tow_zc}")
 
-    out_tow_skill = export_tow_skill_long(
-        paired,
-        cfg5=cfg5,
-        seasons=cfg5.SEASON_ORDER,
-    )
-    print(f"[5c] Saved tow-level skill stats: {out_tow_skill}")
+    if zs_cols:
+        paired_zs = build_paired_long_ecospace(df, groups=zs_cols)
+        paired_zs = paired_zs.query("@cfg5.START_YEAR <= year <= @cfg5.END_YEAR").copy()
+        out_tow_zs = export_tow_skill_long(
+            paired_zs,
+            cfg5=cfg5,
+            seasons=cfg5.SEASON_ORDER,
+            out_csv=os.path.join(
+                cfg5.EVALOUT_P,
+                f"ecospace_zoop_tow_skill_forpub_{cfg5.ecospace_code}_ZS.csv",
+            ),
+        )
+        print(f"[5c] Saved tow-level ZS skill stats: {out_tow_zs}")
 
     # Figures
     if cfg5.MAKE_VIZ:
@@ -862,6 +881,7 @@ def export_tow_skill_long(
     *,
     cfg5: Eval5Config,
     seasons: list[str] | None = None,
+    out_csv: str | None = None,
 ) -> str:
     """
     Export tow-level skill statistics in a compact, Word-friendly format.
@@ -946,13 +966,10 @@ def export_tow_skill_long(
     round_cols = ["bias", "obs std", "mod std", "MAE", "RMSE", "r", "WSS"]
     out[round_cols] = out[round_cols].round(2)
 
-    out_csv = os.path.join(
-        cfg5.EVALOUT_P,
-        f"ecospace_zoop_tow_skill_forpub_{cfg5.ecospace_code}.csv",
-    )
     out.to_csv(out_csv, index=False)
     print(f"[5c] Saved tow-level skill stats: {out_csv}")
     return out_csv
+
 
 def export_station_skill_long(
     df_station: pd.DataFrame,
