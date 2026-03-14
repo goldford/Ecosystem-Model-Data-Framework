@@ -295,7 +295,7 @@ BT_MIN_Y_TICK = 38
 # -------------------------------------------
 # evaluation 5 - zooplankton eval
 # -------------------------------------------
-ZP_RECOMPUTE_MATCH = True # WATCH THIS!!
+ZP_RECOMPUTE_MATCH = False # WATCH THIS!!
 
 # master show toggle
 ZP_SHOW_PLTS = False # SHOWS ALL IF TRUE

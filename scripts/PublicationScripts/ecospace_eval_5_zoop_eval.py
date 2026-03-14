@@ -753,6 +753,16 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
     )
     print(f"[5c] Saved station skill stats: {out_station_skill}")
 
+    paired = build_paired_long_ecospace(df, groups=obs_cols)
+    paired = paired.query("@cfg5.START_YEAR <= year <= @cfg5.END_YEAR").copy()
+
+    out_tow_skill = export_tow_skill_long(
+        paired,
+        cfg5=cfg5,
+        seasons=cfg5.SEASON_ORDER,
+    )
+    print(f"[5c] Saved tow-level skill stats: {out_tow_skill}")
+
     # Figures
     if cfg5.MAKE_VIZ:
         # Total scatter by Region
