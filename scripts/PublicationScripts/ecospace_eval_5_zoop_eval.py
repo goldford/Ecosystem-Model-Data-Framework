@@ -856,12 +856,27 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
 
     return out_station_skill
 
+
 def export_tow_skill_long(
     paired: pd.DataFrame,
     *,
     cfg5: Eval5Config,
     seasons: list[str] | None = None,
 ) -> str:
+    """
+    Export tow-level skill statistics in a compact, Word-friendly format.
+
+    Output columns:
+        group, season, n, bias, obs std, mod std, MAE, RMSE, r, WSS
+
+    Notes
+    -----
+    - Built from the same long paired tow table used by tow-level scatter plots.
+    - Applies the configured year window.
+    - If cfg5.SCATTER_LOG10 is True, stats are computed on log10-transformed values
+      (matching the tow-level scatter workflow).
+    - Values are rounded to 2 decimals for easy cut/paste into Word.
+    """
     rows = []
     seasons = seasons or cfg5.SEASON_ORDER
 
@@ -877,52 +892,66 @@ def export_tow_skill_long(
             g = g[(g["obs_biomass"] > 0) & (g["model_biomass"] > 0)].copy()
             g["obs"] = np.log10(g["obs_biomass"] + cfg5.LOG_OFFSET)
             g["mod"] = np.log10(g["model_biomass"] + cfg5.LOG_OFFSET)
-            scale = "log10"
             log_or_anom = True
         else:
             g["obs"] = g["obs_biomass"]
             g["mod"] = g["model_biomass"]
-            scale = "raw"
             log_or_anom = False
 
-        s = compute_stats(g, "obs", "mod", log_or_anom=log_or_anom)
-        s.update({
-            "assessment": "tow",
-            "season": "All",
-            "group": group,
-            "obs_mean": float(np.nanmean(g["obs"])),
-            "mod_mean": float(np.nanmean(g["mod"])),
-            "obs_std": float(np.nanstd(g["obs"])),
-            "mod_std": float(np.nanstd(g["mod"])),
-            "scale": scale,
-            "aggregation": "matched_tow",
-        })
-        rows.append(s)
+        if g.empty:
+            continue
 
+        # All seasons pooled
+        s = compute_stats(g, "obs", "mod", log_or_anom=log_or_anom)
+        rows.append({
+            "group": group,
+            "season": "All",
+            "n": int(s["N"]) if pd.notna(s["N"]) else 0,
+            "bias": s["MB"],
+            "obs std": float(np.nanstd(g["obs"])),
+            "mod std": float(np.nanstd(g["mod"])),
+            "MAE": s["MAE"],
+            "RMSE": s["RMSE"],
+            "r": s["r"],
+            "WSS": s["WSS"],
+        })
+
+        # Individual seasons
         for season in seasons:
             sub = g[g["season"] == season].copy()
             if sub.empty:
                 continue
+
             s = compute_stats(sub, "obs", "mod", log_or_anom=log_or_anom)
-            s.update({
-                "assessment": "tow",
-                "season": season,
+            rows.append({
                 "group": group,
-                "obs_mean": float(np.nanmean(sub["obs"])),
-                "mod_mean": float(np.nanmean(sub["mod"])),
-                "obs_std": float(np.nanstd(sub["obs"])),
-                "mod_std": float(np.nanstd(sub["mod"])),
-                "scale": scale,
-                "aggregation": "matched_tow",
+                "season": season,
+                "n": int(s["N"]) if pd.notna(s["N"]) else 0,
+                "bias": s["MB"],
+                "obs std": float(np.nanstd(sub["obs"])),
+                "mod std": float(np.nanstd(sub["mod"])),
+                "MAE": s["MAE"],
+                "RMSE": s["RMSE"],
+                "r": s["r"],
+                "WSS": s["WSS"],
             })
-            rows.append(s)
 
     out = pd.DataFrame(rows)
+
+    # enforce exact column order
+    col_order = ["group", "season", "n", "bias", "obs std", "mod std", "MAE", "RMSE", "r", "WSS"]
+    out = out[col_order]
+
+    # round numeric columns to 2 decimals, but keep n as integer
+    round_cols = ["bias", "obs std", "mod std", "MAE", "RMSE", "r", "WSS"]
+    out[round_cols] = out[round_cols].round(2)
+
     out_csv = os.path.join(
         cfg5.EVALOUT_P,
-        f"ecospace_zoop_tow_skill_{scale}_{cfg5.ecospace_code}.csv",
+        f"ecospace_zoop_tow_skill_forpub_{cfg5.ecospace_code}.csv",
     )
     out.to_csv(out_csv, index=False)
+    print(f"[5c] Saved tow-level skill stats: {out_csv}")
     return out_csv
 
 def export_station_skill_long(
