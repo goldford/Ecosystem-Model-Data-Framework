@@ -2332,13 +2332,13 @@ def panel_seasonal_boxplots(
 
     unique_groups = list(dict.fromkeys(plot_df["group"]))  # preserve order
     n_groups = len(unique_groups)
-    ncols = 3
+    ncols = 2
     nrows = int(np.ceil(n_groups / ncols))
 
     fig, axes = plt.subplots(
         nrows,
         ncols,
-        figsize=(5 * ncols, 4 * nrows),
+        figsize=(3 * ncols, 3 * nrows),
         sharey=False,
     )
     axes = np.atleast_1d(axes).flatten()
@@ -2354,15 +2354,16 @@ def panel_seasonal_boxplots(
             showfliers=False,  # match Ecosim behaviour
             hue="Source",
             ax=ax,
+            width=0.7,
             palette={"Observations": "darkorange", "SOGEM-LTL": "blue"},
             medianprops={"color": "white", "linewidth": 0.8}
         )
 
         # nicer labels
         if g == "TOT_ZC":
-            title = "Total crustaceans (ZC)"
+            title = "Total ZC"
         elif g == "TOT_SOFT":
-            title = "Total soft-bodied/other"
+            title = "Total ZS"
         else:
             title = g
 
@@ -2385,12 +2386,12 @@ def panel_seasonal_boxplots(
         )
         ax.set_ylabel(ylabel)
 
-        if i == 0:
-            ax.legend(title="")
-        else:
+        # if i == 0:
+        #     ax.legend(title="")
+        # else:
             # remove duplicate legends
-            if ax.get_legend() is not None:
-                ax.get_legend().remove()
+        if ax.get_legend() is not None:
+            ax.get_legend().remove()
 
         ax.grid(True, alpha=0.3)
 
