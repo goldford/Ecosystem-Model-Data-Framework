@@ -3144,20 +3144,20 @@ def plot_anomaly_panel_paired(
         else:
             print("[WARN] Counts table missing required columns; skipping annotations.")
 
-    ncols = 3
+    ncols = 2
     nrows = int(np.ceil(len(plot_groups) / ncols))
     fig, axes = plt.subplots(
         nrows,
         ncols,
         sharey=True,
-        figsize=(5 * ncols, 4 * nrows),
+        figsize=(4 * ncols, 3 * nrows),
     )
     axes = np.atleast_1d(axes).flatten()
 
     annual_idx = annual.set_index(["group", "year"])
     x = np.arange(len(years))
     pair_step = 1.18  # spacing between years
-    w = 0.28  # bar width
+    w = 0.3  # bar width
     x = np.arange(len(years)) * pair_step
 
     for i, grp in enumerate(plot_groups):
@@ -3174,11 +3174,11 @@ def plot_anomaly_panel_paired(
         ax.grid(True, which="major", axis="both", linestyle="-", alpha=0.5, zorder=1)
 
         if plot_type.lower() == "bar":
-            ax.bar(x - w / 2, y_obs, w, label="Observations", zorder=2)
-            ax.bar(x + w / 2, y_mod, w, label="SOGEM-LTL", zorder=2)
+            ax.bar(x - w / 2, y_obs, w, label="Observations", color="darkorange",  zorder=2)
+            ax.bar(x + w / 2, y_mod, w, label="SOGEM-LTL", color="blue", zorder=2)
         else:
-            ax.plot(years, y_obs, "-o", label="Observations", zorder=2)
-            ax.plot(years, y_mod, "-o", label="SOGEM-LTL", zorder=2)
+            ax.plot(years, y_obs, "-o", label="Observations", color="darkorange", zorder=2)
+            ax.plot(years, y_mod, "-o", label="SOGEM-LTL", olor="blue", zorder=2)
 
         # Optional NPGO overlay (same axis, like the current ecospace plot)
         if npgo_ann is not None:
