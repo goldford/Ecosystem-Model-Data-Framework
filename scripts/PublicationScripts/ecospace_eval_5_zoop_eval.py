@@ -229,6 +229,10 @@ class Eval5Config:
 # =============================================================================
 # SHARED UTILITIES
 # =============================================================================
+
+def _apply_year_window(df: pd.DataFrame, *, year_col: str, cfg5: Eval5Config) -> pd.DataFrame:
+    return df.query("@cfg5.START_YEAR <= " + year_col + " <= @cfg5.END_YEAR").copy()
+
 def _maybe_show(fig, show_plot: bool) -> None:
     if show_plot:
         plt.show()
@@ -695,6 +699,8 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
     print("[5c] Visualizing & computing station-level skill stats…")
     df = pd.read_csv(matched_csv)
 
+    df = df.query("@cfg5.START_YEAR <= Year <= @cfg5.END_YEAR").copy()
+
     # summary table
     summarize_tow_replication_for_supplement(
         matched_csv,
@@ -839,6 +845,75 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
             )
 
     return out_station_skill
+
+def export_tow_skill_long(
+    paired: pd.DataFrame,
+    *,
+    cfg5: Eval5Config,
+    seasons: list[str] | None = None,
+) -> str:
+    rows = []
+    seasons = seasons or cfg5.SEASON_ORDER
+
+    work_all = paired.copy()
+    work_all = work_all.query("@cfg5.START_YEAR <= year <= @cfg5.END_YEAR").copy()
+
+    for group in sorted(work_all["group"].dropna().unique()):
+        g = work_all[work_all["group"] == group].copy()
+        if g.empty:
+            continue
+
+        if cfg5.SCATTER_LOG10:
+            g = g[(g["obs_biomass"] > 0) & (g["model_biomass"] > 0)].copy()
+            g["obs"] = np.log10(g["obs_biomass"] + cfg5.LOG_OFFSET)
+            g["mod"] = np.log10(g["model_biomass"] + cfg5.LOG_OFFSET)
+            scale = "log10"
+            log_or_anom = True
+        else:
+            g["obs"] = g["obs_biomass"]
+            g["mod"] = g["model_biomass"]
+            scale = "raw"
+            log_or_anom = False
+
+        s = compute_stats(g, "obs", "mod", log_or_anom=log_or_anom)
+        s.update({
+            "assessment": "tow",
+            "season": "All",
+            "group": group,
+            "obs_mean": float(np.nanmean(g["obs"])),
+            "mod_mean": float(np.nanmean(g["mod"])),
+            "obs_std": float(np.nanstd(g["obs"])),
+            "mod_std": float(np.nanstd(g["mod"])),
+            "scale": scale,
+            "aggregation": "matched_tow",
+        })
+        rows.append(s)
+
+        for season in seasons:
+            sub = g[g["season"] == season].copy()
+            if sub.empty:
+                continue
+            s = compute_stats(sub, "obs", "mod", log_or_anom=log_or_anom)
+            s.update({
+                "assessment": "tow",
+                "season": season,
+                "group": group,
+                "obs_mean": float(np.nanmean(sub["obs"])),
+                "mod_mean": float(np.nanmean(sub["mod"])),
+                "obs_std": float(np.nanstd(sub["obs"])),
+                "mod_std": float(np.nanstd(sub["mod"])),
+                "scale": scale,
+                "aggregation": "matched_tow",
+            })
+            rows.append(s)
+
+    out = pd.DataFrame(rows)
+    out_csv = os.path.join(
+        cfg5.EVALOUT_P,
+        f"ecospace_zoop_tow_skill_{scale}_{cfg5.ecospace_code}.csv",
+    )
+    out.to_csv(out_csv, index=False)
+    return out_csv
 
 def export_station_skill_long(
     df_station: pd.DataFrame,
@@ -1633,6 +1708,7 @@ def compare_anomaly_obs_summaries(
 
     for pass_label, pass_groups in passes:
         paired = build_paired_long_ecospace(df_match, groups=pass_groups)
+        paired = paired.query("@cfg5.START_YEAR <= year <= @cfg5.END_YEAR").copy()
         plot_groups = list(pass_groups) + (["Total"] if include_total else [])
 
         for season_name in seasons_plus_all:
@@ -3952,6 +4028,7 @@ def anomaly_comparisons(
 
         # build paired long table (tow-level) for this pass (Total is computed from pass_groups)
         paired = build_paired_long_ecospace(df_match, groups=pass_groups)
+        paired = paired.query("@cfg5.START_YEAR <= year <= @cfg5.END_YEAR").copy()
 
         plot_groups = list(pass_groups) + (["Total"] if include_total else [])
         if "Total" in paired["group"].unique() and "Total" not in plot_groups and include_total:

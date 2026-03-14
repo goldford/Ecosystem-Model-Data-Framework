@@ -295,21 +295,24 @@ BT_MIN_Y_TICK = 38
 # -------------------------------------------
 # evaluation 5 - zooplankton eval
 # -------------------------------------------
-ZP_RECOMPUTE_MATCH = False # WATCH THIS!!
+ZP_RECOMPUTE_MATCH = True # WATCH THIS!!
 
 # master show toggle
 ZP_SHOW_PLTS = False # SHOWS ALL IF TRUE
 
 # per-plot-type show toggles
+ZP_SHOW_PUB_TOTAL_PANEL = True
+
 ZP_SHOW_MODOBS_TOTAL_SCATTER = False
-ZP_SHOW_SCATTER_TOWS = True # colorful ones
+ZP_SHOW_SCATTER_TOWS = False # colorful ones
 ZP_SHOW_SEASONAL_BOXPANELS = False
 ZP_SHOW_TOTAL_BY_SEASON_SCATTER = False
-ZP_SHOW_PUB_TOTAL_PANEL = False
 ZP_SHOW_MODELONLY_ANOM_BARS = False
 ZP_SHOW_ANOM_PAIRED_PANEL = False
 ZP_SHOW_SCATTER_ANOMS = False
-ZP_SHOW_SCATTER_ANOMS_TOTAL4 = False
+
+ZP_SHOW_SCATTER_ANOMS_TOTAL4 = True
+
 ZP_SHOW_ANOM_BARS_TOTAL4 = False
 ZP_SHOW_ANOM_TOTAL_SINGLE = False
 
@@ -348,6 +351,7 @@ ZP_SCATTER_LOG10 = True         # tow-level scatter uses log10 axes
 ZP_MAKE_PUB_TOTAL_PANEL = True
 ZP_PUB_PANEL_A_MODE = "anomaly_scatter"   # "tow_scatter" or "anomaly_scatter"
 
+# this will filter out tow-level and ALL other year data from the matched anomaly and boxplots etc
 ZP_YEAR_START = 2000
 ZP_YEAR_END   = 2018
 
