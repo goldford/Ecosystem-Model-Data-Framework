@@ -1,32 +1,34 @@
 
-##3) Prep Release Data for EwE
-#Sep 2020 By: G Oldford (last mod: Jan 2025)
+'''
 
-#Data In:
-#Actual_releases_COORDS.csv - has coordinates and other metadata - includes all species
-# note differences between 'STOCK_...' and 'REL_...' fields are 'stock' and 'release' (stock
-# location may not be release location)
+3) Prep Release Data for EwE
+Sep 2020 By: G Oldford (last mod: Jan 2025)
 
-#Original Data (see previous notebook):
-#EPAD data from Carl (DFO / SEP) - has no coordinates - 'actual_releases.csv'
-#RMIS release location data (edits by SOGDC) - has coordinates - 'rmis_locations_2019.csv'
-#PSF release and release location data - has coordinates - 'PSEReleasesAndLocations2019.csv'
-#Coordinate table by Greig - has a few problem coordinates georeferenced with best-guess
+Data In:
+Actual_releases_COORDS.csv - has coordinates and other metadata - includes all species
+note differences between 'STOCK_...' and 'REL_...' fields are 'stock' and 'release' (stock
+location may not be release location)
 
-#Purpose:
-#Export a series of CSV (Biomass, Row, Col), one for each month, a set of series of files for
-# each functional group (each species and life stage)
-#Step 1: extract start and end month of release (take average)
-#Step 2: Aggregate releases by month, species, and "group" (as defined in PhD work)
-#Step 3: set a row / col corresponding to the custom, rotated EwE map
+Original Data (see previous notebook):
+EPAD data from Carl (DFO / SEP) - has no coordinates - 'actual_releases.csv'
+RMIS release location data (edits by SOGDC) - has coordinates - 'rmis_locations_2019.csv'
+PSF release and release location data - has coordinates - 'PSEReleasesAndLocations2019.csv'
+Coordinate table by Greig - has a few problem coordinates georeferenced with best-guess
 
-#Notes:
-# this was ported from old notebooks in Jan 2025
-# much of notebook was lost in this repo - had to retrieve from the failed CEM-SOG repo Jan 2025
-#EPAD data from Carl Walters and RMIS locations data from SOGDC
-#rmis_smolt_releases dataset from 'rmis_releases.csv' from http://sogdatacentre.ca/search-data/spatial-data/ from all_layers->rmis->rmis_smolt_releases
-#prioritized effort for coordinate matching on just coho and Chinook
+Purpose:
+Export a series of CSV (Biomass, Row, Col), one for each month, a set of series of files for
+each functional group (each species and life stage)
+Step 1: extract start and end month of release (take average)
+Step 2: Aggregate releases by month, species, and "group" (as defined in PhD work)
+Step 3: set a row / col corresponding to the custom, rotated EwE map
 
+Notes:
+this was ported from old notebooks in Jan 2025
+much of notebook was lost in this repo - had to retrieve from the failed CEM-SOG repo Jan 2025
+EPAD data from Carl Walters and RMIS locations data from SOGDC
+rmis_smolt_releases dataset from 'rmis_releases.csv' from http://sogdatacentre.ca/search-data/spatial-data/ from all_layers->rmis->rmis_smolt_releases
+prioritized effort for coordinate matching on just coho and Chinook
+'''
 
 ### 1. READ FILES, INSPECT ###
 import pandas as pd
