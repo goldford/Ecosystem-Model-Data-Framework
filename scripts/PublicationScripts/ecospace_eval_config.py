@@ -301,18 +301,18 @@ ZP_RECOMPUTE_MATCH = False # WATCH THIS!!
 ZP_SHOW_PLTS = False # SHOWS ALL IF TRUE
 
 # per-plot-type show toggles
-ZP_SHOW_PUB_TOTAL_PANEL = True
+ZP_SHOW_PUB_TOTAL_PANEL = False
 
 ZP_SHOW_MODOBS_TOTAL_SCATTER = False
 ZP_SHOW_SCATTER_TOWS = False # colorful ones
-ZP_SHOW_SEASONAL_BOXPANELS = False
+
+ZP_SHOW_SEASONAL_BOXPANELS = True
+
 ZP_SHOW_TOTAL_BY_SEASON_SCATTER = False
 ZP_SHOW_MODELONLY_ANOM_BARS = False
 ZP_SHOW_ANOM_PAIRED_PANEL = False
 ZP_SHOW_SCATTER_ANOMS = False
-
-ZP_SHOW_SCATTER_ANOMS_TOTAL4 = True
-
+ZP_SHOW_SCATTER_ANOMS_TOTAL4 = False
 ZP_SHOW_ANOM_BARS_TOTAL4 = False
 ZP_SHOW_ANOM_TOTAL_SINGLE = False
 
@@ -341,11 +341,17 @@ ZP_FRIENDLY_MAP_ZC = {
     'misc': 'Other',
     'Total': 'Total'
 }
-ZP_LOG_TRANSFORM = True         # not anomalies
+
+ZP_BOXPLOT_LOG10 = False      # seasonal boxplots only
+ZP_SKILL_LOG10 = True       # station/tow skill tables
+ZP_TOTAL_SCATTER_LOG10 = True   # optional: station total scatter only
+
 ZP_SHOW_CNTS = False             # annotate n_tows
 ZP_ANOM_ALL_SEASONS = True     # True => loop Winter/Spring/Summer/Fall
 ZP_MAKE_SCATTER = True          # make scatter figs too
 ZP_SCATTER_LOG10 = True         # tow-level scatter uses log10 axes
+
+ZP_BOXPLOT_LEVEL = "tow"   # {"station", "tow"}
 
 # for the two-panel plot for pub - GO
 ZP_MAKE_PUB_TOTAL_PANEL = True
