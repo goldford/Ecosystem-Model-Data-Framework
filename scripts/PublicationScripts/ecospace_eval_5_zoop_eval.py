@@ -112,7 +112,10 @@ class Eval5Config:
     SEASON_ORDER: List[str] = field(default_factory=lambda: ["Winter", "Spring", "Summer", "Fall"])
     LOG_OFFSET: float = 1e-6
     LAG_YEARS: int = getattr(cfg, "NPGO_LAG_YEARS", 0)
-    LOG_TRANSFORM: bool = getattr(cfg, "ZP_LOG_TRANSFORM", True)
+
+    BOXPLOT_LOG10: bool = getattr(cfg, "ZP_BOXPLOT_LOG10", True)
+    SKILL_LOG10: bool = getattr(cfg, "ZP_SKILL_LOG10", False)
+    TOTAL_SCATTER_LOG10: bool = getattr(cfg, "ZP_TOTAL_SCATTER_LOG10", True)
 
     # New anomaly-summary controls for obs-vs-model evaluation
     # These affect only the anomaly workflow, not the tow-level scatter/boxplot views.
@@ -210,6 +213,8 @@ class Eval5Config:
     ANOM_EXCLUDE_STATIONS: List[str] = field(
         default_factory=lambda: list(getattr(cfg, "ZP_ANOM_EXCLUDE_STATIONS", []))
     )
+
+    BOXPLOT_LEVEL: str = getattr(cfg, "ZP_BOXPLOT_LEVEL", "station")
 
 # show-plot toggles
     SHOW_PLTS: bool = getattr(cfg, "ZP_SHOW_PLTS", False)
@@ -743,6 +748,20 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
         df_station["TOT_ZS"] = df_station[zs_cols].sum(axis=1)
         df_station["EWE-TOT_ZS"] = df_station[[f"EWE-{g}" for g in zs_cols]].sum(axis=1)
 
+
+    df_box = df.copy()
+
+    df_box["TOT"] = df_box[obs_cols].sum(axis=1)
+    df_box["EWE-TOT"] = df_box[model_cols].sum(axis=1)
+
+    if zc_cols:
+        df_box["TOT_ZC"] = df_box[zc_cols].sum(axis=1)
+        df_box["EWE-TOT_ZC"] = df_box[[f"EWE-{g}" for g in zc_cols]].sum(axis=1)
+
+    if zs_cols:
+        df_box["TOT_ZS"] = df_box[zs_cols].sum(axis=1)
+        df_box["EWE-TOT_ZS"] = df_box[[f"EWE-{g}" for g in zs_cols]].sum(axis=1)
+
     # Export one long-format station skill table using the same station-level
     # data that feed the seasonal boxplots.
     out_station_skill = export_station_skill_long(
@@ -787,7 +806,7 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
         # Total scatter by Region
         fig, ax = plt.subplots(figsize=(6, 6))
 
-        if cfg5.LOG_TRANSFORM:
+        if cfg5.TOTAL_SCATTER_LOG10:
             x = np.log10(df_station["TOT"] + cfg5.LOG_OFFSET)
             y = np.log10(df_station["EWE-TOT"] + cfg5.LOG_OFFSET)
             xlab = "log10(Observed + offset)"
@@ -831,7 +850,7 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
         ax.set_ylabel(ylab)
         ax.set_title(
             f"Ecospace {cfg5.ecospace_code} - Model vs. Obs Total Biomass by Station"
-            + (" (log10)" if cfg5.LOG_TRANSFORM else "")
+            + (" (log10)" if cfg5.TOTAL_SCATTER_LOG10 else "")
         )
 
         plt.tight_layout()
@@ -842,35 +861,33 @@ def visualize_and_stats(matched_csv: str, cfg5: Eval5Config) -> str:
         plt.savefig(out_plt)
         _maybe_show(fig, cfg5.SHOW_MODOBS_TOTAL_SCATTER or cfg5.SHOW_PLTS)
 
+        box_df = df_station if cfg5.BOXPLOT_LEVEL == "station" else df_box
+
         # Seasonal boxplots
-        # (a) ZC groups + total ZC
         if zc_cols:
             panel_seasonal_boxplots(
-                df_station,
+                box_df,
                 groups=zc_cols,
                 cfg5=cfg5,
                 extra_total="TOT_ZC",
-                suffix="ZC",
+                suffix=f"ZC_{cfg5.BOXPLOT_LEVEL}",
             )
 
-        # (b) ZS groups + total ZS
         if zs_cols:
             panel_seasonal_boxplots(
-                df_station,
+                box_df,
                 groups=zs_cols,
                 cfg5=cfg5,
                 extra_total="TOT_ZS",
-                suffix="ZS",
+                suffix=f"ZS_{cfg5.BOXPLOT_LEVEL}",
             )
 
-        # (c) Optional ZF panel, if present
-        # Remove this block if you do not want ZF groups plotted separately.
         if zf_cols:
             panel_seasonal_boxplots(
-                df_station,
+                box_df,
                 groups=zf_cols,
                 cfg5=cfg5,
-                suffix="ZF",
+                suffix=f"ZF_{cfg5.BOXPLOT_LEVEL}",
             )
 
     return out_station_skill
@@ -908,7 +925,7 @@ def export_tow_skill_long(
         if g.empty:
             continue
 
-        if cfg5.SCATTER_LOG10:
+        if cfg5.SKILL_LOG10:
             g = g[(g["obs_biomass"] > 0) & (g["model_biomass"] > 0)].copy()
             g["obs"] = np.log10(g["obs_biomass"] + cfg5.LOG_OFFSET)
             g["mod"] = np.log10(g["model_biomass"] + cfg5.LOG_OFFSET)
@@ -917,6 +934,8 @@ def export_tow_skill_long(
             g["obs"] = g["obs_biomass"]
             g["mod"] = g["model_biomass"]
             log_or_anom = False
+
+
 
         if g.empty:
             continue
@@ -994,7 +1013,7 @@ def export_station_skill_long(
 
         work = df_station[["Season", group, mod_group]].copy()
 
-        if cfg5.LOG_TRANSFORM:
+        if cfg5.SKILL_LOG10:
             work["obs"] = np.log10(work[group] + cfg5.LOG_OFFSET)
             work["mod"] = np.log10(work[mod_group] + cfg5.LOG_OFFSET)
             scale = "log10"
@@ -2282,7 +2301,7 @@ def panel_seasonal_boxplots(
 
         sub = df_station[["Season", obs_col, mod_col]].copy()
 
-        if cfg5.LOG_TRANSFORM:
+        if cfg5.BOXPLOT_LOG10:
             sub["Observations"] = np.log10(sub[obs_col] + cfg5.LOG_OFFSET)
             sub["SOGEM-LTL"] = np.log10(sub[mod_col] + cfg5.LOG_OFFSET)
         else:
@@ -2361,7 +2380,7 @@ def panel_seasonal_boxplots(
         ax.set_xlabel("Season")
         ylabel = (
             "log10(g C m$^{-2}$ + offset)"
-            if cfg5.LOG_TRANSFORM
+            if cfg5.BOXPLOT_LOG10
             else "Biomass (g C m$^{-2}$)"
         )
         ax.set_ylabel(ylabel)
@@ -2388,7 +2407,7 @@ def panel_seasonal_boxplots(
         else:
             yr0, yr1 = cfg5.START_YEAR, cfg5.END_YEAR
 
-        log_state = "log10" if cfg5.LOG_TRANSFORM else "raw"
+        log_state = "log10" if cfg5.BOXPLOT_LOG10 else "raw"
         st = fig.suptitle(
             _fig_title(
                 cfg5,
