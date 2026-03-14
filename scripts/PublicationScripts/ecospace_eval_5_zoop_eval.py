@@ -3199,8 +3199,8 @@ def plot_anomaly_panel_paired(
         if i % ncols == 0:
             ax.set_ylabel("Anomaly (z-score)")
 
-        if i == 0:
-            ax.legend()
+        # if i == 0:
+        #     ax.legend()
 
         # Count annotations
         if counts_map:
