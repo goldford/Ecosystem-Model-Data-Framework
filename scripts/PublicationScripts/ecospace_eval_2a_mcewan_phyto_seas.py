@@ -317,14 +317,14 @@ def plot_stacked_three_source(df_long: pd.DataFrame, domain_label: str, out_png:
 
     source_hatch = {
         "1-D": "//",
-        "2-D": "",
-         "Data": "xx"
+        "2-D": "xx",
+         "Data": ""
     }
 
     source_edge = {
         "1-D": "0.25",
-        "2-D": "black",
-        "Data": "0.25",
+        "2-D": "0.25",
+        "Data": "black",
     }
 
     bar_width = 0.22
