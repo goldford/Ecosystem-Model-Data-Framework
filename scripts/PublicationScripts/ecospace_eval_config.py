@@ -501,12 +501,16 @@ ZP_MODELONLY_ANOM_CSV   = f"ecospace_zoop_model_box_anom_{ECOSPACE_SC}.csv"
 NU_F_PREPPED = os.path.join(EVALOUT_P, "nutrients_ios_csop_combined_sampled.csv")
 
 # Plot window (inclusive)
-NU_PLT_YR_ST = 2000
+NU_PLT_YR_ST = 2012
 NU_PLT_YR_EN = 2018
 
 # Observation filter window (inclusive)
-NU_OBS_YR_ST = 2000
+NU_OBS_YR_ST = 2012
 NU_OBS_YR_EN = 2018
+
+# Box sampling window (inclusive)
+NU_MODEL_SAMPLE_YR_ST = 2000
+NU_MODEL_SAMPLE_YR_EN = 2019
 
 # ---- Observation -> inventory settings ----
 NU_POOL_BY_CELL = True
@@ -574,7 +578,8 @@ NU_FLUX_APPLY_MODE = "scale_free"         # {"scale_free", "scale_total"}
 # ---- Model series definitions ----
 # "matched": model sampled at each obs location/time (then pooled)
 # "box":     model sampled over a fixed rectangle of cells (then pooled)
-NU_MODEL_SERIES = ["box", "matched"]
+# NU_MODEL_SERIES = ["box", "matched"]
+NU_MODEL_SERIES = ["matched"]
 
 # Box coordinates are given as (row0, row1, col0, col1), inclusive bounds.
 # This is a fixed region-of-interest, not a per-observation buffer.
@@ -582,10 +587,6 @@ NU_MODEL_SAMPLE_BOX = (90, 98, 46, 55)
 
 # Optional stride when sampling within NU_MODEL_SAMPLE_BOX (1 = sample every cell)
 NU_MODEL_SAMPLE_STRIDE = 1
-
-# Box sampling window (inclusive)
-NU_MODEL_SAMPLE_YR_ST = 2000
-NU_MODEL_SAMPLE_YR_EN = 2018
 
 # When aggregating across cells within each (year, biweekly)
 NU_MODEL_SAMPLE_SPATIAL_REDUCER = "mean"  # {"mean", "median"}

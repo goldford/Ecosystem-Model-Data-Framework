@@ -62,11 +62,11 @@ IOS_CSV = rf"{BASE_P}\\IOS Rosette Bottle Data\\MODIFIED\\IOS_BOT_1978to2019_Jus
 ECOSPACE_GRID_CSV = rf"{GRID_P}\\Ecospace_grid_20210208_rowscols.csv"  # must include: latitude, longitude, EWE_row, EWE_col (or lat/lon)
 
 # --- Outputs
-OUT_DIR = Path(r".//..//..//data/evaluation")
-FIG_DIR = Path(r"..//..//..//figs")
+OUT_DIR = Path(r".//..//..//..//data/evaluation")
+FIG_DIR = Path(r"..//..//..//..//figs")
 
 # --- Observation years to summarize (END-EXCLUSIVE)
-OBS_YEAR_START = 2015
+OBS_YEAR_START = 2012
 OBS_YEAR_END = 2019  # 2019 means through 2018
 
 # --- Depth window (m)

@@ -39,7 +39,11 @@ OUTPUT_DIR_EVAL = os.path.join("..", "..", "data", "evaluation")
 OUTPUT_DIR_FIGS = os.path.join("..", "..", "figs")
 
 ECOSIM_F_PREPPED_SINGLERUN = os.path.join(OUTPUT_DIR_EVAL, f"ecosim_{SCENARIO}_onerun_B_dates_seasons.csv")
-NUTRIENTS_F_PREPPED = os.path.join(OUTPUT_DIR_EVAL, "nutrients_ios_csop_combined_sampled.csv")
+NUTRIENTS_F_PREPPED = os.path.join(
+    OUTPUT_DIR_EVAL,
+    "nutrients_ios_csop_cast_depthint_0p1to20m.csv"
+)
+
 
 # Season mapping nuance used across multiple evals
 MATCH_MCEWAN_SEAS = False  # Feb -> Winter; Jun -> Spring
@@ -100,6 +104,19 @@ END_DATE_PHYT_SEAS = "2018-12-31"
 # =============================================================================
 # Evaluation 3 – nutrients (inventory-based) and seasonal pattern
 # =============================================================================
+
+# Nutrient obs-year window (END EXCLUSIVE)
+# N_OBS_YR_ST = 2012
+# N_OBS_YR_EN = 2019
+
+
+# new controls for Ecosim nutrient matching
+N_MATCH_OBS_IN_TIME = True
+N_MATCH_TOL_DAYS = 3
+N_OBS_DATE_MIN = START_FULL
+N_OBS_DATE_MAX = END_FULL
+N_OBS_DATE_REDUCER = "median"   # or "mean"
+N_WRITE_MATCHED_CSV = True
 
 # ---- Observation binning ----
 OBS_AVG_TYPE = "mean"  # {"mean", "median"}
@@ -226,6 +243,25 @@ ECOSIM_F_W_NUTRIENTS = os.path.join(OUTPUT_DIR_EVAL, f"ecosim_{SCENARIO}_onerun_
 N_SHOW_PLOT = True
 N_PLOT_INCLUDE_OBS = True
 
+# Ecospace overlay on Ecosim nutrient plot
+
+ES_OVERLAY_ENABLE = True
+ES_OVERLAY_CONFIG_MODULE = "ecospace_eval_config"
+# ES_OVERLAY_SERIES = ["box"]          # {"matched", "box"} (single string or list)
+ES_OVERLAY_SERIES = ["matched"]
+
+ES_OVERLAY_MATCHED_CSV = os.path.join(
+    OUTPUT_DIR_EVAL,
+    f"ecospace_{SCENARIO}_nutrients_biweek_model_matched.csv",
+)
+
+ES_OVERLAY_BOX_CSV = os.path.join(
+    OUTPUT_DIR_EVAL,
+    f"ecospace_{SCENARIO}_nutrients_biweek_model_box.csv",
+)
+
+ES_OVERLAY_SPATIAL_REDUCER = "mean"  # {"mean", "median"}
+
 
 # =============================================================================
 # Evaluation 4 – bloom timing
@@ -314,22 +350,3 @@ ZP_TOW_MIN_START_DEPTH_M = 150.0
 ZP_ANOM_CLIM_MODE = "tows"           # {"tows", "yearly_mean"}
 
 
-# =============================================================================
-# Ecospace overlay on Ecosim nutrient plot
-# =============================================================================
-
-ES_OVERLAY_ENABLE = True
-ES_OVERLAY_CONFIG_MODULE = "ecospace_eval_config"
-ES_OVERLAY_SERIES = ["box"]          # {"matched", "box"} (single string or list)
-
-ES_OVERLAY_MATCHED_CSV = os.path.join(
-    OUTPUT_DIR_EVAL,
-    f"ecospace_{SCENARIO}_nutrients_biweek_model_matched.csv",
-)
-
-ES_OVERLAY_BOX_CSV = os.path.join(
-    OUTPUT_DIR_EVAL,
-    f"ecospace_{SCENARIO}_nutrients_biweek_model_box.csv",
-)
-
-ES_OVERLAY_SPATIAL_REDUCER = "mean"  # {"mean", "median"}

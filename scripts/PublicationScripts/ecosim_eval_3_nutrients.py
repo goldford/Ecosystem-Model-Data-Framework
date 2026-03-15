@@ -193,66 +193,210 @@ def _umolL_profile_to_gNm2(depth_m: np.ndarray, conc_umol_L: np.ndarray, *, zmin
     return mmol_m2 * MMOL_TO_GN  # g N m-2
 
 
-def _compute_obs_climatology(obs_csv: str) -> pd.DataFrame:
+def _compute_obs_model_climatology_matched(
+    obs_csv: str,
+    mdf: pd.DataFrame,
+    value_col: str,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
-    Compute a biweekly climatology of observed dissolved N inventories (g N m-2)
-    from a long-format obs table with columns:
-        date, depth, nitrogen(umol/L), [optional ewe_row,ewe_col]
+    Time-match cast-level observed inventories to the Ecosim model, then
+    build paired year-biweekly tables and paired climatologies.
+
+    Returns
+    -------
+    paired_ybw : DataFrame
+        year, biweekly, avg_obs, avg_model
+    obs_clima : DataFrame
+        biweekly climatology for observations
+    model_clima : DataFrame
+        biweekly climatology for Ecosim sampled only on obs dates
     """
     obs = pd.read_csv(obs_csv)
     obs["date"] = pd.to_datetime(obs["date"], errors="coerce")
-    obs = obs.dropna(subset=["date"])
+    obs = obs.dropna(subset=["date"]).copy()
 
-    # Standardize column names
-    if "nitrogen" not in obs.columns:
-        raise ValueError(f"Obs file missing 'nitrogen' column: {obs_csv}")
+    if "cast_nitrogen_int_gN_m2" not in obs.columns:
+        raise ValueError(
+            "Expected cast-level obs file with column 'cast_nitrogen_int_gN_m2'. "
+            f"Got columns: {list(obs.columns)}"
+        )
 
-    if "depth" not in obs.columns:
-        raise ValueError(f"Obs file missing 'depth' column: {obs_csv}")
+    # restrict to the model-evaluation window
+    obs_date_min = getattr(cfg, "N_OBS_DATE_MIN", None)
+    obs_date_max = getattr(cfg, "N_OBS_DATE_MAX", None)
 
-    obs["depth"] = pd.to_numeric(obs["depth"], errors="coerce")
-    obs["nitrogen"] = pd.to_numeric(obs["nitrogen"], errors="coerce")
-    obs.loc[obs["depth"] == 0, "depth"] = 0.1
+    if obs_date_min is not None:
+        obs = obs[obs["date"] >= pd.to_datetime(obs_date_min)]
+    if obs_date_max is not None:
+        obs = obs[obs["date"] <= pd.to_datetime(obs_date_max)]
+
+    if obs.empty:
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+    # collapse multiple casts on the same day to one basin-scale obs value
+    obs_reducer_name = str(getattr(cfg, "N_OBS_DATE_REDUCER", "median")).lower()
+    obs_reducer = np.nanmean if obs_reducer_name == "mean" else np.nanmedian
+
+    obs_day = (
+        obs.groupby("date", as_index=False)
+           .agg(obs_gN_m2=("cast_nitrogen_int_gN_m2", lambda x: float(obs_reducer(x.to_numpy(dtype=float)))))
+           .sort_values("date")
+    )
+
+    model_day = (
+        mdf[["date", value_col]]
+        .dropna()
+        .sort_values("date")
+        .rename(columns={value_col: "model_gN_m2"})
+        .copy()
+    )
+
+    tol_days = int(getattr(cfg, "N_MATCH_TOL_DAYS", 3))
+    paired = pd.merge_asof(
+        obs_day,
+        model_day,
+        on="date",
+        direction="nearest",
+        tolerance=pd.Timedelta(days=tol_days),
+    ).dropna(subset=["model_gN_m2"]).copy()
+
+    if paired.empty:
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+    paired["year"] = paired["date"].dt.year
+    paired["day_of_year"] = paired["date"].dt.dayofyear
+    biweek_max = int(getattr(cfg, "N_BIWEEK_MAX", 26))
+    paired["biweekly"] = np.minimum(
+        biweek_max,
+        ((paired["day_of_year"] - 1) // 14 + 1)
+    ).astype(int)
+
+    # reduce within year x biweekly so each year gets equal weight
+    paired_ybw = (
+        paired.groupby(["year", "biweekly"], as_index=False)
+              .agg(
+                  avg_obs=("obs_gN_m2", "median" if OBS_AVG_TYPE == "median" else "mean"),
+                  avg_model=("model_gN_m2", "mean"),
+              )
+    )
+
+    # climatologies built from the SAME paired table
+    g_obs = paired_ybw.groupby("biweekly")["avg_obs"]
+    obs_clima = pd.DataFrame(index=sorted(paired_ybw["biweekly"].unique()))
+    obs_clima.index.name = "biweekly"
+    obs_clima["obs_center"] = g_obs.mean() if OBS_AVG_TYPE == "mean" else g_obs.median()
+    obs_clima["obs_q10"] = g_obs.quantile(0.1)
+    obs_clima["obs_q90"] = g_obs.quantile(0.9)
+
+    g_mod = paired_ybw.groupby("biweekly")["avg_model"]
+    model_clima = pd.DataFrame(index=sorted(paired_ybw["biweekly"].unique()))
+    model_clima.index.name = "biweekly"
+    model_clima["model_center"] = g_mod.mean()
+    model_clima["model_q10"] = g_mod.quantile(0.1)
+    model_clima["model_q90"] = g_mod.quantile(0.9)
+
+    return paired_ybw, obs_clima, model_clima
+
+
+def _compute_obs_climatology(obs_csv: str) -> pd.DataFrame:
+    """
+    Compute a biweekly climatology of observed dissolved N inventories (g N m-2).
+
+    Supported inputs:
+      1) strict cast-level file from prep1_nutrients_v3.py
+         columns include: date, cast_nitrogen_int_gN_m2
+      2) raw long-format sample file
+         columns include: date, depth, nitrogen
+    """
+    obs = pd.read_csv(obs_csv)
+    obs["date"] = pd.to_datetime(obs["date"], errors="coerce")
+    obs = obs.dropna(subset=["date"]).copy()
+
+    # Optional date filter: restrict obs to model-overlap window
+    obs_date_min = getattr(cfg, "N_OBS_DATE_MIN", None)
+    obs_date_max = getattr(cfg, "N_OBS_DATE_MAX", None)
+
+    if obs_date_min is not None:
+        obs = obs[obs["date"] >= pd.to_datetime(obs_date_min)]
+    if obs_date_max is not None:
+        obs = obs[obs["date"] <= pd.to_datetime(obs_date_max)]
+
+    if obs.empty:
+        return pd.DataFrame()
 
     obs["year"] = obs["date"].dt.year
     obs["day_of_year"] = obs["date"].dt.dayofyear
     biweek_max = int(getattr(cfg, "N_BIWEEK_MAX", 26))
+    obs["biweekly"] = np.minimum(
+        biweek_max,
+        ((obs["day_of_year"] - 1) // 14 + 1)
+    ).astype(int)
 
-    obs["biweekly"] = np.minimum(biweek_max, ((obs["day_of_year"] - 1) // 14 + 1)).astype(int)
-    # profile id: (date, cell) if present; else (date) only
-    prof_keys = ["date"]
-    if "ewe_row" in obs.columns and "ewe_col" in obs.columns:
-        prof_keys += ["ewe_row", "ewe_col"]
-
-    # integrate each profile
-    prof = []
-    for key, d in obs.groupby(prof_keys):
-        gNm2 = _umolL_profile_to_gNm2(
-            depth_m=d["depth"].to_numpy(),
-            conc_umol_L=d["nitrogen"].to_numpy(),
-            zmin=ZMIN,
-            zmax=ZMAX,
-        )
-        if not np.isfinite(gNm2):
-            continue
-        row = dict(zip(prof_keys, key if isinstance(key, tuple) else (key,)))
-        row.update({
-            "year": int(d["year"].iloc[0]),
-            "biweekly": int(d["biweekly"].iloc[0]),
-            "obs_gN_m2": float(gNm2),
-        })
-        prof.append(row)
-
-    if not prof:
-        return pd.DataFrame()
-
-    prof_df = pd.DataFrame(prof)
-
-    # Reduce within (year, biweekly) across profiles
     reducer = np.mean if OBS_AVG_TYPE == "mean" else np.median
-    yrbw = prof_df.groupby(["year", "biweekly"], as_index=False).agg(avg_obs=("obs_gN_m2", reducer))
 
-    # Climatology across years
+    # -------------------------------------------------
+    # Preferred path: pre-screened cast-level inventory
+    # -------------------------------------------------
+    if "cast_nitrogen_int_gN_m2" in obs.columns:
+        obs["cast_nitrogen_int_gN_m2"] = pd.to_numeric(
+            obs["cast_nitrogen_int_gN_m2"], errors="coerce"
+        )
+        obs = obs.dropna(subset=["cast_nitrogen_int_gN_m2"])
+
+        if obs.empty:
+            return pd.DataFrame()
+
+        yrbw = (
+            obs.groupby(["year", "biweekly"], as_index=False)
+               .agg(avg_obs=("cast_nitrogen_int_gN_m2", reducer))
+        )
+
+    # -------------------------------------------------
+    # Fallback path: raw sample-level file
+    # -------------------------------------------------
+    else:
+        if "nitrogen" not in obs.columns:
+            raise ValueError(f"Obs file missing 'nitrogen' column: {obs_csv}")
+        if "depth" not in obs.columns:
+            raise ValueError(f"Obs file missing 'depth' column: {obs_csv}")
+
+        obs["depth"] = pd.to_numeric(obs["depth"], errors="coerce")
+        obs["nitrogen"] = pd.to_numeric(obs["nitrogen"], errors="coerce")
+        obs.loc[obs["depth"] == 0, "depth"] = 0.1
+
+        prof_keys = ["date"]
+        if "ewe_row" in obs.columns and "ewe_col" in obs.columns:
+            prof_keys += ["ewe_row", "ewe_col"]
+
+        prof = []
+        for key, d in obs.groupby(prof_keys):
+            gNm2 = _umolL_profile_to_gNm2(
+                depth_m=d["depth"].to_numpy(),
+                conc_umol_L=d["nitrogen"].to_numpy(),
+                zmin=ZMIN,
+                zmax=ZMAX,
+            )
+            if not np.isfinite(gNm2):
+                continue
+
+            row = dict(zip(prof_keys, key if isinstance(key, tuple) else (key,)))
+            row.update({
+                "year": int(d["year"].iloc[0]),
+                "biweekly": int(d["biweekly"].iloc[0]),
+                "obs_gN_m2": float(gNm2),
+            })
+            prof.append(row)
+
+        if not prof:
+            return pd.DataFrame()
+
+        prof_df = pd.DataFrame(prof)
+
+        yrbw = (
+            prof_df.groupby(["year", "biweekly"], as_index=False)
+                   .agg(avg_obs=("obs_gN_m2", reducer))
+        )
+
     g = yrbw.groupby("biweekly")["avg_obs"]
     clima = pd.DataFrame(index=sorted(yrbw["biweekly"].unique()))
     clima.index.name = "biweekly"
@@ -622,18 +766,37 @@ def run_nutrient_eval() -> Tuple[pd.DataFrame, pd.DataFrame]:
     # ------------------
     # Climatology
     # ------------------
-    model_clima = _compute_model_climatology(mdf, value_col=value_col)
+    # Full-model climatology retained for reference/debugging
+    model_clima_full = _compute_model_climatology(mdf, value_col=value_col)
 
-    # ------------------
-    # Plot (optional)
-    # ------------------
+    paired_ybw = None
+    obs_clima = None
+    model_clima_plot = model_clima_full
+    model_clima = model_clima_full
+
+    if N_PLOT_INCLUDE_OBS and N_DATA_REF and bool(getattr(cfg, "N_MATCH_OBS_IN_TIME", True)):
+        paired_ybw, obs_clima, model_clima_plot = _compute_obs_model_climatology_matched(
+            N_DATA_REF,
+            mdf,
+            value_col=value_col,
+        )
+
+        if bool(getattr(cfg, "N_WRITE_MATCHED_CSV", True)) and paired_ybw is not None and not paired_ybw.empty:
+            out_pair = os.path.join(
+                OUTPUT_DIR_EVAL,
+                f"ecosim_{SCENARIO}_nutrients_obs_model_paired_biweekly.csv"
+            )
+            paired_ybw.to_csv(out_pair, index=False)
+            print(f"[ecosim nutrients] Paired obs-model table saved → {out_pair}")
+
+    # keep the plot-generation guard
     if N_SHOW_PLOT:
-        obs_clima = None
-        if N_PLOT_INCLUDE_OBS and N_DATA_REF:
-            obs_clima = _compute_obs_climatology(N_DATA_REF)
-
-        out_png = os.path.join(OUTPUT_DIR_FIGS, f"ecosim_{SCENARIO}_nutrient_clima_overlay_gNm2.png")
+        out_png = os.path.join(
+            OUTPUT_DIR_FIGS,
+            f"ecosim_{SCENARIO}_nutrient_clima_overlay_gNm2.png"
+        )
         os.makedirs(os.path.dirname(out_png), exist_ok=True)
+
         ecospace_climas = None
         if ES_OVERLAY_ENABLE:
             ecospace_climas = {}
@@ -641,20 +804,20 @@ def run_nutrient_eval() -> Tuple[pd.DataFrame, pd.DataFrame]:
             if isinstance(kinds, str):
                 kinds = [kinds]
             kinds = [str(k).lower() for k in kinds]
-            if 'matched' in kinds:
+            if "matched" in kinds:
                 try:
-                    ecospace_climas['matched'] = _compute_ecospace_climatology('matched')
+                    ecospace_climas["matched"] = _compute_ecospace_climatology("matched")
                 except Exception as e:
-                    print(f'[ecospace overlay] matched failed: {e}')
-                    ecospace_climas['matched'] = None
-            if 'box' in kinds:
+                    print(f"[ecospace overlay] matched failed: {e}")
+                    ecospace_climas["matched"] = None
+            if "box" in kinds:
                 try:
-                    ecospace_climas['box'] = _compute_ecospace_climatology('box')
+                    ecospace_climas["box"] = _compute_ecospace_climatology("box")
                 except Exception as e:
-                    print(f'[ecospace overlay] box failed: {e}')
-                    ecospace_climas['box'] = None
+                    print(f"[ecospace overlay] box failed: {e}")
+                    ecospace_climas["box"] = None
 
-        _plot_overlay(obs_clima, model_clima, ecospace_climas, out_png=out_png)
+        _plot_overlay(obs_clima, model_clima_plot, ecospace_climas, out_png=out_png)
         print(f"[ecosim nutrients] Plot saved → {out_png}")
 
     return mdf, model_clima
