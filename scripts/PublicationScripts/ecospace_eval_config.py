@@ -242,8 +242,8 @@ BT_DOMAIN_CONFIG_PATH = "C:/Users/Greig/Documents/github/Ecosystem-Model-Data-Fr
 BT_DOMAIN_FILE = "analysis_domains_suchy.yml"
 BT_SAT_MASK_PF = r'../../data/evaluation/suchy_ecospace_mask.nc'
 
-BT_RECOMPUTE_BLOOM_TIMING_SAT = True  # Set to True to force recomputation as needed, saves time
-BT_RECOMPUTE_BLOOM_TIMING_C09 = True
+BT_RECOMPUTE_BLOOM_TIMING_SAT = False  # Set to True to force recomputation as needed, saves time
+BT_RECOMPUTE_BLOOM_TIMING_C09 = False
 
 BT_START_YEAR = 1980 # analysis years (exclude spinup?)
 BT_END_YEAR = 2018
@@ -287,9 +287,16 @@ BT_PCT_MAX_WINDOW_DAYS_C09 = 6
 
 BT_DO_NUTRIENTS = False # another script does this now (#9?)
 # OVERRIDE_REDFIELD = True # added by GO to help eval 2025-06-03
-
 BT_MIN_Y_TICK = 38
 
+BT_OVERLAY_ECOSIM = True
+BT_ECOSIM_SAT_CSV = os.path.join(
+    EVALOUT_P, f"ecosim_bloom_timing_satellite_{ECOSPACE_SC}.csv"
+)
+BT_ECOSIM_C09_CSV = os.path.join(
+    EVALOUT_P, f"ecosim_bloom_timing_C09_{ECOSPACE_SC}.csv"
+)
+BT_ECOSIM_LABEL = "Ecosim"
 
 
 # -------------------------------------------

@@ -873,6 +873,7 @@ def run_qu39_eval() -> None:
     # Round numeric statistics for export
     round_cols = ['R', 'obs_std', 'model_std', 'centered_RMSE',
                   'RMSE', 'Bias', 'MAE', 'WSS']
+
     for col in round_cols:
         if col in stats_df.columns:
             stats_df[col] = stats_df[col].round(2)
