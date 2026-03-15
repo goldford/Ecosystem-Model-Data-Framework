@@ -93,6 +93,15 @@ C09_COL = cfg.BT_C09_COL
 # Utility Functions
 # ================================
 
+def load_overlay_csv(path):
+    if not os.path.exists(path):
+        print(f"Overlay CSV not found: {path}")
+        return None
+    df = pd.read_csv(path)
+    if 'Bloom Date' in df.columns:
+        df['Bloom Date'] = pd.to_datetime(df['Bloom Date'], errors='coerce')
+    return df
+
 def convert_doy_to_date(doys, start_year):
     return [datetime(start_year + i, 1, 1) + timedelta(days=doy - 1) for i, doy in enumerate(doys)]
 
@@ -356,6 +365,7 @@ def compute_bloom_timing(ds, var_name, mask=None,
 # ================================
 # Plotting Functions
 # ================================
+
 def standardize_columns(df):
     for col in df.columns:
         if "Year" in col and col != "Year" and col != "Day of Year":
@@ -368,58 +378,107 @@ def standardize_columns(df):
     return df
 
 
-def plot_bloom_comparison(df_model, df_obs, label_model="Ecospace",
-                          label_obs="sat", title="Bloom Timing Comparison",
-                          filename="bloom_timing_plot.png"):
+def _standardize_model_cols(df, doy_name):
+    out = df.copy()
+    for col in out.columns:
+        if "Year" in col and col != "Year" and col != "Day of Year":
+            out = out.rename(columns={col: "Year"})
+            break
+    for col in out.columns:
+        if "Day of Year" in col and col != "Year" and col != doy_name:
+            out = out.rename(columns={col: doy_name})
+            break
+    return out
 
+
+def plot_bloom_comparison(
+    df_model,
+    df_obs,
+    label_model="SOGEM-LTL 2D",
+    label_obs="sat",
+    title="Bloom Timing Comparison",
+    filename="bloom_timing_plot.png",
+    df_overlay=None,
+    label_overlay="SOGEM-LTL 1-D",
+):
     df_obs = standardize_columns(df_obs)
+    df_model = _standardize_model_cols(df_model, "Day of Year_Model")
 
-    df_merged = df_model.merge(df_obs, on="Year", suffixes=("_Model", "_Obs"))
+    if df_overlay is not None:
+        df_overlay = _standardize_model_cols(df_overlay, "Day of Year_Overlay")
+
+    # Limit all plotted series to the observation years
+    plot_years = sorted(df_obs["Year"].dropna().astype(int).unique())
+
+    df_model = df_model[df_model["Year"].isin(plot_years)].copy()
+
+    if df_overlay is not None:
+        df_overlay = df_overlay[df_overlay["Year"].isin(plot_years)].copy()
 
     if label_obs == 'Satellite':
-        fig_w = 7; fig_h = 4
+        fig_w, fig_h = 7, 4
     else:
-        fig_w = 10; fig_h = 5
+        fig_w, fig_h = 10, 5
+
     fig, ax = plt.subplots(figsize=(fig_w, fig_h))
-    for col in df_merged.columns:
-        if "Day of Year" in col and col != "Day of Year_Obs":
-            df_merged = df_merged.rename(columns={col: "Day of Year_Model"})
-            break  # Stop after the first match
-    ax.errorbar(df_merged['Year'], df_merged['Day of Year_Obs'],
-                yerr=4, fmt='s', markersize=4,
-                label=label_obs, color='darkorange', capsize=3)
 
-    ax.errorbar(df_merged['Year'], df_merged['Day of Year_Model'],
-                yerr=1.5, fmt='o', markersize=4,
-                label=label_model, color='blue')
-    # line plots
-    ax.plot(df_merged['Year'], df_merged['Day of Year_Obs'], '-', color='darkorange',
-             markersize=0)
-    ax.plot(df_merged['Year'], df_merged['Day of Year_Model'], '-', color='blue',
-             markersize=0)
+    # observations
+    ax.errorbar(
+        df_obs['Year'], df_obs['Day of Year_Obs'],
+        yerr=4, fmt='s', markersize=4,
+        label=label_obs, color='darkorange', capsize=3
+    )
+    ax.plot(df_obs['Year'], df_obs['Day of Year_Obs'], '-', color='darkorange')
 
-    ax.grid(True)
+    # primary model (Ecospace)
+    ax.errorbar(
+        df_model['Year'], df_model['Day of Year_Model'],
+        yerr=1.5, fmt='o', markersize=4,
+        label=label_model, color='blue', capsize=3
+    )
+    ax.plot(df_model['Year'], df_model['Day of Year_Model'], '-', color='blue')
 
-    mean = np.nanmean(df_merged['Day of Year_Obs'])
-    std = np.nanstd(df_merged['Day of Year_Obs'])
+    # optional overlay model (Ecosim)
+    if df_overlay is not None and 'Day of Year_Overlay' in df_overlay.columns:
+        ax.errorbar(
+            df_overlay['Year'], df_overlay['Day of Year_Overlay'],
+            yerr=1.5, fmt='^',
+            markersize=4,
+            label=label_overlay,
+            color='blue', capsize=3
+        )
+        ax.plot(df_overlay['Year'],
+                df_overlay['Day of Year_Overlay'],
+                '--',
+                linewidth=1.5,
+                color='blue')
 
-    print(label_obs)
-    print(f"late bloom DoY: {mean+std}")
-    print(f"average bloom DoY {mean}")
-    print(f"early bloom DoY: {mean-std}")
-    ax.axhline(y=mean+std, linestyle='--', color='grey', label='') # late threshold
-    ax.axhline(y=mean, linestyle='-', color='grey', label='')      # average
-    ax.axhline(y=mean-std, linestyle='--', color='grey', label='') # early threshold
+    mean = np.nanmean(df_obs['Day of Year_Obs'])
+    std = np.nanstd(df_obs['Day of Year_Obs'])
+    ax.axhline(y=mean + std, linestyle='--', color='grey')
+    ax.axhline(y=mean, linestyle='-', color='grey')
+    ax.axhline(y=mean - std, linestyle='--', color='grey')
 
-    # ax.fill_between([x_min-0.5, x_max+0.5], 68, 108, color='lightgrey', alpha=0.3)
+    ymax = np.nanmax(df_obs['Day of Year_Obs'])
+    if len(df_model) > 0:
+        ymax = max(ymax, np.nanmax(df_model['Day of Year_Model']))
+    if df_overlay is not None and 'Day of Year_Overlay' in df_overlay.columns and len(df_overlay) > 0:
+        ymax = max(ymax, np.nanmax(df_overlay['Day of Year_Overlay']))
 
     ax.set_xlabel("Year")
     ax.set_ylabel("Day of Year")
     ax.set_title(title)
-    ax.set_ylim([MIN_Y_TICK, df_merged[["Day of Year_Model", "Day of Year_Obs"]].max().max() + 10])
+    ax.set_ylim([MIN_Y_TICK, ymax + 10])
+
+    if len(plot_years) > 0:
+        ax.set_xlim(min(plot_years) - 0.5, max(plot_years) + 0.5)
+        ax.set_xticks(plot_years if len(plot_years) <= 20 else plot_years[::2])
+
+    ax.grid(True)
     # ax.legend()
     plt.tight_layout()
     plt.savefig('..//..//figs//' + filename)
+    print("saved: " + filename)
     plt.show()
     plt.close()
 
@@ -720,6 +779,7 @@ def run_bt_eval() -> None:
         bloom_df_sat = pd.read_csv(bloom_csv_path_sat)
         print(f"Loaded bloom timing from cached files: {bloom_csv_path_sat}")
 
+
     print('bloom doy mean, C09:')
     print(C09_df['Day of Year_C09'].mean())
     print('bloom doy early and late thresholds, CO9:')
@@ -734,19 +794,31 @@ def run_bt_eval() -> None:
     print("Ecospace (Satellite):", bloom_df_sat.shape)
     print("Ecospace (C09):", bloom_df_C09.shape)
 
+    ecosim_sat_df = None
+    ecosim_c09_df = None
+
+    if getattr(cfg, "BT_OVERLAY_ECOSIM", False):
+        ecosim_sat_df = load_overlay_csv(cfg.BT_ECOSIM_SAT_CSV)
+        ecosim_c09_df = load_overlay_csv(cfg.BT_ECOSIM_C09_CSV)
+
     # Plot comparison with C09 1D model
     plot_bloom_comparison(
         bloom_df_C09, C09_df,
-        label_model="SOGEM-LTL", label_obs="C09 1D Model",
+        label_model="Ecospace", label_obs="C09 1D Model",
         title=f"Bloom Timing: {SCENARIO} vs C09",
-        filename=f"ecospace_vs_C09_{SCENARIO}.png")
+        filename=f"ecospace_vs_C09_{SCENARIO}.png",
+        df_overlay=ecosim_c09_df,
+        label_overlay=cfg.BT_ECOSIM_LABEL,
+    )
 
-    # Plot comparison with sat data
     plot_bloom_comparison(
         bloom_df_sat, sat_df,
-        label_model="SOGEM-LTL", label_obs="Satellite",
+        label_model="Ecospace", label_obs="Satellite",
         title=f"Bloom Timing: {SCENARIO} vs Satellite",
-        filename=f"ecospace_vs_satell_{SCENARIO}.png")
+        filename=f"ecospace_vs_satell_{SCENARIO}.png",
+        df_overlay=ecosim_sat_df,
+        label_overlay=cfg.BT_ECOSIM_LABEL,
+    )
 
     # Compute and print statistics
     stats_sat = evaluate_model(
