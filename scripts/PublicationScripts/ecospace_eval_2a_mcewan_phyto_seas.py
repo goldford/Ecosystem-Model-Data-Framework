@@ -393,8 +393,8 @@ def plot_stacked_three_source(df_long: pd.DataFrame, domain_label: str, out_png:
         for s in sources
     ]
 
-    leg1 = ax.legend(handles=group_handles, loc="upper left", title="Group", fontsize=8)
-    ax.add_artist(leg1)
+    # leg1 = ax.legend(handles=group_handles, loc="upper left", title="Group", fontsize=8)
+    # ax.add_artist(leg1)
     # ax.legend(handles=source_handles, loc="upper right", title="Source", fontsize=8)
 
     ax.set_ylabel("Biomass (g C m$^{-2}$)")
