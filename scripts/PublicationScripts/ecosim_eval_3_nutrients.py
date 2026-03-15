@@ -189,7 +189,7 @@ def _umolL_profile_to_gNm2(depth_m: np.ndarray, conc_umol_L: np.ndarray, *, zmin
 
     conc_grid = np.interp(z_grid, depth, conc)  # conc in mmol/m3
 
-    mmol_m2 = float(np.trapz(conc_grid, z_grid))  # mmol/m2
+    mmol_m2 = float(np.trapezoid(conc_grid, z_grid))  # mmol/m2
     return mmol_m2 * MMOL_TO_GN  # g N m-2
 
 
@@ -408,10 +408,10 @@ def _plot_overlay(
 
     # Okabe–Ito palette (color-blind friendly)
     col_obs = "darkorange"       # orange
-    col_ecosim = "blue"    # blue
-    col_ecospace = "#56B4E9"  # light blue
+    col_ecosim = "blue"    # blue dashed;
+    col_ecospace = "blue"  # blue; alt #56B4E9" light blue
 
-    fig, ax = plt.subplots(figsize=(7.2, 4.2), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(6, 5), constrained_layout=True)
 
     # Model (Ecosim)
     x = model_clima.index.to_numpy()
@@ -420,10 +420,10 @@ def _plot_overlay(
         x,
         model_clima["model_center"],
         color=col_ecosim,
-        linewidth=2.0,
-        linestyle="-",
+        linewidth=1.5,
+        linestyle="--",
         marker="s",
-        markersize=4.0,
+        markersize=3.0,
         label="Ecosim (1D)",
     )
 
@@ -435,10 +435,10 @@ def _plot_overlay(
             xo,
             obs_clima["obs_center"],
             color=col_obs,
-            linewidth=2.0,
+            linewidth=1.5,
             linestyle="-",
             marker="o",
-            markersize=4.0,
+            markersize=3,
             label="Observations",
         )
 
@@ -456,20 +456,20 @@ def _plot_overlay(
                 ls, mk = ":", "D"
                 lab = "Ecospace (matched)"
             elif str(series_name).lower() == "box":
-                ls, mk = "--", "^"
+                ls, mk = "-", "^"
                 lab = "Ecospace (box)"
             else:
-                ls, mk = "--", "^"
+                ls, mk = "-", "^"
                 lab = f"Ecospace ({series_name})"
 
             ax.plot(
                 xe,
                 es_clima["es_center"],
                 color=col_ecospace,
-                linewidth=2.0,
+                linewidth=1.5,
                 linestyle=ls,
                 marker=mk,
-                markersize=4.0,
+                markersize=3.0,
                 label=lab,
             )
 
