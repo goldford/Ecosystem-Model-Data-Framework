@@ -213,7 +213,7 @@ def plot_stacked_side_by_side(seasonal_stats_df: pd.DataFrame, domain_label: str
         x_pos.append(center - pair_spacing / 2)  # model
         x_pos.append(center + pair_spacing / 2)  # obs
 
-    fig, ax = plt.subplots(figsize=(5.2, 4.2))
+    fig, ax = plt.subplots(figsize=(4.0, 4.0))
 
     # bottoms for stacking
     bottom_model = [0.0] * len(SEASONS_ORDER)
@@ -328,7 +328,7 @@ def plot_stacked_three_source(df_long: pd.DataFrame, domain_label: str, out_png:
     }
 
     bar_width = 0.22
-    group_spacing = 1.2
+    group_spacing = 1
     offsets = {
         "1-D":  -0.28,
         "2-D":  0.00,
@@ -341,7 +341,7 @@ def plot_stacked_three_source(df_long: pd.DataFrame, domain_label: str, out_png:
         for src in sources
     }
 
-    fig, ax = plt.subplots(figsize=(6.4, 4.6))
+    fig, ax = plt.subplots(figsize=(4, 4))
 
     for src in sources:
         bottoms = [0.0] * len(SEASONS_ORDER)

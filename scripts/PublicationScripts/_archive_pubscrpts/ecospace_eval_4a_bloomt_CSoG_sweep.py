@@ -19,26 +19,36 @@ import os
 import xarray as xr
 import numpy as np
 import pandas as pd
+import matplotlib
+# Choose a backend before importing pyplot (important for batch sweeps / headless runs)
+if 'MPLBACKEND' not in os.environ:
+    _show = os.getenv('BT_SHOW_PLOTS')
+    if _show is not None and _show.strip().lower() in ('0','false','no','n'):
+        matplotlib.use('Agg')
+    else:
+        try:
+            matplotlib.use('TkAgg')
+        except Exception:
+            pass
+
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.path import Path
 from datetime import datetime, timedelta
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-import matplotlib
-matplotlib.use('TkAgg')
 
 from helpers import (
     read_sdomains, find_nearest_point, find_bloom_doy,
     buildSortableString
 )
-import ecospace_eval_config as cfg
+import ecospace_eval_config_sweep as cfg
 
 
 # ================================
 # Configuration
 # ================================
 ECOSPACE_OUT_PATH = cfg.NC_PATH_OUT
-STATS_OUT_PATH = cfg.EVALOUT_P
+STATS_OUT_PATH = getattr(cfg, "BT_OUTDIR", cfg.EVALOUT_P)
 DOMAIN_CONFIG_PATH = cfg.DOMAIN_P
 DOMAIN_FILE = cfg.BT_DOMAIN_FILE
 SAT_MASK_PF = cfg.BT_SAT_MASK_PF
@@ -89,18 +99,20 @@ C09_ROW = cfg.BT_C09_ROW
 C09_COL = cfg.BT_C09_COL
 
 
+# --- sweep/output helpers ---
+RUN_TAG = getattr(cfg, 'BT_RUN_TAG', '').strip()
+TAG_SUFFIX = f'_{RUN_TAG}' if RUN_TAG else ''
+FIGS_OUTDIR = getattr(cfg, 'BT_FIGS_OUTDIR', '..//..//figs//')
+SHOW_PLOTS = getattr(cfg, 'BT_SHOW_PLOTS', True)
+
+# Ensure output dirs exist (relative paths are OK)
+os.makedirs(FIGS_OUTDIR, exist_ok=True)
+os.makedirs(STATS_OUT_PATH, exist_ok=True)
+
+
 # ================================
 # Utility Functions
 # ================================
-
-def load_overlay_csv(path):
-    if not os.path.exists(path):
-        print(f"Overlay CSV not found: {path}")
-        return None
-    df = pd.read_csv(path)
-    if 'Bloom Date' in df.columns:
-        df['Bloom Date'] = pd.to_datetime(df['Bloom Date'], errors='coerce')
-    return df
 
 def convert_doy_to_date(doys, start_year):
     return [datetime(start_year + i, 1, 1) + timedelta(days=doy - 1) for i, doy in enumerate(doys)]
@@ -160,7 +172,8 @@ def generate_2d_mask(ds, domain_file_path, region_name=BT_MASK_REGNM, depth_var=
         'mask': (('row', 'col'), combined_mask)
     }, coords={'lat': (('row', 'col'), lat), 'lon': (('row', 'col'), lon)})
 
-    out_path = os.path.join(DOMAIN_CONFIG_PATH, '..//..//data//evaluation//suchy_ecospace_mask.nc')
+    out_path = SAT_MASK_PF
+    os.makedirs(os.path.dirname(out_path) or '.', exist_ok=True)
     mask_ds.to_netcdf(out_path)
     print(f"Saved 2D mask to {out_path}")
     return mask_ds
@@ -365,7 +378,6 @@ def compute_bloom_timing(ds, var_name, mask=None,
 # ================================
 # Plotting Functions
 # ================================
-
 def standardize_columns(df):
     for col in df.columns:
         if "Year" in col and col != "Year" and col != "Day of Year":
@@ -378,130 +390,60 @@ def standardize_columns(df):
     return df
 
 
-def _standardize_model_cols(df, doy_name):
-    out = df.copy()
-    for col in out.columns:
-        if "Year" in col and col != "Year" and col != "Day of Year":
-            out = out.rename(columns={col: "Year"})
-            break
-    for col in out.columns:
-        if "Day of Year" in col and col != "Year" and col != doy_name:
-            out = out.rename(columns={col: doy_name})
-            break
-    return out
+def plot_bloom_comparison(df_model, df_obs, label_model="Ecospace",
+                          label_obs="sat", title="Bloom Timing Comparison",
+                          filename="bloom_timing_plot.png"):
 
-
-def plot_bloom_comparison(
-    df_model,
-    df_obs,
-    label_model="SOGEM-LTL 2D",
-    label_obs="sat",
-    title="Bloom Timing Comparison",
-    filename="bloom_timing_plot.png",
-    df_overlay=None,
-    label_overlay="SOGEM-LTL 1-D",
-):
     df_obs = standardize_columns(df_obs)
-    df_model = _standardize_model_cols(df_model, "Day of Year_Model")
 
-    if df_overlay is not None:
-        df_overlay = _standardize_model_cols(df_overlay, "Day of Year_Overlay")
-
-    # Limit all plotted series to the observation years
-    plot_years = sorted(df_obs["Year"].dropna().astype(int).unique())
-
-    df_model = df_model[df_model["Year"].isin(plot_years)].copy()
-
-    if df_overlay is not None:
-        df_overlay = df_overlay[df_overlay["Year"].isin(plot_years)].copy()
+    df_merged = df_model.merge(df_obs, on="Year", suffixes=("_Model", "_Obs"))
 
     if label_obs == 'Satellite':
-        fig_w, fig_h = 6, 3.5
+        fig_w = 7; fig_h = 4
     else:
-        fig_w, fig_h = 6, 3
-
+        fig_w = 10; fig_h = 5
     fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+    for col in df_merged.columns:
+        if "Day of Year" in col and col != "Day of Year_Obs":
+            df_merged = df_merged.rename(columns={col: "Day of Year_Model"})
+            break  # Stop after the first match
+    ax.errorbar(df_merged['Year'], df_merged['Day of Year_Obs'],
+                yerr=4, fmt='s', markersize=4,
+                label=label_obs, color='darkorange', capsize=3)
 
-    # observations
-    ax.errorbar(
-        df_obs['Year'], df_obs['Day of Year_Obs'],
-        yerr=4, fmt='s',
-        markersize=2,
-        label=label_obs,
-        color='darkorange', capsize=3
-    )
-    ax.plot(df_obs['Year'], df_obs['Day of Year_Obs'],
-            linewidth=1,
-            linestyle='-',
-            color='darkorange')
+    ax.errorbar(df_merged['Year'], df_merged['Day of Year_Model'],
+                yerr=1.5, fmt='o', markersize=4,
+                label=label_model, color='blue')
+    # line plots
+    ax.plot(df_merged['Year'], df_merged['Day of Year_Obs'], '-', color='darkorange',
+             markersize=0)
+    ax.plot(df_merged['Year'], df_merged['Day of Year_Model'], '-', color='blue',
+             markersize=0)
 
-    # primary model (Ecospace)
-    ax.errorbar(
-        df_model['Year'], df_model['Day of Year_Model'],
-        yerr=1.5, fmt='o', markersize=2,
-        label=label_model, color='blue', capsize=3
-    )
-    ax.plot(df_model['Year'], df_model['Day of Year_Model'],
-            linewidth=1,
-            linestyle='-',
-            color='blue')
+    ax.grid(True)
 
-    # optional overlay model (Ecosim)
-    if df_overlay is not None and 'Day of Year_Overlay' in df_overlay.columns:
-        ax.errorbar(
-            df_overlay['Year'], df_overlay['Day of Year_Overlay'],
-            yerr=1.5, fmt='^',
-            markersize=2,
-            label=label_overlay,
-            color='blue', capsize=3
-        )
-        ax.plot(df_overlay['Year'],
-                df_overlay['Day of Year_Overlay'],
-                linestyle='--',
-                linewidth=1,
-                color='blue')
+    mean = np.nanmean(df_merged['Day of Year_Obs'])
+    std = np.nanstd(df_merged['Day of Year_Obs'])
 
-    mean = np.nanmean(df_obs['Day of Year_Obs'])
-    std = np.nanstd(df_obs['Day of Year_Obs'])
+    print(label_obs)
+    print(f"late bloom DoY: {mean+std}")
+    print(f"average bloom DoY {mean}")
+    print(f"early bloom DoY: {mean-std}")
+    ax.axhline(y=mean+std, linestyle='--', color='grey', label='') # late threshold
+    ax.axhline(y=mean, linestyle='-', color='grey', label='')      # average
+    ax.axhline(y=mean-std, linestyle='--', color='grey', label='') # early threshold
 
-    lower_bound = mean - std
-    upper_bound = mean + std
-
-    ax.axhspan(
-        lower_bound,
-        upper_bound,
-        facecolor='lightgrey',
-        alpha=0.25,
-        zorder=0
-    )
-
-    ax.axhline(y=upper_bound, linestyle='--', color='grey', zorder=1)
-    ax.axhline(y=mean, linestyle='-', color='grey', zorder=1)
-    ax.axhline(y=lower_bound, linestyle='--', color='grey', zorder=1)
-
-
-    ymax = np.nanmax(df_obs['Day of Year_Obs'])
-    if len(df_model) > 0:
-        ymax = max(ymax, np.nanmax(df_model['Day of Year_Model']))
-    if df_overlay is not None and 'Day of Year_Overlay' in df_overlay.columns and len(df_overlay) > 0:
-        ymax = max(ymax, np.nanmax(df_overlay['Day of Year_Overlay']))
+    # ax.fill_between([x_min-0.5, x_max+0.5], 68, 108, color='lightgrey', alpha=0.3)
 
     ax.set_xlabel("Year")
     ax.set_ylabel("Day of Year")
     ax.set_title(title)
-    ax.set_ylim([MIN_Y_TICK, ymax + 10])
-
-    if len(plot_years) > 0:
-        ax.set_xlim(min(plot_years) - 0.5, max(plot_years) + 0.5)
-        ax.set_xticks(plot_years if len(plot_years) <= 20 else plot_years[::2])
-        ax.set_xticklabels(plot_years if len(plot_years) <= 20 else plot_years[::2], rotation=45)
-
-    ax.grid(True)
-    # ax.legend()
+    ax.set_ylim([MIN_Y_TICK, df_merged[["Day of Year_Model", "Day of Year_Obs"]].max().max() + 10])
+    ax.legend()
     plt.tight_layout()
-    plt.savefig('..//..//figs//' + filename)
-    print("saved: " + filename)
-    plt.show()
+    plt.savefig(os.path.join(FIGS_OUTDIR, filename))
+    if SHOW_PLOTS:
+        plt.show()
     plt.close()
 
 
@@ -710,8 +652,9 @@ def plot_nutrient_concentration(df_nutrient_all, ds=None, include_only=None, mas
         ax2.set_ylabel("Biomass (g C m$^{-2}$)")
         ax2.legend(loc="upper right")
 
-    plt.show()
-    plt.savefig('..//..//figs//' + "nutrient_concentration_climatology_" + SCENARIO + ".png")
+    plt.savefig(os.path.join(FIGS_OUTDIR, f"nutrient_concentration_climatology_{SCENARIO}{TAG_SUFFIX}.png"))
+    if SHOW_PLOTS:
+        plt.show()
     plt.close()
 
 
@@ -801,7 +744,6 @@ def run_bt_eval() -> None:
         bloom_df_sat = pd.read_csv(bloom_csv_path_sat)
         print(f"Loaded bloom timing from cached files: {bloom_csv_path_sat}")
 
-
     print('bloom doy mean, C09:')
     print(C09_df['Day of Year_C09'].mean())
     print('bloom doy early and late thresholds, CO9:')
@@ -816,31 +758,19 @@ def run_bt_eval() -> None:
     print("Ecospace (Satellite):", bloom_df_sat.shape)
     print("Ecospace (C09):", bloom_df_C09.shape)
 
-    ecosim_sat_df = None
-    ecosim_c09_df = None
-
-    if getattr(cfg, "BT_OVERLAY_ECOSIM", False):
-        ecosim_sat_df = load_overlay_csv(cfg.BT_ECOSIM_SAT_CSV)
-        ecosim_c09_df = load_overlay_csv(cfg.BT_ECOSIM_C09_CSV)
-
     # Plot comparison with C09 1D model
     plot_bloom_comparison(
         bloom_df_C09, C09_df,
-        label_model="Ecospace", label_obs="C09 1D Model",
+        label_model="Ecospace Model", label_obs="C09 1D Model",
         title=f"Bloom Timing: {SCENARIO} vs C09",
-        filename=f"ecospace_vs_C09_{SCENARIO}.png",
-        df_overlay=ecosim_c09_df,
-        label_overlay=cfg.BT_ECOSIM_LABEL,
-    )
+        filename=f"ecospace_vs_C09_{SCENARIO}{TAG_SUFFIX}.png")
 
+    # Plot comparison with sat data
     plot_bloom_comparison(
         bloom_df_sat, sat_df,
-        label_model="Ecospace", label_obs="Satellite",
+        label_model="Ecospace Model", label_obs="Satellite",
         title=f"Bloom Timing: {SCENARIO} vs Satellite",
-        filename=f"ecospace_vs_satell_{SCENARIO}.png",
-        df_overlay=ecosim_sat_df,
-        label_overlay=cfg.BT_ECOSIM_LABEL,
-    )
+        filename=f"ecospace_vs_satell_{SCENARIO}{TAG_SUFFIX}.png")
 
     # Compute and print statistics
     stats_sat = evaluate_model(
@@ -861,8 +791,8 @@ def run_bt_eval() -> None:
             f"Willmott = {stat['Willmott Skill']:.3f}")
 
     # write to csv
-    stats_df = pd.DataFrame(stats_out).round(2)
-    stats_csv_path = os.path.join(STATS_OUT_PATH, f"ecospace_bloom_timing_stats_{SCENARIO}.csv")
+    stats_df = pd.DataFrame(stats_out)
+    stats_csv_path = os.path.join(STATS_OUT_PATH, f"ecospace_bloom_timing_stats_{SCENARIO}{TAG_SUFFIX}.csv")
     stats_df.to_csv(stats_csv_path, index=False)
     print(f"Saved evaluation stats to {stats_csv_path}")
 
@@ -915,8 +845,7 @@ def run_bt_eval() -> None:
     ])
 
     cat_stats_df = pd.DataFrame(cat_stats)
-    cat_stats_df["Proportion"] = cat_stats_df["Proportion"].round(2)
-    cat_stats_csv_path = os.path.join(STATS_OUT_PATH, f"ecospace_bloom_timing_agreement_{SCENARIO}.csv")
+    cat_stats_csv_path = os.path.join(STATS_OUT_PATH, f"ecospace_bloom_timing_agreement_{SCENARIO}{TAG_SUFFIX}.csv")
     cat_stats_df.to_csv(cat_stats_csv_path, index=False)
     print(f"Saved categorical/timing agreement stats to {cat_stats_csv_path}")
 

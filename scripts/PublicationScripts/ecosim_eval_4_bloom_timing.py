@@ -484,11 +484,10 @@ def evaluate_model(obs, mod, label):
 
 
 def export_evaluation_stats(stats_list, out_path, scenario):
-    df_stats = pd.DataFrame(stats_list)
+    df_stats = pd.DataFrame(stats_list).round(2)
     outfile = os.path.join(STATS_OUT_PATH, f"ecosim_bloom_eval_stats_{scenario}.csv")
     df_stats.to_csv(outfile, index=False)
     print("Exported bloom timing stats to: " + outfile)
-
 
 def evaluate_bloom_categories(df_obs,
                               df_mod,
@@ -671,6 +670,7 @@ def run_bloom_eval():
     ])
 
     cat_stats_df = pd.DataFrame(cat_stats)
+    cat_stats_df["Proportion"] = cat_stats_df["Proportion"].round(2)
     cat_stats_csv_path = os.path.join(STATS_OUT_PATH, f"ecosim_bloom_timing_agreement_{SCENARIO}.csv")
     cat_stats_df.to_csv(cat_stats_csv_path, index=False)
     print(f"Saved categorical/timing agreement stats to {cat_stats_csv_path}")
