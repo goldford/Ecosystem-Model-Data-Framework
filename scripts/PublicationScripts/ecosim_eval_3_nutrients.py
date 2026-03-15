@@ -597,7 +597,7 @@ def _plot_overlay(
 
             # Differentiate Ecospace series by line style + marker (works in grayscale)
             if str(series_name).lower() == "matched":
-                ls, mk = ":", "D"
+                ls, mk = "-", "D"
                 lab = "Ecospace (matched)"
             elif str(series_name).lower() == "box":
                 ls, mk = "-", "^"
