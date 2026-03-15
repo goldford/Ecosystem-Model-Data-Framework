@@ -3098,6 +3098,7 @@ def plot_model_only_anomaly_bars(
     print(f"[5m] Saved model-only anomaly bar plot: {outpath}")
     return outpath
 
+
 def plot_anomaly_panel_paired(
     annual: pd.DataFrame,
     *,
@@ -3274,6 +3275,7 @@ def plot_anomaly_panel_paired(
 
     print(f"[INFO] Saved anomaly panel: {out_panel}")
     return out_panel
+
 
 def plot_scatter_matched_tows(
     paired_long: pd.DataFrame,
