@@ -415,14 +415,13 @@ def run_model_statistics(df, model_obs_pairs,
             results.append(ssc_all)
 
         if ssc_field and ssc_vals is not None and len(obs_vals) >= 2 and len(ssc_vals) >= 2:
-            seasonal_stats = compute_model_stats(obs_vals, eco_vals, seasons=seasons)
+            seasonal_stats = compute_model_stats(obs_vals, ssc_vals, seasons=seasons)
 
-            # If seasonal_stats is a dict (not a list), wrap it in a list
             if isinstance(seasonal_stats, dict):
                 seasonal_stats = [seasonal_stats]
 
             for stat in seasonal_stats:
-                stat.update({'Group': group, 'Model': 'Ecospace'})
+                stat.update({'Group': group, 'Model': 'SSC'})
                 results.append(stat)
 
     return pd.DataFrame(results)
@@ -866,9 +865,24 @@ def run_qu39_eval() -> None:
     print(stats_df)
 
     stats_outfile = os.path.join(stats_out_p, f"ecospace_{MODEL_RUN}_QU39_ModelStats_ObsVsModel.csv")
+
+    stats_df = pd.concat(results, ignore_index=True)
+    print('stats generated!')
+    print(stats_df)
+
+    # Round numeric statistics for export
+    round_cols = ['R', 'obs_std', 'model_std', 'centered_RMSE',
+                  'RMSE', 'Bias', 'MAE', 'WSS']
+    for col in round_cols:
+        if col in stats_df.columns:
+            stats_df[col] = stats_df[col].round(2)
+
+    if 'N' in stats_df.columns:
+        stats_df['N'] = stats_df['N'].astype(int)
+
+    stats_outfile = os.path.join(stats_out_p, f"ecospace_{MODEL_RUN}_QU39_ModelStats_ObsVsModel.csv")
     stats_df.to_csv(stats_outfile, index=False)
     print(f"[Saved] Model statistics written to: {stats_outfile}")
-    print('DONE')
 
 
 if __name__ == "__main__":
