@@ -411,7 +411,7 @@ def _plot_overlay(
     col_ecosim = "blue"    # blue dashed;
     col_ecospace = "blue"  # blue; alt #56B4E9" light blue
 
-    fig, ax = plt.subplots(figsize=(4, 3), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(4.5, 3.5), constrained_layout=True)
 
     # Model (Ecosim)
     x = model_clima.index.to_numpy()
