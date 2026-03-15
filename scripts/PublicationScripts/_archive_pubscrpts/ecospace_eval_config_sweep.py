@@ -265,7 +265,7 @@ BT_FIGS_OUTDIR = _env_str('BT_FIGS_OUTDIR', FIGS_P)
 BT_SHOW_PLOTS = _env_bool('BT_SHOW_PLOTS', True)
 
 # Mask region (used by bloom timing + cached mask filename)
-BT_MASK_REGNM = _env_str('BT_MASK_REGNM', 'SGC4')  # 'SGC2'|'SGC3'|'SGC4'
+BT_MASK_REGNM = _env_str('BT_MASK_REGNM', 'SGC2')  # 'SGC2'|'SGC3'|'SGC4'
 
 def _bt_tagged_filename(stem: str, ext: str) -> str:
     ext = ext.lstrip('.')
@@ -287,24 +287,12 @@ BT_CREATE_MASKS = _env_bool('BT_CREATE_MASKS', True)  # True to regenerate masks
 # results somewhat sensitive
 # BT_MASK_REGNM defined above
 BT_USEC09_MASK_FOR_SAT = False # overrides above!
-BT_USE_SAT_MASK_CO9 = _env_bool('BT_USE_SAT_MASK_CO9', True)
+BT_USE_SAT_MASK_CO9 = False
 BT_C09_ROW = 100 # overridden by above!
 BT_C09_COL = 52
 
 BT_CSV_SUCHY_PF = os.path.join(BT_OUTDIR, _bt_tagged_filename(f'ecospace_bloom_timing_SSoG_{ECOSPACE_SC}', 'csv'))
-BT_CSV_ALLEN_PF = os.path.join(BT_CACHE_OUTDIR, _bt_tagged_filename(f'ecospace_bloom_timing_C09_{ECOSPACE_SC}', 'csv'))
-
-# Optional overlay of bloom timing previously exported from the 1-D Ecosim workflow
-BT_OVERLAY_ECOSIM = _env_bool('BT_OVERLAY_ECOSIM', False)
-BT_ECOSIM_LABEL = _env_str('BT_ECOSIM_LABEL', 'Ecosim')
-BT_ECOSIM_SAT_CSV = _env_str(
-    'BT_ECOSIM_SAT_CSV',
-    os.path.join(EVALOUT_P, f'ecosim_bloom_timing_satellite_{ECOSPACE_SC}.csv')
-)
-BT_ECOSIM_C09_CSV = _env_str(
-    'BT_ECOSIM_C09_CSV',
-    os.path.join(EVALOUT_P, f'ecosim_bloom_timing_C09_{ECOSPACE_SC}.csv')
-)
+BT_CSV_ALLEN_PF = os.path.join(BT_CACHE_OUTDIR, f"ecospace_bloom_timing_C09_{ECOSPACE_SC}.csv")
 
 # if multiple vars listed here, it will sum across them when computing anomalies, bloom timing etc!
 #OK with run 96 this is first time model fit has been okay with all pp groups
@@ -323,7 +311,7 @@ BT_SUB_THRESHOLD_FACTOR_SAT = 0.7
 BT_EXCLUDE_DEC_JAN_SAT = _env_bool('BT_EXCLUDE_DEC_JAN_SAT', False)  #
 BT_EXCLUDE_DEC_JAN_C09 = False
 
-BT_LOG_TRANSFORM_C09 = _env_bool('BT_LOG_TRANSFORM_C09', False)
+BT_LOG_TRANSFORM_C09 = True
 BT_USE_PCT_MAX_C09 = False # new method added 2025-9-12 GO
 BT_PCT_MAX_C09 = 0.9
 BT_PCT_MAX_WINDOW_DAYS_C09 = 6

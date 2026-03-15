@@ -118,7 +118,7 @@ ES_END_SPINUP =   "1979-12-31"
 # Prep 2 - mcewan seasonal eval
 # -------------------------------------------
 
-MW_SHOW_PLTS = False # causes halt of pipeline - optional
+MW_SHOW_PLTS = True # causes halt of pipeline - optional
 MW_SEASON_DEF: Dict[str, List[int]] = {
     "Winter": [11,12, 1, 2],
     "Spring": [3, 4, 5],
