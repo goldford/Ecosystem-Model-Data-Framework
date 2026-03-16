@@ -167,6 +167,306 @@ NU_ECOSIM_LABEL = str(getattr(cfg, "NU_ECOSIM_LABEL", "ecosim"))
 # Helpers
 # -----------------------------------------------------------------------------
 
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import os
+
+def _compute_skill_metrics(
+    df: pd.DataFrame,
+    *,
+    obs_col: str = "avg_obs",
+    model_col: str = "avg_model",
+) -> pd.DataFrame:
+    """
+    Compute standard paired skill metrics from a paired table.
+    Expects one row per paired comparison unit (e.g., year x biweekly).
+    """
+    d = df[[obs_col, model_col]].copy()
+    d[obs_col] = pd.to_numeric(d[obs_col], errors="coerce")
+    d[model_col] = pd.to_numeric(d[model_col], errors="coerce")
+    d = d.dropna(subset=[obs_col, model_col]).copy()
+
+    if d.empty:
+        return pd.DataFrame([{
+            "n": 0,
+            "bias": np.nan,
+            "obs_std": np.nan,
+            "model_std": np.nan,
+            "MAE": np.nan,
+            "RMSE": np.nan,
+            "r": np.nan,
+            "WSS": np.nan,
+        }])
+
+    obs = d[obs_col].to_numpy(dtype=float)
+    mod = d[model_col].to_numpy(dtype=float)
+    resid = mod - obs
+
+    n = len(d)
+    bias = float(np.mean(resid))
+    obs_std = float(np.std(obs, ddof=1)) if n > 1 else np.nan
+    model_std = float(np.std(mod, ddof=1)) if n > 1 else np.nan
+    mae = float(np.mean(np.abs(resid)))
+    rmse = float(np.sqrt(np.mean(resid ** 2)))
+    r = float(np.corrcoef(obs, mod)[0, 1]) if n > 1 else np.nan
+
+    obs_mean = float(np.mean(obs))
+    denom = np.sum((np.abs(mod - obs_mean) + np.abs(obs - obs_mean)) ** 2)
+    wss = float(1.0 - np.sum((mod - obs) ** 2) / denom) if denom > 0 else np.nan
+
+    return pd.DataFrame([{
+        "n": n,
+        "bias": bias,
+        "obs_std": obs_std,
+        "model_std": model_std,
+        "MAE": mae,
+        "RMSE": rmse,
+        "r": r,
+        "WSS": wss,
+    }])
+
+
+def _plot_skill_scatter(
+    df: pd.DataFrame,
+    *,
+    obs_col: str = "avg_obs",
+    model_col: str = "avg_model",
+    out_png: str,
+    title: str,
+    stats_df: pd.DataFrame | None = None,
+):
+    """
+    Scatter plot from the same paired table used for skill stats.
+    """
+    d = df[[obs_col, model_col]].copy()
+    if "year" in df.columns:
+        d["year"] = df["year"]
+    if "biweekly" in df.columns:
+        d["biweekly"] = df["biweekly"]
+
+    d[obs_col] = pd.to_numeric(d[obs_col], errors="coerce")
+    d[model_col] = pd.to_numeric(d[model_col], errors="coerce")
+    d = d.dropna(subset=[obs_col, model_col]).copy()
+
+    if d.empty:
+        print(f"[skill scatter] No paired data available for {title}")
+        return
+
+    fig, ax = plt.subplots(figsize=(5.5, 5.5))
+    ax.scatter(d[obs_col], d[model_col], alpha=0.7)
+
+    lo = np.nanmin([d[obs_col].min(), d[model_col].min()])
+    hi = np.nanmax([d[obs_col].max(), d[model_col].max()])
+    ax.plot([lo, hi], [lo, hi], linestyle="--", linewidth=1)
+
+    ax.set_xlabel("Observed N (g N m$^{-2}$)")
+    ax.set_ylabel("Modelled N (g N m$^{-2}$)")
+    ax.set_title(title)
+    ax.grid(True, alpha=0.3)
+
+    if stats_df is not None and not stats_df.empty:
+        s = stats_df.iloc[0]
+        txt = (
+            f"n = {int(s['n'])}\n"
+            f"r = {s['r']:.2f}\n"
+            f"RMSE = {s['RMSE']:.2f}\n"
+            f"MAE = {s['MAE']:.2f}\n"
+            f"WSS = {s['WSS']:.2f}"
+        )
+        ax.text(
+            0.98, 0.02, txt,
+            transform=ax.transAxes,
+            ha="right", va="bottom",
+            bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
+        )
+
+    os.makedirs(os.path.dirname(out_png), exist_ok=True)
+    fig.tight_layout()
+    fig.savefig(out_png, dpi=300)
+    plt.close(fig)
+
+def _prepare_paired_df_for_series(series: str = "matched") -> pd.DataFrame:
+    """
+    Build the most raw paired Ecospace nutrient table available for one series.
+
+    For 'matched', this is the cell-biweekly matched table with model free-N reconstructed
+    row by row. Rows lacking either obs or model are dropped only at the very end.
+    """
+    df = _load_series_table(series)
+
+    # Best available obs column in g N m-2
+    obs_col = _pick_obs_gN_col(df)
+    df = _ensure_obs_col(df, obs_col).copy()
+
+    # Infer model-bound N from biomass columns
+    group_cols = _infer_group_cols(df)
+    c2n = _build_c_to_n_map(group_cols)
+    bound_init_ecopath = _compute_bound_init_gN_m2(group_cols, c2n)
+
+    df["model_N_bound_gN_m2"] = _compute_bound_N(df, group_cols, c2n)
+
+    # Optional: add POC diagnostics into bound N
+    if NU_INCLUDE_POC_DIAG:
+        if not NU_POC_RELATIVE_CSV or not os.path.exists(NU_POC_RELATIVE_CSV):
+            raise FileNotFoundError(f"NU_POC_RELATIVE_CSV not found: {NU_POC_RELATIVE_CSV}")
+
+        b0 = dict(getattr(cfg, "ES_GROUPS_ECOPATH_B", {}) or {})
+        if "DE1-POC" not in b0:
+            raise ValueError("Missing 'DE1-POC' in cfg.ES_GROUPS_ECOPATH_B (baseline gC/m2).")
+
+        B0_poc_gc = float(b0["DE1-POC"])
+        c2n_poc = float(NU_GROUP_C_TO_N.get("DE1-POC", C_TO_N_POM))
+        rel = _load_diag_relative_series_poc(NU_POC_RELATIVE_CSV, rel_col=NU_POC_REL_COL)
+
+        if "model_t_idx" in df.columns:
+            step = pd.to_numeric(df["model_t_idx"], errors="coerce")
+        else:
+            mt = pd.to_datetime(df["model_time"], errors="coerce")
+            uniq = pd.Series(mt.dropna().unique()).sort_values()
+            step_map = pd.Series(range(len(uniq)), index=uniq.values)
+            step = mt.map(step_map)
+
+        rel_on_rows = step.map(rel).astype(float).fillna(0.0)
+        B_poc_gc = B0_poc_gc * (1.0 + rel_on_rows)
+        df["model_POC_N_bound_gN_m2"] = B_poc_gc * c2n_poc
+        df["model_N_bound_gN_m2"] = df["model_N_bound_gN_m2"] + df["model_POC_N_bound_gN_m2"]
+
+    # Choose bound-init anchor
+    if NU_BOUND_INIT_MODE.lower() == "t0_series":
+        bound_init_used = _series_t0_bound_init_gN_m2(df)
+    elif NU_BOUND_INIT_MODE.lower() == "ecopath":
+        bound_init_used = bound_init_ecopath
+    else:
+        raise ValueError("NU_BOUND_INIT_MODE must be 'ecopath' or 't0_series'")
+
+    # Choose free-init anchor
+    free_init = float(NU_FREE_INIT_GNM2)
+    if NU_FREE_INIT_MODE.lower() == "t0_preserve_total":
+        total_ref = float(NU_FREE_INIT_GNM2 + bound_init_ecopath)
+        bound_t0 = bound_init_used if NU_BOUND_INIT_MODE.lower() == "t0_series" else _series_t0_bound_init_gN_m2(df)
+        free_init = float(max(0.0, total_ref - bound_t0))
+    elif NU_FREE_INIT_MODE.lower() != "config":
+        raise ValueError("NU_FREE_INIT_MODE must be 'config' or 't0_preserve_total'")
+
+    # Infer free dissolved N
+    df["model_N_free_gN_m2"] = free_init + bound_init_used - df["model_N_bound_gN_m2"]
+    df.loc[df["model_N_free_gN_m2"] < 0, "model_N_free_gN_m2"] = 0.0
+    model_col_used = "model_N_free_gN_m2"
+
+    # Optional nutrient-flux scaling
+    if NU_USE_FLUX_MULT and (NU_FLUX_MULT_COL in df.columns):
+        mult = pd.to_numeric(df[NU_FLUX_MULT_COL], errors="coerce")
+        if NU_FLUX_MULT_FILL is not None:
+            mult = mult.fillna(float(NU_FLUX_MULT_FILL))
+        df["model_N_flux_mult"] = mult
+
+        if NU_FLUX_APPLY_MODE == "scale_free":
+            df["model_N_free_used_gN_m2"] = df["model_N_free_gN_m2"] * df["model_N_flux_mult"]
+        elif NU_FLUX_APPLY_MODE == "scale_total":
+            total_init = float(getattr(cfg, "NU_TOTAL_INIT_GNM2", free_init + bound_init_used))
+            df["model_N_free_used_gN_m2"] = (total_init * df["model_N_flux_mult"]) - df["model_N_bound_gN_m2"]
+        else:
+            raise ValueError(f"Unknown NU_FLUX_APPLY_MODE={NU_FLUX_APPLY_MODE!r}")
+
+        df.loc[df["model_N_free_used_gN_m2"] < 0, "model_N_free_used_gN_m2"] = 0.0
+        model_col_used = "model_N_free_used_gN_m2"
+
+    # Standardize names used by the skill helpers
+    raw = df.copy()
+    raw["avg_obs"] = pd.to_numeric(raw[obs_col], errors="coerce")
+    raw["avg_model"] = pd.to_numeric(raw[model_col_used], errors="coerce")
+
+    # This is the actual paired table used for raw skill
+    raw = raw.dropna(subset=["avg_obs", "avg_model"]).copy()
+
+    return raw
+
+
+def _write_ecospace_skill_from_series(series: str = "matched") -> tuple[str, str, str, str]:
+    """
+    Write BOTH:
+      1) raw matched skill/stat products
+      2) year x biweekly aggregated skill/stat products
+    """
+    raw = _prepare_paired_df_for_series(series)
+
+    # ---------- RAW MATCHED ----------
+    stats_raw = _compute_skill_metrics(raw, obs_col="avg_obs", model_col="avg_model")
+    stats_raw.insert(0, "support", "raw_matched")
+    stats_raw.insert(0, "series", series)
+
+    out_stats_raw = os.path.join(
+        OUTPUT_DIR_EVAL,
+        f"ecospace_{SCENARIO}_nutrient_skill_raw_{series}.csv"
+    )
+    out_pairs_raw = os.path.join(
+        OUTPUT_DIR_EVAL,
+        f"ecospace_{SCENARIO}_nutrient_skill_pairs_raw_{series}.csv"
+    )
+    out_scatter_raw = os.path.join(
+        OUTPUT_DIR_FIGS,
+        f"ecospace_{SCENARIO}_nutrient_scatter_raw_{series}.png"
+    )
+
+    raw.to_csv(out_pairs_raw, index=False)
+    stats_raw.to_csv(out_stats_raw, index=False)
+
+    _plot_skill_scatter(
+        raw,
+        obs_col="avg_obs",
+        model_col="avg_model",
+        out_png=out_scatter_raw,
+        title=f"Ecospace nutrient skill ({series}, raw matched)",
+        stats_df=stats_raw,
+    )
+
+    # ---------- OLD WAY: YEAR x BIWEEK ----------
+    year_biweek = _aggregate_year_biweek(
+        raw,
+        obs_col="avg_obs",
+        model_col="avg_model",
+        require_both=True,
+    )
+
+    stats_ybw = _compute_skill_metrics(year_biweek, obs_col="avg_obs", model_col="avg_model")
+    stats_ybw.insert(0, "support", "year_biweek")
+    stats_ybw.insert(0, "series", series)
+
+    out_stats_ybw = os.path.join(
+        OUTPUT_DIR_EVAL,
+        f"ecospace_{SCENARIO}_nutrient_skill_yearbiweek_{series}.csv"
+    )
+    out_pairs_ybw = os.path.join(
+        OUTPUT_DIR_EVAL,
+        f"ecospace_{SCENARIO}_nutrient_skill_pairs_yearbiweek_{series}.csv"
+    )
+    out_scatter_ybw = os.path.join(
+        OUTPUT_DIR_FIGS,
+        f"ecospace_{SCENARIO}_nutrient_scatter_yearbiweek_{series}.png"
+    )
+
+    year_biweek.to_csv(out_pairs_ybw, index=False)
+    stats_ybw.to_csv(out_stats_ybw, index=False)
+
+    _plot_skill_scatter(
+        year_biweek,
+        obs_col="avg_obs",
+        model_col="avg_model",
+        out_png=out_scatter_ybw,
+        title=f"Ecospace nutrient skill ({series}, year × biweekly)",
+        stats_df=stats_ybw,
+    )
+
+    print(f"[ecospace nutrients] Raw skill stats saved → {out_stats_raw}")
+    print(f"[ecospace nutrients] Raw paired table saved → {out_pairs_raw}")
+    print(f"[ecospace nutrients] Raw scatter saved → {out_scatter_raw}")
+    print(f"[ecospace nutrients] Year×biweekly skill stats saved → {out_stats_ybw}")
+    print(f"[ecospace nutrients] Year×biweekly paired table saved → {out_pairs_ybw}")
+    print(f"[ecospace nutrients] Year×biweekly scatter saved → {out_scatter_ybw}")
+
+    return out_stats_raw, out_stats_ybw, out_scatter_raw, out_scatter_ybw
+
 def _load_series_table(series: str) -> pd.DataFrame:
     if series == "matched":
         return _load_paired_table(PAIRED_BIWEEK_CSV)
@@ -1057,6 +1357,8 @@ def run_nutrient_overlay() -> None:
 
     _plot_overlay_multi(obs_clima, model_climas, out_png=out_png_multi, scenario=SCENARIO)
     print(f"Saved multi-series overlay plot → {out_png_multi}")
+
+    _write_ecospace_skill_from_series("matched")
 
     return out_png_multi
 

@@ -101,6 +101,122 @@ ES_OVERLAY_SPATIAL_REDUCER = str(getattr(cfg, "ES_OVERLAY_SPATIAL_REDUCER", "mea
 # Helpers
 # -----------------------------------------------------------------------------
 
+
+
+def _compute_skill_metrics(
+    df: pd.DataFrame,
+    *,
+    obs_col: str = "avg_obs",
+    model_col: str = "avg_model",
+) -> pd.DataFrame:
+    """
+    Compute standard paired skill metrics from a paired table.
+    Expects one row per paired comparison unit (e.g., year x biweekly).
+    """
+    d = df[[obs_col, model_col]].copy()
+    d[obs_col] = pd.to_numeric(d[obs_col], errors="coerce")
+    d[model_col] = pd.to_numeric(d[model_col], errors="coerce")
+    d = d.dropna(subset=[obs_col, model_col]).copy()
+
+    if d.empty:
+        return pd.DataFrame([{
+            "n": 0,
+            "bias": np.nan,
+            "obs_std": np.nan,
+            "model_std": np.nan,
+            "MAE": np.nan,
+            "RMSE": np.nan,
+            "r": np.nan,
+            "WSS": np.nan,
+        }])
+
+    obs = d[obs_col].to_numpy(dtype=float)
+    mod = d[model_col].to_numpy(dtype=float)
+    resid = mod - obs
+
+    n = len(d)
+    bias = float(np.mean(resid))
+    obs_std = float(np.std(obs, ddof=1)) if n > 1 else np.nan
+    model_std = float(np.std(mod, ddof=1)) if n > 1 else np.nan
+    mae = float(np.mean(np.abs(resid)))
+    rmse = float(np.sqrt(np.mean(resid ** 2)))
+    r = float(np.corrcoef(obs, mod)[0, 1]) if n > 1 else np.nan
+
+    obs_mean = float(np.mean(obs))
+    denom = np.sum((np.abs(mod - obs_mean) + np.abs(obs - obs_mean)) ** 2)
+    wss = float(1.0 - np.sum((mod - obs) ** 2) / denom) if denom > 0 else np.nan
+
+    return pd.DataFrame([{
+        "n": n,
+        "bias": bias,
+        "obs_std": obs_std,
+        "model_std": model_std,
+        "MAE": mae,
+        "RMSE": rmse,
+        "r": r,
+        "WSS": wss,
+    }])
+
+
+def _plot_skill_scatter(
+    df: pd.DataFrame,
+    *,
+    obs_col: str = "avg_obs",
+    model_col: str = "avg_model",
+    out_png: str,
+    title: str,
+    stats_df: pd.DataFrame | None = None,
+):
+    """
+    Scatter plot from the same paired table used for skill stats.
+    """
+    d = df[[obs_col, model_col]].copy()
+    if "year" in df.columns:
+        d["year"] = df["year"]
+    if "biweekly" in df.columns:
+        d["biweekly"] = df["biweekly"]
+
+    d[obs_col] = pd.to_numeric(d[obs_col], errors="coerce")
+    d[model_col] = pd.to_numeric(d[model_col], errors="coerce")
+    d = d.dropna(subset=[obs_col, model_col]).copy()
+
+    if d.empty:
+        print(f"[skill scatter] No paired data available for {title}")
+        return
+
+    fig, ax = plt.subplots(figsize=(5.5, 5.5))
+    ax.scatter(d[obs_col], d[model_col], alpha=0.7)
+
+    lo = np.nanmin([d[obs_col].min(), d[model_col].min()])
+    hi = np.nanmax([d[obs_col].max(), d[model_col].max()])
+    ax.plot([lo, hi], [lo, hi], linestyle="--", linewidth=1)
+
+    ax.set_xlabel("Observed N (g N m$^{-2}$)")
+    ax.set_ylabel("Modelled N (g N m$^{-2}$)")
+    ax.set_title(title)
+    ax.grid(True, alpha=0.3)
+
+    if stats_df is not None and not stats_df.empty:
+        s = stats_df.iloc[0]
+        txt = (
+            f"n = {int(s['n'])}\n"
+            f"r = {s['r']:.2f}\n"
+            f"RMSE = {s['RMSE']:.2f}\n"
+            f"MAE = {s['MAE']:.2f}\n"
+            f"WSS = {s['WSS']:.2f}"
+        )
+        ax.text(
+            0.98, 0.02, txt,
+            transform=ax.transAxes,
+            ha="right", va="bottom",
+            bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
+        )
+
+    os.makedirs(os.path.dirname(out_png), exist_ok=True)
+    fig.tight_layout()
+    fig.savefig(out_png, dpi=300)
+    plt.close(fig)
+
 def derive_season_from_month(month: int) -> str:
     return SEASON_MAP.get(month, "Winter")
 
@@ -417,8 +533,6 @@ def _compute_model_climatology(mdf: pd.DataFrame, value_col: str) -> pd.DataFram
     clima["model_q10"] = g.quantile(0.1)
     clima["model_q90"] = g.quantile(0.9)
     return clima
-
-
 
 
 def _reducer(name: str):
@@ -819,6 +933,42 @@ def run_nutrient_eval() -> Tuple[pd.DataFrame, pd.DataFrame]:
 
         _plot_overlay(obs_clima, model_clima_plot, ecospace_climas, out_png=out_png)
         print(f"[ecosim nutrients] Plot saved → {out_png}")
+
+    out_skill_csv = os.path.join(
+        OUTPUT_DIR_EVAL,
+        f"ecosim_{SCENARIO}_nutrient_skill.csv"
+    )
+    out_pairs_csv = os.path.join(
+        OUTPUT_DIR_EVAL,
+        f"ecosim_{SCENARIO}_nutrient_skill_pairs.csv"
+    )
+    out_scatter_png = os.path.join(
+        OUTPUT_DIR_FIGS,
+        f"ecosim_{SCENARIO}_nutrient_scatter.png"
+    )
+
+    stats = _compute_skill_metrics(
+        paired_ybw,
+        obs_col="avg_obs",
+        model_col="avg_model",
+    )
+
+    paired_ybw.to_csv(out_pairs_csv, index=False)
+    stats.to_csv(out_skill_csv, index=False)
+
+    _plot_skill_scatter(
+        paired_ybw,
+        obs_col="avg_obs",
+        model_col="avg_model",
+        out_png=out_scatter_png,
+        title=f"Ecosim nutrient skill",
+        stats_df=stats,
+    )
+
+    print(f"[ecosim nutrients] Skill stats saved → {out_skill_csv}")
+    print(f"[ecosim nutrients] Paired table saved → {out_pairs_csv}")
+    print(f"[ecosim nutrients] Scatter saved → {out_scatter_png}")
+
 
     return mdf, model_clima
 
