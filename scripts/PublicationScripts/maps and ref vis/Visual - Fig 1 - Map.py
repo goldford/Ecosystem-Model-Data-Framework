@@ -156,9 +156,14 @@ if imap == True:
     verts_ecospace=[[ewe_navlon_TL, ewe_navlat_TL],[ewe_navlon_TR, ewe_navlat_TR],
                          [ewe_navlon_BR, ewe_navlat_BR],[ewe_navlon_BL, ewe_navlat_BL]]
     poly_ecospace = geometry.polygon.Polygon(verts_ecospace)
+    # model rec face
     p = ax0.add_geometries([poly_ecospace,],crs=crt.crs.PlateCarree(),
-                         facecolor=(.8, .8, .8), edgecolor=None,
+                         facecolor=(.6, .6, .6), edgecolor=None,
                          lw=1, zorder=2)
+   # model outline
+    p2 = ax0.add_geometries([poly_ecospace, ], crs=crt.crs.PlateCarree(),
+                           facecolor='none', edgecolor=(.5, .5, .5),
+                           lw=0.8, zorder=4)
 
     # major lines of long and lat
     #    gl = ax0.gridlines(crs=crt.crs.PlateCarree(), draw_labels=True,
@@ -195,15 +200,21 @@ if imap == True:
 
     arrow_w = 0.5
 
-    ax0.annotate('SOGEM-LTL\ndomain',xy=(-0.32e5,6.19e6),xytext=(-2e5,6.19e6),
-                arrowprops=dict(facecolor='black', width=arrow_w,headwidth=5,headlength=6),fontsize=9, ha='center', va='center')
+    ax0.annotate('SOGEM-LTL\ndomain',xy=(-0.32e5,6.19e6),
+                 xytext=(-2e5,6.19e6),
+                arrowprops=dict(facecolor='black', width=arrow_w,headwidth=5,headlength=6),
+                 fontsize=9,
+                 ha='center', va='center',
+                 zorder=4
+                 )
 
     ax0.annotate('Salish\nSea\n(blue)', xy=(-0.84e5, 6.15e6), xytext=(-2.2e5, 6.10e6),
                  arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=9, ha='center',
-                 va='center')
+                 va='center', zorder=4)
 
     ax0.annotate('Strait of\nGeorgia', xy=(-0.04e5, 6.28e6), xytext=(-.9e5, 6.23e6),
-                 arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center')
+                 arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6),
+                 fontsize=8, ha='center', zorder=4)
 
     # ax0.annotate('Toba\nInlet', xy=(-0.58e5, 6.495e6), xytext=(0.05e5, 6.485e6),
     #              arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center')
@@ -217,30 +228,30 @@ if imap == True:
 
     ax0.annotate('Howe\nSound', xy=(0.7e5, 6.34e6), xytext=(1.3e5, 6.37e6),
                  arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center',
-                 va='center')
+                 va='center', zorder=4)
 
     # ax0.annotate('Johnstone\nStrait', xy=(-2.35e5, 6.49e6), xytext=(-2.25e5, 6.56e6),
     #              arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center')
 
     ax0.annotate('Strait of\nJuan de Fuca', xy=(-0.05e5, 6.125e6), xytext=(-0.02e5, 6.04e6),
                  arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center',
-                 va='center')
+                 va='center', zorder=4)
 
     ax0.annotate('Puget\nSound', xy=(1.45e5, 6.06e6), xytext=(2.45e5, 6.06e6),
                  arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center',
-                 va='center')
+                 va='center', zorder=4)
 
     ax0.annotate('San Juan/\nGulf Islands', xy=(1.0e5, 6.18e6), xytext=(2.22e5, 6.18e6),
                  arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, ha='center',
-                 va='center')
+                 va='center', zorder=4)
 
-    ax0.annotate('Canada/\nUnited States', xy=(2.22e5, 6.227e6), ha='center')
-    ax0.annotate('PACIFIC\nOCEAN', xy=(-2.0e5, 5.95e6), ha='center')
+    ax0.annotate('Canada/\nUnited States', xy=(2.22e5, 6.227e6), ha='center', zorder=4)
+    ax0.annotate('PACIFIC\nOCEAN', xy=(-2.0e5, 5.95e6), ha='center', zorder=4)
 
-    ax0.annotate('Vancouver\nIsland', xy=(-1.6e5, 6.31e6), fontsize=8, ha='center', rotation=300)
+    ax0.annotate('Vancouver\nIsland', xy=(-1.6e5, 6.31e6), fontsize=8, ha='center', rotation=300, zorder=4)
 
     ax0.annotate('Fraser R.', xy=(1.121e5, 6.277e6), xytext=(1.54e5, 6.3e6),
-                 arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8)
+                 arrowprops=dict(facecolor='black', width=arrow_w, headwidth=5, headlength=6), fontsize=8, zorder=4)
 
     #     ax0.annotate('200 km',xy=(1.45e5,5.9e6),xytext=(1.3e5,5.9e6),
     #             arrowprops=dict(facecolor='black',arrowstyle='<->'),
@@ -271,8 +282,8 @@ if imap == True:
     a = 18
 
     # Map Inset
-    xmap, ymap = [-150, -110], [42, 59]
-    ax1 = fig.add_axes([0.37, 0.77, 0.21, 0.21], projection=crt.crs.LambertConformal(np.mean(xmap), np.mean(ymap)))
+    xmap, ymap = [-140, -110], [43, 58]
+    ax1 = fig.add_axes([0.4, 0.77, 0.21, 0.21], projection=crt.crs.LambertConformal(np.mean(xmap), np.mean(ymap)))
     ax1.set_extent(xmap + ymap)
     ax1.add_feature(feature.GSHHSFeature('low', edgecolor='k', facecolor='darkgray', linewidth=0.1))
     ax1.add_feature(feature.BORDERS, linewidth=0.1, zorder=10)
@@ -282,20 +293,24 @@ if imap == True:
                             ylim[1] - ylim[0],
                             transform=crt.crs.PlateCarree(),
                             fill=False, edgecolor='r', zorder=10, linewidth=2))
-    ax1.text(0.15, 0.47, 'Gulf of\nAlaska', transform=ax1.transAxes)
+    ax1.text(0.18, 0.2, 'Northeast\nPacific\nOcean',
+             ha='center',
+             transform=ax1.transAxes)
     ax1.text(0.7, 0.55, 'Canada', transform=ax1.transAxes)
     ax1.text(0.74, 0.1, 'USA', transform=ax1.transAxes)
 
     xticks, yticks = list(range(-160, -100, 20)), list(range(49, 80, 12))
     ax1.gridlines(linestyle=":", color='k', xlocs=xticks, ylocs=yticks, draw_labels=False)
     #     ax1.xlabels_top = False
-    #     ax1.xlabels_left = False
-    #     ax1.ylabels_left = False
+    # ax1.xlabels_left = False
+
     #     ax1.ylabels_right= False
     #     ax1.ylabels_top = False
     #     ax1.direction = "in"
     ax1.xaxis.set_major_formatter(LONGITUDE_FORMATTER)
     ax1.yaxis.set_major_formatter(LATITUDE_FORMATTER)
+    ax1.ylabels_left = False
+
 
 #     gl = ax0.gridlines(linestyle=":", color='gray', draw_labels=True, xlocs=xlocs, ylocs=ylocs)
 #     gl.xlabels_top, gl.ylabels_right = False, False
@@ -307,7 +322,7 @@ if imap == True:
 
 # plt.tight_layout() # didn't help, added 2024-09
 
-plt.savefig('..//..//..//figs//Fig01_test.png', dpi=300)
+plt.savefig('..//..//..//figs//Fig01.png', dpi=300)
 plt.show()
 
 # plt.savefig('..//..//figs//Fig01_noecospace_test.pdf', dpi=300)
