@@ -28,7 +28,6 @@ Outputs
 -------
 - ecospace_<SC>_nutrients_cast_depthint.csv
 - ecospace_<SC>_nutrients_biweek_obs.csv
-- ecospace_<SC>_nutrients_cast_model_matched.csv
 - ecospace_<SC>_nutrients_biweek_model_matched.csv
 
 Notes
@@ -117,7 +116,6 @@ OUTPUT_DIR_EVAL = cfg.EVALOUT_P
 
 OUT_CAST_CSV = rf"{OUTPUT_DIR_EVAL}/ecospace_{SCENARIO}_nutrients_cast_depthint.csv"
 OUT_OBS_BIWEEK_CSV = rf"{OUTPUT_DIR_EVAL}/ecospace_{SCENARIO}_nutrients_biweek_obs.csv"
-OUT_MATCHED_CAST_CSV = rf"{OUTPUT_DIR_EVAL}/ecospace_{SCENARIO}_nutrients_cast_model_matched.csv"
 OUT_MATCHED_BIWEEK_CSV = rf"{OUTPUT_DIR_EVAL}/ecospace_{SCENARIO}_nutrients_biweek_model_matched.csv"
 OUT_BOX_BIWEEK_CSV = rf"{OUTPUT_DIR_EVAL}/ecospace_{SCENARIO}_nutrients_biweek_model_box.csv"
 
@@ -445,58 +443,6 @@ def depth_integrate_to_casts(obs: pd.DataFrame) -> pd.DataFrame:
     return cast
 
 
-def prepare_casts_for_matching(cast: pd.DataFrame) -> pd.DataFrame:
-    """Preserve one row per depth-integrated cast for nearest-time model matching.
-
-    This keeps the evaluation closer to the original observation support than the
-    pooled biweekly workflow, while still carrying year/biweekly metadata forward
-    so downstream summaries can aggregate upward if desired.
-    """
-
-    c = cast.copy()
-    c["date"] = pd.to_datetime(c["date"], errors="coerce")
-
-    need_cols = {"cast_nitrogen_int_mmol_m2", "cast_nitrogen_avg_mmol_L"}
-    miss = need_cols - set(c.columns)
-    if miss:
-        raise ValueError(f"Cast table is missing required columns: {sorted(miss)}")
-
-    c = c.dropna(subset=["date", "ewe_row", "ewe_col", "cast_nitrogen_int_mmol_m2", "cast_nitrogen_avg_mmol_L"]).copy()
-
-    c["year"] = c["date"].dt.year
-    c["day_of_year"] = c["date"].dt.dayofyear
-    c["biweekly"] = ((c["day_of_year"] - 1) // 14 + 1).astype(int)
-
-    c = c[(c["year"] >= int(NU_OBS_YR_ST)) & (c["year"] < int(NU_OBS_YR_EN))].copy()
-
-    c["date_rep"] = c["date"]
-    c["zmin_m"] = NU_ZMIN_M
-    c["zmax_m"] = NU_ZMAX_M
-    c["n_casts"] = 1
-    c["mean_n_depths"] = c["n_depths"]
-    c["mean_max_depth"] = c["max_depth"]
-    c["frac_pad_surface"] = c["pad_surface"].astype(float)
-    c["frac_pad_deep"] = c["pad_deep"].astype(float)
-    c["frac_extrap_surface"] = c["extrap_surface"].astype(float)
-    c["frac_extrap_deep"] = c["extrap_deep"].astype(float)
-
-    c["avg_nitrogen_mmol_m2_obs"] = c["cast_nitrogen_int_mmol_m2"]
-    c["avg_nitrogen_mmol_L_obs"] = c["cast_nitrogen_avg_mmol_L"]
-    c["avg_nitrogen_gN_m2_obs"] = c["avg_nitrogen_mmol_m2_obs"] * (14.0067 / 1000.0)
-    c["avg_nitrogen_umol_L_obs"] = c["avg_nitrogen_mmol_L_obs"] * 1000.0
-
-    mode = str(getattr(cfg, "NU_OBS_VALUE_MODE", "integral")).lower()
-    if mode not in {"integral", "average"}:
-        raise ValueError(f"NU_OBS_VALUE_MODE must be 'integral' or 'average', got: {mode!r}")
-
-    if mode == "integral":
-        c["avg_nitrogen_primary_mmol_m2_obs"] = c["avg_nitrogen_mmol_m2_obs"]
-    else:
-        c["avg_nitrogen_primary_mmol_L_obs"] = c["avg_nitrogen_mmol_L_obs"]
-
-    return c
-
-
 # -----------------------------------------------------------------------------
 # Pool casts to biweekly bins
 # -----------------------------------------------------------------------------
@@ -660,15 +606,12 @@ def run_nut_matched() -> None:
     cast.to_csv(OUT_CAST_CSV, index=False)
     print(f"Wrote cast-level depth-integrated obs: {OUT_CAST_CSV} ({len(cast):,} rows)")
 
-    # Preserve cast-level rows for closer per-sample matching
-    cast_match_obs = prepare_casts_for_matching(cast)
-
     # Pool casts to biweekly bins
     obs_bins = pool_casts_to_biweekly(cast)
     obs_bins.to_csv(OUT_OBS_BIWEEK_CSV, index=False)
     print(f"Wrote pooled biweekly obs: {OUT_OBS_BIWEEK_CSV} ({len(obs_bins):,} rows)")
 
-    print('Writing cast-level matched data...')
+    print('Writing biweekly matched data...')
 
     # Open model
     ds = xr.open_dataset(ECOSPACE_NC)
@@ -679,14 +622,6 @@ def run_nut_matched() -> None:
 
     model_times = pd.DatetimeIndex(pd.to_datetime(ds["time"].values))
     vars_to_get = model_vars_to_extract(ds)
-
-    # Match depth-integrated casts directly to nearest model time
-    casts2 = nearest_time_join(cast_match_obs, date_col="date", model_times=model_times, tol_days=TIME_TOL_DAYS)
-    matched_cast = extract_model_at_bins(ds, casts2, vars_to_get)
-    matched_cast.to_csv(OUT_MATCHED_CAST_CSV, index=False)
-    print(f"Wrote cast-level matched table: {OUT_MATCHED_CAST_CSV} ({len(matched_cast):,} rows)")
-
-    print('Writing biweekly matched data...')
 
     # Match bins to nearest model time using date_rep
     bins2 = nearest_time_join(obs_bins, date_col="date_rep", model_times=model_times, tol_days=TIME_TOL_DAYS)

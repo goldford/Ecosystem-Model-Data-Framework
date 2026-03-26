@@ -78,11 +78,6 @@ NU_FLUX_APPLY_MODE = str(getattr(cfg, "NU_FLUX_APPLY_MODE", "scale_free")).lower
 
 
 # Produced by ecospace_eval_6a_nutrientsmatched.py
-PAIRED_CAST_CSV = os.path.join(
-    OUTPUT_DIR_EVAL,
-    f"ecospace_{SCENARIO}_nutrients_cast_model_matched.csv",
-)
-
 PAIRED_BIWEEK_CSV = os.path.join(
     OUTPUT_DIR_EVAL,
     f"ecospace_{SCENARIO}_nutrients_biweek_model_matched.csv",
@@ -93,8 +88,7 @@ BOX_BIWEEK_CSV = os.path.join(
     f"ecospace_{SCENARIO}_nutrients_biweek_model_box.csv",
 )
 
-NU_PRIMARY_PAIRED_SERIES = str(getattr(cfg, "NU_PRIMARY_PAIRED_SERIES", "matched_cast" if os.path.exists(PAIRED_CAST_CSV) else "matched"))
-NU_PLOT_MODEL_SERIES = list(getattr(cfg, "NU_MODEL_SERIES", [NU_PRIMARY_PAIRED_SERIES]))
+NU_PLOT_MODEL_SERIES = list(getattr(cfg, "NU_MODEL_SERIES", ["matched"]))
 
 # Optional year filter
 NU_PLT_YR_ST = getattr(cfg, "NU_PLT_YR_ST", None)
@@ -233,64 +227,6 @@ def _compute_skill_metrics(
     }])
 
 
-SEASON_ORDER = ["Winter", "Spring", "Summer", "Fall"]
-SEASON_COLORS = {
-    "Winter": "tab:blue",
-    "Spring": "tab:green",
-    "Summer": "tab:orange",
-    "Fall": "tab:red",
-}
-
-
-def _month_to_season(month: int) -> str:
-    if month in (12, 1, 2):
-        return "Winter"
-    if month in (3, 4, 5):
-        return "Spring"
-    if month in (6, 7, 8):
-        return "Summer"
-    return "Fall"
-
-
-def _biweekly_to_season(biweekly: float) -> str | float:
-    if pd.isna(biweekly):
-        return np.nan
-    day_of_year = int((int(biweekly) - 1) * 14 + 7)
-    ts = pd.Timestamp("2001-01-01") + pd.to_timedelta(day_of_year - 1, unit="D")
-    return _month_to_season(int(ts.month))
-
-
-def _infer_season_series(df: pd.DataFrame) -> pd.Series:
-    if "season" in df.columns:
-        return df["season"].astype(str).str.capitalize()
-    if "Season" in df.columns:
-        return df["Season"].astype(str).str.capitalize()
-    if "date" in df.columns:
-        dt = pd.to_datetime(df["date"], errors="coerce")
-        return dt.dt.month.map(lambda m: _month_to_season(int(m)) if pd.notna(m) else np.nan)
-    if "model_time" in df.columns:
-        dt = pd.to_datetime(df["model_time"], errors="coerce")
-        return dt.dt.month.map(lambda m: _month_to_season(int(m)) if pd.notna(m) else np.nan)
-    if "biweekly" in df.columns:
-        bw = pd.to_numeric(df["biweekly"], errors="coerce")
-        return bw.map(_biweekly_to_season)
-    return pd.Series(np.nan, index=df.index, dtype=object)
-
-
-def _add_best_fit_line(ax, x: np.ndarray, y: np.ndarray, *, color: str, linewidth: float = 1.4, linestyle: str = "-") -> None:
-    mask = np.isfinite(x) & np.isfinite(y)
-    x = np.asarray(x)[mask]
-    y = np.asarray(y)[mask]
-    if len(x) < 2:
-        return
-    if np.nanmin(x) == np.nanmax(x):
-        return
-    slope, intercept = np.polyfit(x, y, 1)
-    xx = np.linspace(np.nanmin(x), np.nanmax(x), 100)
-    yy = slope * xx + intercept
-    ax.plot(xx, yy, color=color, linewidth=linewidth, linestyle=linestyle, zorder=4)
-
-
 def _plot_skill_scatter(
     df: pd.DataFrame,
     *,
@@ -302,14 +238,12 @@ def _plot_skill_scatter(
 ):
     """
     Scatter plot from the same paired table used for skill stats.
-    Points are colored by season when season can be inferred, with a separate
-    best-fit line for each season.
     """
-    keep_cols = [obs_col, model_col]
-    for extra in ("year", "biweekly", "date", "model_time", "season", "Season"):
-        if extra in df.columns and extra not in keep_cols:
-            keep_cols.append(extra)
-    d = df[keep_cols].copy()
+    d = df[[obs_col, model_col]].copy()
+    if "year" in df.columns:
+        d["year"] = df["year"]
+    if "biweekly" in df.columns:
+        d["biweekly"] = df["biweekly"]
 
     d[obs_col] = pd.to_numeric(d[obs_col], errors="coerce")
     d[model_col] = pd.to_numeric(d[model_col], errors="coerce")
@@ -319,47 +253,13 @@ def _plot_skill_scatter(
         print(f"[skill scatter] No paired data available for {title}")
         return
 
-    d["season_plot"] = _infer_season_series(d)
-
-    fig, ax = plt.subplots(figsize=(6.2, 5.8))
+    fig, ax = plt.subplots(figsize=(5.5, 5.5))
+    ax.scatter(d[obs_col], d[model_col], alpha=0.7)
 
     lo = np.nanmin([d[obs_col].min(), d[model_col].min()])
     hi = np.nanmax([d[obs_col].max(), d[model_col].max()])
-    span = hi - lo
-    pad = 0.05 * span if span > 0 else 1.0
-    ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], linestyle="--", linewidth=1, color="0.5", zorder=1)
+    ax.plot([lo, hi], [lo, hi], linestyle="--", linewidth=1)
 
-    plotted_any = False
-    for season in SEASON_ORDER:
-        g = d[d["season_plot"] == season].copy()
-        if g.empty:
-            continue
-        color = SEASON_COLORS[season]
-        ax.scatter(
-            g[obs_col],
-            g[model_col],
-            alpha=0.5,
-            s=15,
-            color=color,
-            label=f"{season} (n={len(g)})",
-            zorder=3,
-        )
-        _add_best_fit_line(
-            ax,
-            g[obs_col].to_numpy(dtype=float),
-            g[model_col].to_numpy(dtype=float),
-            color=color,
-        )
-        plotted_any = True
-
-    if not plotted_any:
-        ax.scatter(d[obs_col], d[model_col], alpha=0.5, s=22, zorder=3)
-        _add_best_fit_line(ax, d[obs_col].to_numpy(dtype=float), d[model_col].to_numpy(dtype=float), color="k")
-    else:
-        ax.legend(frameon=True, fontsize=8, loc="upper left")
-
-    ax.set_xlim(lo - pad, hi + pad)
-    ax.set_ylim(lo - pad, hi + pad)
     ax.set_xlabel("Observed N (g N m$^{-2}$)")
     ax.set_ylabel("Modelled N (g N m$^{-2}$)")
     ax.set_title(title)
@@ -385,7 +285,6 @@ def _plot_skill_scatter(
     fig.tight_layout()
     fig.savefig(out_png, dpi=300)
     plt.close(fig)
-
 
 def _prepare_paired_df_for_series(series: str = "matched") -> pd.DataFrame:
     """
@@ -569,13 +468,11 @@ def _write_ecospace_skill_from_series(series: str = "matched") -> tuple[str, str
     return out_stats_raw, out_stats_ybw, out_scatter_raw, out_scatter_ybw
 
 def _load_series_table(series: str) -> pd.DataFrame:
-    if series == "matched_cast":
-        return _load_paired_table(PAIRED_CAST_CSV)
     if series == "matched":
         return _load_paired_table(PAIRED_BIWEEK_CSV)
     if series == "box":
         return _load_paired_table(BOX_BIWEEK_CSV)
-    raise ValueError(f"Unknown model series {series!r}. Use 'matched_cast', 'matched', or 'box'.")
+    raise ValueError(f"Unknown model series {series!r}. Use 'matched' or 'box'.")
 
 
 def _ensure_obs_col(df: pd.DataFrame, obs_col: str) -> pd.DataFrame:
@@ -765,7 +662,7 @@ def _compute_bound_init_gN_m2(group_cols: list[str], c2n: Dict[str, float]) -> f
 def _load_paired_table(csv_path: str) -> pd.DataFrame:
     if not os.path.exists(csv_path):
         raise FileNotFoundError(
-            f"Paired nutrient table not found: {csv_path}\n"
+            f"Paired biweekly table not found: {csv_path}\n"
             "Run ecospace_eval_6a_nutrientsmatched.py first."
         )
 
@@ -1239,8 +1136,8 @@ def _series_t0_bound_init_gN_m2(df: pd.DataFrame) -> float:
 def run_nutrient_overlay() -> None:
     """Pipeline entrypoint (keeps the same name used by ecospace_evaluation_master_pipeline.py)."""
 
-    # --- Load the primary paired support once to define obs_col + group_cols consistently ---
-    df_matched = _load_series_table(NU_PRIMARY_PAIRED_SERIES)
+    # --- Always load matched once to define obs_col + group_cols consistently ---
+    df_matched = _load_series_table("matched")
     obs_col = _pick_obs_gN_col(df_matched)
 
     group_cols = _infer_group_cols(df_matched)
@@ -1461,19 +1358,7 @@ def run_nutrient_overlay() -> None:
     _plot_overlay_multi(obs_clima, model_climas, out_png=out_png_multi, scenario=SCENARIO)
     print(f"Saved multi-series overlay plot → {out_png_multi}")
 
-    skill_series_to_write: list[str] = []
-    for s in [NU_PRIMARY_PAIRED_SERIES, "matched_cast", "matched"]:
-        if s not in skill_series_to_write:
-            try:
-                _load_series_table(s)
-                skill_series_to_write.append(s)
-            except (FileNotFoundError, ValueError):
-                pass
-
-    for s in skill_series_to_write:
-        if s == "box":
-            continue
-        _write_ecospace_skill_from_series(s)
+    _write_ecospace_skill_from_series("matched")
 
     return out_png_multi
 
