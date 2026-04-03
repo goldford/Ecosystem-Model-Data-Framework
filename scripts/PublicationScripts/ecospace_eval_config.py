@@ -18,8 +18,8 @@ from typing import Dict, List
 # -------------------------------------------
 # General settings
 # -------------------------------------------
-ECOSPACE_SC = "SC215"
-ECOSPACE_SC_FULL = "SC215"
+ECOSPACE_SC = "SC300"
+ECOSPACE_SC_FULL = "SC300"
 ECOPATH_F_NM = "LTL_Carb_3day_ewe6_7_19295_v18_BigPC_ECOSPACEPARAMZ"
 ECOSPACE_RAW_DIR = f"C://Users//Greig//Documents//EwE output//{ECOPATH_F_NM}//Ecospace_{ECOSPACE_SC_FULL}//asc//"
 

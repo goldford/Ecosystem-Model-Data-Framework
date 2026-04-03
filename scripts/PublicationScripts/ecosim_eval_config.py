@@ -20,7 +20,7 @@ from typing import Dict
 # General settings
 # =============================================================================
 
-SCENARIO = "SC215"
+SCENARIO = "SC218"
 ECOPATH_F_NM = "LTL_Carb_3day_ewe6_7_19295_v18_BigPC_ECOSPACEPARAMZ"
 
 YEAR_START_FULLRUN = 1978

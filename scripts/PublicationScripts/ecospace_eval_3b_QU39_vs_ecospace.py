@@ -625,7 +625,7 @@ def plot_combined_panel(dfs, field_codes_list, taxon_names, taxon_labels, labels
     import matplotlib.pyplot as plt
     import calendar
 
-    fig, axes = plt.subplots(2, 2, figsize=(10, 6.5), sharex=True, sharey=True)
+    fig, axes = plt.subplots(2, 2, figsize=(8, 6.5), sharex=True, sharey=True)
     fig.subplots_adjust(left=0.17)
     fig.text(0.004, 0.5, 'Normalized Anomaly', va='center', rotation='vertical', fontsize=10)
     axes = axes.flatten()
@@ -661,7 +661,7 @@ def plot_combined_panel(dfs, field_codes_list, taxon_names, taxon_labels, labels
         ax.grid(True)
 
     handles = [plt.Line2D([0], [0], color=color_map[f], lw=4) for f in field_codes_list[0]]
-    fig.legend(handles, source_names, loc='upper left', bbox_to_anchor=(0.37, 0.95), ncol=1, frameon=True)
+    # fig.legend(handles, source_names, loc='upper left', bbox_to_anchor=(0.37, 0.95), ncol=1, frameon=True)
     fig.tight_layout()
     fig.savefig(output_file)
     print(f"[Saved] Panel to: {output_file}")
@@ -771,7 +771,8 @@ def run_qu39_eval() -> None:
             dfs=[df_dia, df_nan, df_pic, df_dino],
             field_codes_list=field_codes_panel,
             taxon_names=['Bacillariophyceae', 'Nanophytoplankton', 'Pyramimonadophyceae', 'Dinophyceae'],
-            taxon_labels=['Diatoms', 'Nanophytoplankton', 'Picophytoplankton', 'Dinoflagellates'],
+            taxon_labels=['Diatoms (PP1-DIA)', 'Nanophytoplankton (PP2-NAN)',
+                          'Picophytoplankton (PP3-PIC)', 'Dinoflagellates (PZ2-DIN)'],
             labels=['(a)', '(b)', '(c)', '(d)'],
             source_names=source_names,
             color_map={
