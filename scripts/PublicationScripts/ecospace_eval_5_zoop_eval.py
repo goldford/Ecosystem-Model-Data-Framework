@@ -3099,6 +3099,86 @@ def plot_model_only_anomaly_bars(
     return outpath
 
 
+def plot_model_only_anomaly_panel(
+    annual_anom: pd.DataFrame,
+    *,
+    cfg5: Eval5Config,
+    top_group: str = "Total",
+    bottom_group: str = "ZC2-AMP",
+    season: Optional[str] = None,
+    label: str = "zoop_model_box",
+    outname: str = "model_box_anomaly_panel",
+) -> str:
+    """
+    Two-row publication panel for model-only annual anomalies:
+      (a) top_group
+      (b) bottom_group
+
+    No subplot titles. Keeps standalone plots separate.
+    """
+    def _draw_group(ax, group: str, tag: str):
+        d = annual_anom.copy()
+        d = d[d["group"] == group].copy()
+        if d.empty:
+            raise ValueError(f"No anomaly values found for group '{group}'.")
+
+        d = d.sort_values("year")
+        years = d["year"].astype(int).tolist()
+        vals = d["anom"].astype(float).tolist()
+
+        x = np.arange(len(years))
+        colors = ["tab:blue" if v >= 0 else "tab:red" for v in vals]
+
+        ax.axhline(0, lw=1, linestyle="--", alpha=0.7, color="k", zorder=1)
+        ax.bar(x, vals, width=0.82, color=colors, zorder=2)
+
+        ax.set_xticks(x)
+        ax.set_xticklabels([str(y) for y in years], rotation=45, ha="right")
+        ax.set_ylabel("Anomaly (z-score)")
+        ax.grid(True, axis="y", alpha=0.3, zorder=0)
+
+        # panel tag
+        ax.text(
+            0.01, 0.97, tag,
+            transform=ax.transAxes,
+            ha="left", va="top",
+            fontsize=12, fontweight="bold"
+        )
+
+    fig, axes = plt.subplots(
+        2, 1,
+        figsize=(12, 7.2),
+        sharex=False,
+        constrained_layout=False,
+    )
+
+    _draw_group(axes[0], top_group, "(a)")
+    _draw_group(axes[1], bottom_group, "(b)")
+
+    axes[0].set_xlabel("")      # no x-label on top panel
+    axes[1].set_xlabel("Year")  # only bottom panel gets x-label
+
+    # No titles in the panel
+    fig.tight_layout()
+
+    os.makedirs(cfg5.FIGSOUT_P, exist_ok=True)
+    outpath = os.path.join(
+        cfg5.FIGSOUT_P,
+        f"ecospace_{cfg5.ecospace_code}_zoop_{outname}_{label}_{top_group}_{bottom_group}.png",
+    )
+
+    fig.savefig(
+        outpath,
+        dpi=300,
+        bbox_inches="tight",
+        pad_inches=0.2,
+    )
+
+    _maybe_show(fig, cfg5.SHOW_MODELONLY_ANOM_BARS or cfg5.SHOW_PLTS)
+
+    print(f"[5m] Saved model-only anomaly panel: {outpath}")
+    return outpath
+
 def plot_anomaly_panel_paired(
     annual: pd.DataFrame,
     *,
@@ -4348,6 +4428,19 @@ def run_model_only_box_anomaly(cfg5: Optional[Eval5Config] = None) -> tuple[str,
     print(f"[5m] Saved selected box cells: {cells_csv}")
     print(f"[5m] Saved model-only figure: {fig_path}")
     print(f"[5m] Workflow complete in {_fmt_elapsed(t0)}")
+
+    panel_path = plot_model_only_anomaly_panel(
+        annual_anom,
+        cfg5=cfg5,
+        top_group="Total",
+        bottom_group="ZC2-AMP",
+        season=getattr(cfg, "ZP_MODELONLY_SEASON", None),
+        label="zoop_model_box",
+        outname="model_box_anomaly_panel",
+    )
+
+    print(f"[5m] Saved {len(fig_paths)} model-only figure(s).")
+    print(f"[5m] Saved model-only panel figure: {panel_path}")
     print("[5m] ==================================================")
 
     return series_csv, anom_csv, fig_path
