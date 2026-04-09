@@ -3082,7 +3082,7 @@ def plot_model_only_anomaly_bars(
     os.makedirs(cfg5.FIGSOUT_P, exist_ok=True)
     outpath = os.path.join(
         cfg5.FIGSOUT_P,
-        f"ecospace_{cfg5.ecospace_code}_zoop_{outname}_{label}_{group}.png",
+        f"ecospace_{cfg5.ecospace_code}_zoop_{season}_{outname}_{label}_{group}.png",
     )
 
     fig.savefig(

@@ -487,8 +487,8 @@ ZP_MODELONLY_LABELS = {
 }
 
 # Output filenames
-ZP_MODELONLY_SERIES_CSV = f"ecospace_zoop_model_box_series_{ECOSPACE_SC}.csv"
-ZP_MODELONLY_ANOM_CSV   = f"ecospace_zoop_model_box_anom_{ECOSPACE_SC}.csv"
+ZP_MODELONLY_SERIES_CSV = f"ecospace_zoop_model_box_series_{ZP_MODELONLY_SEASON}_{ECOSPACE_SC}.csv"
+ZP_MODELONLY_ANOM_CSV   = f"ecospace_zoop_model_box_anom_{ZP_MODELONLY_SEASON}_{ECOSPACE_SC}.csv"
 
 
 
